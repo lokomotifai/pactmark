@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import { readNpmPackedManifest, sha256Bytes } from "../lib/release-integrity.mjs";
 import { readJson, repositoryRoot } from "../lib/repository.mjs";
@@ -45,6 +45,16 @@ interface NpmPackResult {
   readonly files: readonly NpmPackFile[];
   readonly shasum: string;
   readonly integrity: string;
+}
+
+function npmInvocation(args: readonly string[]): readonly [string, string[]] {
+  if (process.platform !== "win32") return ["npm", [...args]];
+  const npmCli = (process.env["PATH"] ?? "")
+    .split(delimiter)
+    .map((directory) => join(directory, "node_modules", "npm", "bin", "npm-cli.js"))
+    .find((candidate) => existsSync(candidate));
+  if (npmCli === undefined) throw new Error("KAF_PACK_NPM_CLI_NOT_FOUND");
+  return [process.execPath, [npmCli, ...args]];
 }
 
 export interface PublishablePackage {
@@ -256,11 +266,15 @@ export function inspectNpmPack(
   package_: PublishablePackage,
   options: { readonly cacheDirectory: string },
 ): NpmPackSnapshot {
-  const output = execFileSync(
-    "npm",
-    ["pack", "--json", "--dry-run", "--ignore-scripts", "--cache", options.cacheDirectory],
-    { cwd: package_.directory, encoding: "utf8" },
-  );
+  const [command, args] = npmInvocation([
+    "pack",
+    "--json",
+    "--dry-run",
+    "--ignore-scripts",
+    "--cache",
+    options.cacheDirectory,
+  ]);
+  const output = execFileSync(command, args, { cwd: package_.directory, encoding: "utf8" });
   const result = npmPackResult(JSON.parse(output) as unknown);
   if (result.name !== package_.name || result.version !== package_.version) {
     throw new Error("KAF_PACK_NPM_IDENTITY_DRIFT");
@@ -319,15 +333,19 @@ function packDeterministicArtifact(
       `${stable(materializePublishManifest(package_))}\n`,
       { mode: 0o644 },
     );
-    const output = execFileSync(
-      "npm",
-      ["pack", ".", "--ignore-scripts", "--json", "--pack-destination", destination],
-      {
-        cwd: staging,
-        encoding: "utf8",
-        env: { ...process.env, npm_config_cache: npmCacheDirectory },
-      },
-    );
+    const [command, args] = npmInvocation([
+      "pack",
+      ".",
+      "--ignore-scripts",
+      "--json",
+      "--pack-destination",
+      destination,
+    ]);
+    const output = execFileSync(command, args, {
+      cwd: staging,
+      encoding: "utf8",
+      env: { ...process.env, npm_config_cache: npmCacheDirectory },
+    });
     return npmPackResult(JSON.parse(output) as unknown);
   } finally {
     rmSync(staging, { recursive: true, force: true });
