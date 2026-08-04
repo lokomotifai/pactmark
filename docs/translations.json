@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "1",
+  "terminology": "docs/tr/terminology.md",
+  "mappings": [
+    {
+      "english": "getting-started/first-agent.md",
+      "turkish": "getting-started/first-agent.md",
+      "requiredTerms": ["AgentDefinition", "WorkOrder", "BUGÜN"],
+      "requiredHeadings": ["BUGÜN", "Komutlar", "Beklenen sonuç", "Hata kurtarma"]
+    },
+    {
+      "english": "getting-started/vercel.md",
+      "turkish": "getting-started/vercel.md",
+      "requiredTerms": ["@pactmark/vercel", "Postgres", "PİLOT"],
+      "requiredHeadings": ["BUGÜN", "PİLOT", "Sınırlar"]
+    },
+    {
+      "english": "getting-started/node-container.md",
+      "turkish": "getting-started/node-container.md",
+      "requiredTerms": ["OCI", "Postgres", "BUGÜN"],
+      "requiredHeadings": ["BUGÜN", "Üretim profili", "Kurtarma"]
+    },
+    {
+      "english": "concepts/agent-and-work-order.md",
+      "turkish": "concepts/agent-and-work-order.md",
+      "requiredTerms": ["AgentDefinition", "WorkOrder", "authority"],
+      "requiredHeadings": ["AgentDefinition", "WorkOrder", "Yetki sınırı"]
+    },
+    {
+      "english": "concepts/run-lifecycle-and-durability.md",
+      "turkish": "concepts/run-lifecycle-and-durability.md",
+      "requiredTerms": ["RunEvent", "Postgres", "exactly-once"],
+      "requiredHeadings": ["Yaşam döngüsü", "Dayanıklılık", "Etki belirsizliği"]
+    },
+    {
+      "english": "concepts/tools-risk-and-capability-grants.md",
+      "turkish": "concepts/tools-risk-and-capability-grants.md",
+      "requiredTerms": ["CapabilityGrant", "ToolSecurity", "default-deny"],
+      "requiredHeadings": ["Risk", "Grant", "Modelin rolü"]
+    },
+    {
+      "english": "concepts/decisions-and-human-authority.md",
+      "turkish": "concepts/decisions-and-human-authority.md",
+      "requiredTerms": ["Approval", "DecisionChallenge", "authority"],
+      "requiredHeadings": ["İnsan kararı", "Tek kullanımlık bağ", "Reddedilemeyen kontroller"]
+    },
+    {
+      "english": "concepts/memory-workspace-artifacts-and-evidence.md",
+      "turkish": "concepts/memory-workspace-artifacts-and-evidence.md",
+      "requiredTerms": ["Artifact", "EvidenceRecord", "ContextStore"],
+      "requiredHeadings": ["Bellek ve bağlam", "Artifact", "EvidenceRecord"]
+    },
+    {
+      "english": "concepts/verification-and-evals.md",
+      "turkish": "concepts/verification-and-evals.md",
+      "requiredTerms": ["Verifier", "VerificationResult", "eval"],
+      "requiredHeadings": ["Doğrulama", "Eval", "Sınır"]
+    },
+    {
+      "english": "concepts/what-the-framework-does-not-prove.md",
+      "turkish": "concepts/what-the-framework-does-not-prove.md",
+      "requiredTerms": ["exactly-once", "sertifikasyon", "production"],
+      "requiredHeadings": ["Kanıtlanmayanlar", "Yerel kanıt", "Harici doğrulama"]
+    },
+    {
+      "english": "security/security-model.md",
+      "turkish": "security/security-model.md",
+      "requiredTerms": ["default-deny", "SecretRef", "tenant"],
+      "requiredHeadings": ["Güvenlik modeli", "Yetki", "Gizli değerler", "Kalan risk"]
+    },
+    {
+      "english": "production/it-readiness-checklist.md",
+      "turkish": "production/it-readiness-checklist.md",
+      "requiredTerms": ["Postgres", "TLS", "RPO", "RTO"],
+      "requiredHeadings": [
+        "Kimlik ve tenant",
+        "Veri ve gizli değerler",
+        "Dayanıklılık",
+        "İşletim kararı"
+      ]
+    },
+    {
+      "english": "community/contribution-path.md",
+      "turkish": "community/contribution-path.md",
+      "requiredTerms": ["DCO", "Changeset", "Komünite Agent Lab"],
+      "requiredHeadings": ["Katkı akışı", "Güvenlik bildirimi", "Komünite Agent Lab"]
+    }
+  ]
+}

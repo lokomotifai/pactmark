@@ -1,0 +1,51 @@
+{
+  "name": "@pactmark/policy",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pactmark/pactmark.git",
+    "directory": "packages/policy"
+  },
+  "description": "Portable default-deny policy, grants, risk gates, and revocation for Pactmark",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:coverage": "vitest run --coverage --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@pactmark/core": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "4.1.10",
+    "fast-check": "4.9.0",
+    "tsdown": "0.22.14",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  },
+  "engines": {
+    "node": "^22.14.0 || ^24.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "license": "Apache-2.0"
+}

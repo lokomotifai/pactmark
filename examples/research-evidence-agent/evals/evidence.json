@@ -1,0 +1,5 @@
+{
+  "query": "deterministic offline verification",
+  "mustSupport": "The embedded fixture states that offline verification is supported.",
+  "mustNotProve": "The cited URL exists or is authoritative."
+}

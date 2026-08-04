@@ -1,0 +1,51 @@
+{
+  "name": "@pactmark/executor-in-process",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pactmark/pactmark.git",
+    "directory": "packages/executor-in-process"
+  },
+  "description": "Declared in-process tool execution and fail-closed egress brokers for Pactmark",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@pactmark/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@pactmark/testing": "workspace:*",
+    "@vitest/coverage-v8": "4.1.10",
+    "@types/node": "22.20.1",
+    "tsdown": "0.22.14",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  },
+  "engines": {
+    "node": "^22.14.0 || ^24.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

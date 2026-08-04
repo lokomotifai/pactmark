@@ -1,0 +1,8 @@
+{
+  "name": "negative-release-command-fixture",
+  "private": true,
+  "scripts": {
+    "unsafe-release": "npm publish --registry=https://registry.npmjs.org/",
+    "unsafe-tag": "npm dist-tag add negative@1.0.0 latest"
+  }
+}

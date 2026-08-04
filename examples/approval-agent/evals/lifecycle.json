@@ -1,0 +1,12 @@
+{
+  "required": [
+    "approve",
+    "reject",
+    "expiry",
+    "mutation",
+    "replay",
+    "crash_before",
+    "crash_after",
+    "reconcile"
+  ]
+}

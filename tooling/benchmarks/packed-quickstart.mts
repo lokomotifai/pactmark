@@ -1,0 +1,120 @@
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { cpSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { performance } from "node:perf_hooks";
+
+import { repositoryRoot } from "../lib/repository.mjs";
+
+const pnpmStoreDirectory =
+  process.env["PACTMARK_PNPM_STORE"] ?? join(repositoryRoot, ".pnpm-store");
+
+export function nearestRankPercentile(values: readonly number[], percentile: number): number {
+  if (values.length === 0 || !Number.isFinite(percentile) || percentile <= 0 || percentile > 1)
+    throw new TypeError("KAF_BENCH_PERCENTILE_INVALID");
+  const sorted = [...values].sort((left, right) => left - right);
+  return sorted[Math.ceil(percentile * sorted.length) - 1] ?? 0;
+}
+
+export interface PackedQuickstartResult {
+  readonly schemaVersion: "1";
+  readonly benchmark: "packed-runtime-quickstart";
+  readonly runs: number;
+  readonly samplesMilliseconds: readonly number[];
+  readonly p90Milliseconds: number;
+  readonly environment: Readonly<{ node: string; platform: string; architecture: string }>;
+  readonly tarballDigests: Readonly<Record<string, string>>;
+  readonly method: string;
+  readonly limitation: string;
+}
+
+function digest(path: string): string {
+  return `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+}
+
+export async function runPackedQuickstartBenchmark(
+  options: Readonly<{ runs?: number; tarballDirectory?: string }> = {},
+): Promise<PackedQuickstartResult> {
+  const runs = options.runs ?? 5;
+  if (!Number.isSafeInteger(runs) || runs < 5 || runs > 20)
+    throw new TypeError("KAF_BENCH_RUN_COUNT_INVALID");
+  const tarballDirectory =
+    options.tarballDirectory ?? join(repositoryRoot, ".artifacts", "release-dry-run", "tarballs");
+  const tarballs = {
+    "@pactmark/agent": join(tarballDirectory, "pactmark-agent-0.1.0.tgz"),
+    "@pactmark/core": join(tarballDirectory, "pactmark-core-0.1.0.tgz"),
+    "@pactmark/evidence": join(tarballDirectory, "pactmark-evidence-0.1.0.tgz"),
+    "@pactmark/executor-in-process": join(
+      tarballDirectory,
+      "pactmark-executor-in-process-0.1.0.tgz",
+    ),
+    "@pactmark/policy": join(tarballDirectory, "pactmark-policy-0.1.0.tgz"),
+    "@pactmark/runtime": join(tarballDirectory, "pactmark-runtime-0.1.0.tgz"),
+    "@pactmark/store-memory": join(tarballDirectory, "pactmark-store-memory-0.1.0.tgz"),
+  } as const;
+  for (const path of Object.values(tarballs)) readFileSync(path);
+  const root = await mkdtemp(join(tmpdir(), "pactmark-packed-quickstart-"));
+  try {
+    await mkdir(join(root, "src"), { recursive: true });
+    cpSync(
+      join(repositoryRoot, "tooling", "benchmarks", "fixtures", "packed-quickstart.mjs"),
+      join(root, "src", "quickstart.mjs"),
+    );
+    writeFileSync(
+      join(root, "package.json"),
+      `${JSON.stringify({ name: "pactmark-packed-quickstart-benchmark", private: true, type: "module", dependencies: { "@pactmark/agent": `file:${tarballs["@pactmark/agent"]}`, "@pactmark/core": `file:${tarballs["@pactmark/core"]}`, zod: "4.4.3" } }, null, 2)}\n`,
+    );
+    writeFileSync(
+      join(root, "pnpm-workspace.yaml"),
+      `overrides:\n${Object.entries(tarballs)
+        .map(([name, path]) => `  ${JSON.stringify(name)}: ${JSON.stringify(`file:${path}`)}`)
+        .join("\n")}\n`,
+    );
+    execFileSync(
+      join(repositoryRoot, "node_modules", ".bin", "pnpm"),
+      [
+        "install",
+        "--offline",
+        "--ignore-scripts",
+        "--frozen-lockfile=false",
+        "--store-dir",
+        pnpmStoreDirectory,
+      ],
+      { cwd: root, stdio: "pipe" },
+    );
+    const samples: number[] = [];
+    for (let index = 0; index < runs; index += 1) {
+      const started = performance.now();
+      const output = execFileSync(process.execPath, [join(root, "src", "quickstart.mjs")], {
+        cwd: root,
+        encoding: "utf8",
+      });
+      samples.push(performance.now() - started);
+      const parsed = JSON.parse(output) as Readonly<{ status?: unknown; profile?: unknown }>;
+      if (parsed.status !== "completed" || parsed.profile !== "ephemeral")
+        throw new Error("KAF_BENCH_PACKED_RUN_FAILED");
+    }
+    return Object.freeze({
+      schemaVersion: "1",
+      benchmark: "packed-runtime-quickstart",
+      runs,
+      samplesMilliseconds: Object.freeze(samples),
+      p90Milliseconds: nearestRankPercentile(samples, 0.9),
+      environment: Object.freeze({
+        node: process.version,
+        platform: process.platform,
+        architecture: process.arch,
+      }),
+      tarballDigests: Object.freeze(
+        Object.fromEntries(Object.entries(tarballs).map(([name, path]) => [name, digest(path)])),
+      ),
+      method: `Tarballs prebuilt; one offline independent install excluded from samples; ${String(runs)} fresh Node processes measured from spawn to completed deterministic streamed runtime result; nearest-rank p90`,
+      limitation:
+        "This is a packed runtime startup baseline, not the initializer-to-first-run product SLO; dependency install, initializer generation, and network latency are excluded.",
+    });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}

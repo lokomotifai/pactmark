@@ -1,0 +1,8 @@
+{
+  "adapterKind": "container_contract_fixture",
+  "network": "none",
+  "rootFilesystem": "read_only",
+  "workspaceMount": "bounded",
+  "nonRoot": true,
+  "productionIsolationClaim": false
+}

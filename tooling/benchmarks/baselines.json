@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1",
+  "measuredAt": "2026-08-03T16:28:55.454Z",
+  "environment": {
+    "node": "v22.22.3",
+    "platform": "darwin",
+    "architecture": "arm64"
+  },
+  "slowConsumer": {
+    "observation": {
+      "totalBytes": 10485760,
+      "chunkBytes": 65536,
+      "chunks": 160,
+      "maximumQueuedBytes": 131072,
+      "maximumRssDeltaBytes": 1196032,
+      "elapsedMilliseconds": 6.648916999999983
+    },
+    "budget": {
+      "maximumQueuedBytes": 262144,
+      "maximumRssDeltaBytes": 67108864,
+      "maximumElapsedMilliseconds": 30000
+    }
+  },
+  "projection": {
+    "observation": {
+      "eventCount": 10000,
+      "finalSequence": 10000,
+      "finalStatus": "planning",
+      "elapsedMilliseconds": 206.58279199999998,
+      "rssDeltaBytes": 45203456
+    },
+    "budget": {
+      "maximumElapsedMilliseconds": 10000,
+      "maximumRssDeltaBytes": 268435456
+    }
+  },
+  "packedQuickstart": {
+    "observation": {
+      "runs": 5,
+      "samplesMilliseconds": [
+        136.799083, 130.087041, 131.59195799999998, 133.34133299999985, 133.23066600000016
+      ],
+      "p90Milliseconds": 136.799083,
+      "tarballDigests": {
+        "@pactmark/agent": "sha256:f1546f2e530974da91b2bf745c5db1537117916a79a6f6487fd4791e0bbdc62b",
+        "@pactmark/core": "sha256:bcb21e532f60723ffa3e8139395ae436e03fad8d70692373199c3ac6f3a5bcb0",
+        "@pactmark/evidence": "sha256:cb9c65cd8163fb6183957c40d131e618e03a1a7db75327e5aa33e6cfc2abe94d",
+        "@pactmark/executor-in-process": "sha256:11776a71cf79965dd4e951e26edfdf2ce0160db7a026de1654bb3b1786b1161d",
+        "@pactmark/policy": "sha256:00047860b3f727693d60a4a0022ba81bf12b48bdbc8eb77010402c9ae5a77342",
+        "@pactmark/runtime": "sha256:b25aa2b95265b01bc4411f431c9627b4b724b334d45efc5d75a3bcfcb3be82af",
+        "@pactmark/store-memory": "sha256:2154305bd5816a53c9d6587df0b13355f7d547df038b9c47495a05ddcf50dd26"
+      }
+    },
+    "budget": {
+      "minimumRuns": 5,
+      "maximumP90Milliseconds": 10000
+    },
+    "limitation": "This is a packed runtime startup baseline, not the initializer-to-first-run product SLO; dependency install, initializer generation, and network latency are excluded."
+  }
+}

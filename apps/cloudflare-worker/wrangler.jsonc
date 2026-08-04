@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "pactmark-cloudflare-worker-local",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-08-03",
+  "compatibility_flags": [],
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": { "PACTMARK_PROFILE": "preview" },
+}

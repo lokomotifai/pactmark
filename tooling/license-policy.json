@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1",
+  "allowedExpressions": [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "0BSD",
+    "BlueOak-1.0.0",
+    "MPL-2.0",
+    "Python-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "CC0-1.0",
+    "CC-BY-4.0",
+    "MIT OR Apache-2.0",
+    "Unlicense",
+    "WTFPL",
+    "(AFL-2.1 OR BSD-3-Clause)",
+    "(MIT OR Apache-2.0)",
+    "(MIT OR CC0-1.0)",
+    "(WTFPL OR MIT)",
+    "WTFPL OR ISC"
+  ],
+  "allowedPackageExpressions": {},
+  "allowedPackageFamilies": [
+    {
+      "identityPattern": "^@img/sharp-libvips-(?:darwin-(?:arm64|x64)|linux-(?:arm|arm64|ppc64|riscv64|s390x|x64)|linuxmusl-(?:arm64|x64))@1\\.3\\.(?:1|2)$",
+      "expression": "LGPL-3.0-or-later",
+      "reason": "Reviewed optional platform libvips binaries used by Next or Wrangler/Miniflare through sharp; they are not included in Pactmark public package tarballs and remain subject to LGPL notice/source obligations in any redistributed application image."
+    }
+  ],
+  "manifestExceptions": {
+    "@andrewbranch/untar.js@1.0.3": {
+      "effectiveLicense": "MIT",
+      "licenseFileSha256": "c450f990e293d45dbbcb1886f573312faa81f2d60ac1e6e6977f4f20015bccdc",
+      "reason": "The package manifest omits license metadata; the packed LICENSE is the standard MIT text."
+    },
+    "spawndamnit@3.0.1": {
+      "effectiveLicense": "MIT",
+      "licenseFileSha256": "aac99045d4e36ab3b1e2914337620963b56cbac53de280c94f29261a22ab5b0f",
+      "reason": "The manifest points to its packed LICENSE, which is the standard MIT text."
+    }
+  },
+  "forbiddenTokens": ["AGPL", "GPL", "LGPL", "SSPL", "BUSL"]
+}

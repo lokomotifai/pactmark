@@ -1,0 +1,28 @@
+{
+  "name": "cloudflare-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "node tooling/run-wrangler.mjs dev",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "types:generate": "node tooling/run-wrangler.mjs types",
+    "types:check": "node tooling/run-wrangler.mjs types --check",
+    "deploy:dry-run": "node tooling/run-wrangler.mjs deploy --dry-run --outdir dist",
+    "deploy:live": "node tooling/run-wrangler.mjs deploy"
+  },
+  "dependencies": {
+    "@pactmark/agent": "workspace:*",
+    "@pactmark/cloudflare": "workspace:*",
+    "@pactmark/core": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260801.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10",
+    "wrangler": "4.118.0"
+  }
+}

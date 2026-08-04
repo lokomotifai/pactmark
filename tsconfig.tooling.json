@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "rootDir": ".",
+    "outDir": "dist/tooling",
+    "paths": {
+      "@pactmark/*": ["./packages/*/src/index.ts"]
+    },
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["tooling/**/*.mts", "tooling/**/*.ts", "tests/**/*.ts", "*.config.ts"],
+  "exclude": ["dist", "node_modules"]
+}

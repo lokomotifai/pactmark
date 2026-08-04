@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@pactmark/*": ["./packages/*/src/index.ts"]
+    },
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "tooling/**/*.mts",
+    "tooling/**/*.ts",
+    "tests/**/*.ts",
+    "packages/**/*.ts",
+    "examples/**/*.ts",
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "*.config.ts"
+  ],
+  "exclude": ["dist", "node_modules", "**/dist/**"]
+}

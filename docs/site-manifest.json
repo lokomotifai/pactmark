@@ -1,0 +1,267 @@
+{
+  "schemaVersion": "1",
+  "compatibility": "Pactmark 0.1.x",
+  "pages": [
+    { "language": "en", "source": "docs/index.md", "route": "index.md" },
+    { "language": "en", "source": "docs/404.md", "route": "404.md" },
+    { "language": "en", "source": "docs/terminology.md", "route": "terminology.md" },
+    {
+      "language": "en",
+      "source": "docs/getting-started/first-agent.md",
+      "route": "getting-started/first-agent.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/getting-started/vercel.md",
+      "route": "getting-started/vercel.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/getting-started/node-container.md",
+      "route": "getting-started/node-container.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/getting-started/cloudflare-preview.md",
+      "route": "getting-started/cloudflare-preview.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/concepts/agent-and-work-order.md",
+      "route": "concepts/agent-and-work-order.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/concepts/run-lifecycle-and-durability.md",
+      "route": "concepts/run-lifecycle-and-durability.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/concepts/tools-risk-and-capability-grants.md",
+      "route": "concepts/tools-risk-and-capability-grants.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/concepts/decisions-and-human-authority.md",
+      "route": "concepts/decisions-and-human-authority.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/concepts/memory-workspace-artifacts-and-evidence.md",
+      "route": "concepts/memory-workspace-artifacts-and-evidence.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/concepts/verification-and-evals.md",
+      "route": "concepts/verification-and-evals.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/concepts/pattern-maturity.md",
+      "route": "concepts/pattern-maturity.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/concepts/what-the-framework-does-not-prove.md",
+      "route": "concepts/what-the-framework-does-not-prove.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/guides/model-adapters.md",
+      "route": "guides/model-adapters.md"
+    },
+    { "language": "en", "source": "docs/guides/mcp.md", "route": "guides/mcp.md" },
+    { "language": "en", "source": "docs/guides/postgres.md", "route": "guides/postgres.md" },
+    {
+      "language": "en",
+      "source": "docs/guides/streaming-and-clients.md",
+      "route": "guides/streaming-and-clients.md"
+    },
+    { "language": "en", "source": "docs/guides/approvals.md", "route": "guides/approvals.md" },
+    {
+      "language": "en",
+      "source": "docs/guides/testing-agents.md",
+      "route": "guides/testing-agents.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/guides/observability-and-privacy.md",
+      "route": "guides/observability-and-privacy.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/guides/migration-and-versioning.md",
+      "route": "guides/migration-and-versioning.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/guides/incident-recovery.md",
+      "route": "guides/incident-recovery.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/production/it-readiness-checklist.md",
+      "route": "production/it-readiness-checklist.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/production/responsibility-matrix.md",
+      "route": "production/responsibility-matrix.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/production/architecture-and-data-flow.md",
+      "route": "production/architecture-and-data-flow.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/production/authentication-and-tenancy.md",
+      "route": "production/authentication-and-tenancy.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/production/secrets-egress-and-regions.md",
+      "route": "production/secrets-egress-and-regions.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/production/retention-deletion-and-audit.md",
+      "route": "production/retention-deletion-and-audit.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/production/reliability-and-recovery.md",
+      "route": "production/reliability-and-recovery.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/production/platform-compatibility.md",
+      "route": "production/platform-compatibility.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/security/security-model.md",
+      "route": "security/security-model.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/security/threat-model.md",
+      "route": "security/threat-model.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/security/sandbox-boundary.md",
+      "route": "security/sandbox-boundary.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/security/supply-chain.md",
+      "route": "security/supply-chain.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/security/vulnerability-response.md",
+      "route": "security/vulnerability-response.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/reference/configuration.md",
+      "route": "reference/configuration.md"
+    },
+    { "language": "en", "source": "docs/reference/cli.md", "route": "reference/cli.md" },
+    {
+      "language": "en",
+      "source": "docs/reference/http-openapi.md",
+      "route": "reference/http-openapi.md"
+    },
+    { "language": "en", "source": "docs/reference/errors.md", "route": "reference/errors.md" },
+    {
+      "language": "en",
+      "source": "docs/reference/support-policy.md",
+      "route": "reference/support-policy.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/community/contribution-path.md",
+      "route": "community/contribution-path.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/community/rfc-and-adr.md",
+      "route": "community/rfc-and-adr.md"
+    },
+    {
+      "language": "en",
+      "source": "docs/community/agent-lab-pattern-submission.md",
+      "route": "community/agent-lab-pattern-submission.md"
+    },
+    { "language": "tr", "source": "docs/tr/index.md", "route": "index.md" },
+    { "language": "tr", "source": "docs/tr/404.md", "route": "404.md" },
+    { "language": "tr", "source": "docs/tr/terminology.md", "route": "terminology.md" },
+    {
+      "language": "tr",
+      "source": "docs/tr/getting-started/first-agent.md",
+      "route": "getting-started/first-agent.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/getting-started/vercel.md",
+      "route": "getting-started/vercel.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/getting-started/node-container.md",
+      "route": "getting-started/node-container.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/concepts/agent-and-work-order.md",
+      "route": "concepts/agent-and-work-order.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/concepts/run-lifecycle-and-durability.md",
+      "route": "concepts/run-lifecycle-and-durability.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/concepts/tools-risk-and-capability-grants.md",
+      "route": "concepts/tools-risk-and-capability-grants.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/concepts/decisions-and-human-authority.md",
+      "route": "concepts/decisions-and-human-authority.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/concepts/memory-workspace-artifacts-and-evidence.md",
+      "route": "concepts/memory-workspace-artifacts-and-evidence.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/concepts/verification-and-evals.md",
+      "route": "concepts/verification-and-evals.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/concepts/what-the-framework-does-not-prove.md",
+      "route": "concepts/what-the-framework-does-not-prove.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/security/security-model.md",
+      "route": "security/security-model.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/production/it-readiness-checklist.md",
+      "route": "production/it-readiness-checklist.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/community/contribution-path.md",
+      "route": "community/contribution-path.md"
+    }
+  ]
+}

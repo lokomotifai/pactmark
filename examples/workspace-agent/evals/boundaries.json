@@ -1,0 +1,4 @@
+{
+  "deny": ["../secret", "/etc/passwd", "workspace/link", "workspace\\..\\secret"],
+  "allow": ["workspace/README.md"]
+}

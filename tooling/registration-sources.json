@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "1",
+  "entries": [
+    {
+      "path": "packages/core/src/registrations.ts",
+      "digest": "sha256:6c470fa94598d700d378db155c36b9cd4d25791be9a6468348feb7d168aed531"
+    },
+    {
+      "path": "packages/core/src/schema-identity.ts",
+      "digest": "sha256:06f2f89a0cd02529a598ff4b450b0e1cd7ec7887f41925e7244f87b84016babe"
+    },
+    {
+      "path": "packages/policy/src/policy.ts",
+      "digest": "sha256:123b6840b120194d38aabb1d042229a5f1523cf4f970a687abebd8a418533033"
+    },
+    {
+      "path": "packages/policy/src/grants.ts",
+      "digest": "sha256:c6ce170d732603cdff6da8463610ae4e53a1d37970463c94f9af307d2ecaac7a"
+    },
+    {
+      "path": "packages/policy/src/kill-switch.ts",
+      "digest": "sha256:3899bdafedc89b270570b9ee30ca87e8d74703b424e055aef3a0f14108246491"
+    },
+    {
+      "path": "packages/policy/src/effect-strategies.ts",
+      "digest": "sha256:0d36a1733b7a3a417a7abc3842c0575d320fea0b2c84ef00b53bc9e4daa0f787"
+    },
+    {
+      "path": "packages/policy/src/authorization-reservations.ts",
+      "digest": "sha256:aa793e7ce96291bb828643efda0473cb2d4e048879c8ad3c6175baf026fb4a81"
+    },
+    {
+      "path": "packages/policy/src/secrets.ts",
+      "digest": "sha256:47734d83af52434153f439f7990ba83d3b37880115eb2d5c287b360f142df885"
+    },
+    {
+      "path": "packages/policy/src/admission.ts",
+      "digest": "sha256:8fc79a567ca688d3211ca3b2c6a4adc23acfe2ac38d3d01f0d89b1e67a8e687c"
+    },
+    {
+      "path": "packages/evidence/src/verifiers.ts",
+      "digest": "sha256:42f8f530f6349ff311dfc31f05617095e08bbed4bd89be8234162817701ed6cf"
+    },
+    {
+      "path": "packages/executor-in-process/src/index.ts",
+      "digest": "sha256:00460ff84d261c0ac7adb1012709580d2eb89c9ec8ffc2cf5a531ab05388995c"
+    },
+    {
+      "path": "packages/ai-sdk/src/index.ts",
+      "digest": "sha256:0656e35ff4d1eaca3a700a2ebac6115b3fa3ef13d2c97ce794f98f15666464bb"
+    },
+    {
+      "path": "packages/agent/src/definitions.ts",
+      "digest": "sha256:7fd176d6d328aa64bb634ecdd1fccc39bb96c08930eb2bf0cc9aa134ac8ebdea"
+    },
+    {
+      "path": "packages/agent/src/readiness.ts",
+      "digest": "sha256:6f330b6d1fc24762dc360b216d4547124322b6387294035c57fb022003f7f9fb"
+    },
+    {
+      "path": "packages/runtime/src/runtime.ts",
+      "digest": "sha256:1f47d7c5b5e46e005dd5029d159f0fa418e22a3542677162a7287fc7984ae914"
+    },
+    {
+      "path": "packages/mcp/src/contracts.ts",
+      "digest": "sha256:469dac5528dd10e4ffbad903efd75f65674427af3cd62a6ac1690bbd9709f2bf"
+    }
+  ]
+}

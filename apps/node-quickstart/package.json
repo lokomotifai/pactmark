@@ -1,0 +1,33 @@
+{
+  "name": "pactmark-node-quickstart",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "build": "tsdown",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "container:build": "docker build -f apps/node-quickstart/Dockerfile -t pactmark-node-quickstart:local .",
+    "container:run": "docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m -p 3000:3000 pactmark-node-quickstart:local"
+  },
+  "dependencies": {
+    "@pactmark/agent": "workspace:*",
+    "@pactmark/core": "workspace:*",
+    "@pactmark/http": "workspace:*",
+    "@pactmark/node": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "tsdown": "0.22.14",
+    "tsx": "4.23.5",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  },
+  "engines": {
+    "node": "^22.14.0 || ^24.0.0"
+  }
+}

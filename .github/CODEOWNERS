@@ -1,0 +1,9 @@
+# Draft CODEOWNERS file.
+#
+# No public remote, repository owner handle, team, branch protection, or
+# CODEOWNERS enforcement has been verified. Adding a fabricated account would
+# create a false review claim, so this file intentionally has no active rule.
+# Activate repository-wide and security-critical path rules only after the
+# canonical owner/team handles are validated on the real remote, then inspect
+# required-review enforcement. Until then GOVERNANCE.md review requirements
+# remain mandatory but are procedural rather than platform-enforced.

@@ -1,0 +1,13 @@
+.git
+.github
+.artifacts
+.pnpm-store
+**/node_modules
+**/dist
+**/coverage
+**/.turbo
+briefs
+research
+.env
+.env.*
+!**/.env.example

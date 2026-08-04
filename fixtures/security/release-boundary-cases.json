@@ -1,0 +1,204 @@
+[
+  {
+    "id": "loopback-public-registry",
+    "kind": "loopback_registry",
+    "value": "https://registry.npmjs.org/",
+    "error": "KAF_RELEASE_LOOPBACK_REGISTRY_REQUIRED"
+  },
+  {
+    "id": "loopback-lookalike",
+    "kind": "loopback_registry",
+    "value": "http://127.0.0.1.evil.test/",
+    "error": "KAF_RELEASE_LOOPBACK_REGISTRY_REQUIRED"
+  },
+  {
+    "id": "loopback-localhost-name",
+    "kind": "loopback_registry",
+    "value": "http://localhost:4873/",
+    "error": "KAF_RELEASE_LOOPBACK_REGISTRY_REQUIRED"
+  },
+  {
+    "id": "loopback-https",
+    "kind": "loopback_registry",
+    "value": "https://127.0.0.1:4873/",
+    "error": "KAF_RELEASE_LOOPBACK_REGISTRY_REQUIRED"
+  },
+  {
+    "id": "public-lookalike",
+    "kind": "public_registry",
+    "value": "https://registry.npmjs.org.evil.test/",
+    "error": "KAF_RELEASE_PUBLIC_REGISTRY_INVALID"
+  },
+  {
+    "id": "public-http",
+    "kind": "public_registry",
+    "value": "http://registry.npmjs.org/",
+    "error": "KAF_RELEASE_PUBLIC_REGISTRY_INVALID"
+  },
+  {
+    "id": "abandoned-manifest",
+    "kind": "manifest",
+    "field": "status",
+    "value": "abandoned",
+    "error": "KAF_RELEASE_MANIFEST_ABANDONED"
+  },
+  {
+    "id": "unattested-public",
+    "kind": "manifest",
+    "field": "status",
+    "value": "draft",
+    "error": "KAF_RELEASE_ATTESTED_MANIFEST_REQUIRED"
+  },
+  {
+    "id": "local-profile-public",
+    "kind": "manifest",
+    "field": "metadataProfile",
+    "value": "local",
+    "error": "KAF_RELEASE_METADATA_PROFILE_INVALID"
+  },
+  {
+    "id": "dirty-source",
+    "kind": "source",
+    "field": "clean",
+    "value": false,
+    "error": "KAF_RELEASE_DIRTY_SOURCE"
+  },
+  {
+    "id": "absent-authorization",
+    "kind": "authorization_absent",
+    "error": "KAF_RELEASE_EXTERNAL_AUTHORIZATION_REQUIRED"
+  },
+  {
+    "id": "wrong-runner",
+    "kind": "authorization",
+    "field": "runner",
+    "value": "self-hosted",
+    "error": "KAF_RELEASE_RUNNER_INVALID"
+  },
+  {
+    "id": "node-floor",
+    "kind": "authorization",
+    "field": "nodeVersion",
+    "value": "22.13.0",
+    "error": "KAF_RELEASE_NODE_FLOOR_UNMET"
+  },
+  {
+    "id": "npm-floor",
+    "kind": "authorization",
+    "field": "npmVersion",
+    "value": "10.0.0",
+    "error": "KAF_RELEASE_NPM_FLOOR_UNMET"
+  },
+  {
+    "id": "bootstrap-non-tty",
+    "kind": "authorization",
+    "field": "authMode",
+    "value": "interactive-bootstrap",
+    "secondaryField": "tty",
+    "secondaryValue": false,
+    "error": "KAF_RELEASE_INTERACTIVE_TTY_REQUIRED"
+  },
+  {
+    "id": "oidc-tty",
+    "kind": "authorization",
+    "field": "tty",
+    "value": true,
+    "error": "KAF_RELEASE_OIDC_NONINTERACTIVE_REQUIRED"
+  },
+  {
+    "id": "wrong-repository-context",
+    "kind": "authorization",
+    "field": "repository",
+    "value": "evil/pactmark",
+    "error": "KAF_RELEASE_ATTESTATION_CONTEXT_MISMATCH"
+  },
+  {
+    "id": "wrong-workflow-context",
+    "kind": "authorization",
+    "field": "workflow",
+    "value": ".github/workflows/evil.yml",
+    "error": "KAF_RELEASE_ATTESTATION_CONTEXT_MISMATCH"
+  },
+  {
+    "id": "wrong-ref-context",
+    "kind": "authorization",
+    "field": "ref",
+    "value": "refs/heads/main",
+    "error": "KAF_RELEASE_ATTESTATION_CONTEXT_MISMATCH"
+  },
+  {
+    "id": "wrong-environment-context",
+    "kind": "authorization",
+    "field": "environment",
+    "value": "development",
+    "error": "KAF_RELEASE_ATTESTATION_CONTEXT_MISMATCH"
+  },
+  {
+    "id": "wrong-tarball-digest",
+    "kind": "entry",
+    "field": "tarballSha256",
+    "value": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "error": "KAF_RELEASE_TARBALL_DIGEST_MISMATCH"
+  },
+  {
+    "id": "wrong-version",
+    "kind": "entry",
+    "field": "version",
+    "value": "0.1.1",
+    "error": "KAF_RELEASE_VERSION_MISMATCH"
+  },
+  {
+    "id": "wrong-repository-url",
+    "kind": "packed",
+    "field": "repository.url",
+    "value": "git+https://github.com/evil/pactmark.git",
+    "error": "KAF_RELEASE_PACKED_REPOSITORY_INVALID"
+  },
+  {
+    "id": "wrong-repository-directory",
+    "kind": "packed",
+    "field": "repository.directory",
+    "value": "packages/other",
+    "error": "KAF_RELEASE_PACKED_DIRECTORY_MISMATCH"
+  },
+  {
+    "id": "wrong-packed-registry",
+    "kind": "packed",
+    "field": "publishConfig.registry",
+    "value": "https://registry.example.test/",
+    "error": "KAF_RELEASE_PACKED_REGISTRY_INVALID"
+  },
+  {
+    "id": "restricted-scoped-access",
+    "kind": "packed",
+    "field": "publishConfig.access",
+    "value": "restricted",
+    "error": "KAF_RELEASE_SCOPED_ACCESS_INVALID"
+  },
+  {
+    "id": "missing-scoped-access",
+    "kind": "packed_delete",
+    "field": "publishConfig.access",
+    "error": "KAF_RELEASE_SCOPED_ACCESS_INVALID"
+  },
+  {
+    "id": "wrong-packed-name",
+    "kind": "packed",
+    "field": "name",
+    "value": "@pactmark/lookalike",
+    "error": "KAF_RELEASE_PACKED_IDENTITY_MISMATCH"
+  },
+  {
+    "id": "wrong-packed-version",
+    "kind": "packed",
+    "field": "version",
+    "value": "0.1.1",
+    "error": "KAF_RELEASE_PACKED_IDENTITY_MISMATCH"
+  },
+  {
+    "id": "nonexact-internal-dependency",
+    "kind": "entry_dependency",
+    "value": "workspace:*",
+    "error": "KAF_RELEASE_INTERNAL_DEPENDENCY_NOT_EXACT"
+  }
+]

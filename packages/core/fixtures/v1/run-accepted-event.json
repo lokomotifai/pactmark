@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1",
+  "eventId": "event-fixture-1",
+  "runId": "run-fixture-1",
+  "sequence": 1,
+  "occurredAt": "2026-08-03T12:00:00.000Z",
+  "correlationId": "correlation-fixture-1",
+  "tenantId": "tenant-1",
+  "dataClass": "public",
+  "executionDefinition": {
+    "kind": "agent",
+    "id": "fixture-agent",
+    "version": "1.0.0",
+    "agentDefinitionDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "executionDefinitionDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "eventType": "RunAccepted",
+  "payload": {
+    "workOrderId": "wo-fixture-1",
+    "workOrderBindingDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "requiredVerifierIds": []
+  }
+}

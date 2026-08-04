@@ -1,0 +1,5 @@
+{
+  "workspace/README.md": "Fixture project\n",
+  "workspace/config.txt": "token=fixture-secret\nmode=test\n",
+  "workspace/link": { "symlink": "/etc/passwd" }
+}

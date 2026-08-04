@@ -1,0 +1,14 @@
+node_modules
+.pnpm-store
+dist
+coverage
+.artifacts
+**/.next
+**/.wrangler
+pnpm-lock.yaml
+PLAN.md
+briefs
+research
+**/etc/*.api.md
+**/temp/*.api.md
+apps/cloudflare-worker/worker-configuration.d.ts

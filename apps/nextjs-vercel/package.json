@@ -1,0 +1,40 @@
+{
+  "name": "nextjs-vercel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "doctor:preview": "node --import tsx tooling/doctor.ts preview",
+    "doctor:production": "node --import tsx tooling/doctor.ts production",
+    "migrate:postgres": "node --import tsx tooling/migrate.ts",
+    "deploy:preview": "pnpm doctor:preview && npx --yes vercel@58.4.4 deploy",
+    "deploy:production": "pnpm doctor:production && npx --yes vercel@58.4.4 deploy --prod"
+  },
+  "dependencies": {
+    "@pactmark/agent": "workspace:*",
+    "@pactmark/core": "workspace:*",
+    "@pactmark/executor-in-process": "workspace:*",
+    "@pactmark/vercel": "workspace:*",
+    "next": "16.2.12",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "tsx": "4.23.5",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  },
+  "engines": {
+    "node": "^22.14.0 || ^24.0.0"
+  }
+}

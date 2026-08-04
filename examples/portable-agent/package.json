@@ -1,0 +1,26 @@
+{
+  "name": "pactmark-example-portable-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "node --import tsx src/run.ts",
+    "lint": "eslint . --config ../eslint.config.mjs --max-warnings 0",
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pactmark/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.8.0",
+    "tsx": "4.23.5",
+    "tsdown": "0.22.14",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.65.0",
+    "vitest": "4.1.10"
+  }
+}

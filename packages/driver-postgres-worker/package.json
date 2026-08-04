@@ -1,0 +1,53 @@
+{
+  "name": "@pactmark/driver-postgres-worker",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pactmark/pactmark.git",
+    "directory": "packages/driver-postgres-worker"
+  },
+  "description": "Durable fenced PostgreSQL worker driver contracts and loop for Pactmark",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@pactmark/core": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/pg": "8.20.0",
+    "pg": "8.22.0",
+    "tsdown": "0.22.14",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10"
+  },
+  "engines": {
+    "node": "^22.14.0 || ^24.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["tooling/**/*.mts", "tests/**/*.test.ts", "*.config.{ts,mjs,cjs}"],
+  "project": ["tooling/**/*.{ts,mts}", "tests/**/*.ts", "*.config.{ts,mjs,cjs}"],
+  "ignore": ["packages/cli/tests/fixtures/*.mjs"],
+  "ignoreDependencies": [
+    "@eslint/js",
+    "@arethetypeswrong/cli",
+    "@microsoft/api-extractor",
+    "@yarnpkg/cli-dist",
+    "bun",
+    "fast-check",
+    "pnpm",
+    "publint",
+    "tsdown",
+    "typescript-eslint",
+    "zod"
+  ]
+}

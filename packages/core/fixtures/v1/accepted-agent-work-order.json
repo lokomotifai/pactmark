@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1",
+  "id": "wo-fixture-1",
+  "createdAt": "2026-08-03T12:00:00.000Z",
+  "goal": "Produce a fixture-backed brief.",
+  "input": { "topic": "pactmark" },
+  "context": {
+    "roleFamily": "research",
+    "workflowId": "brief",
+    "riskClass": "low"
+  },
+  "workMode": "augment",
+  "autonomyMode": "delegate_review",
+  "decisionOwner": {
+    "mode": "principal",
+    "principal": { "type": "user", "id": "user-1" }
+  },
+  "purpose": { "code": "service_delivery", "registryVersion": "general@1" },
+  "dataClass": "public",
+  "retention": { "mode": "session" },
+  "principal": { "type": "user", "id": "user-1" },
+  "tenant": { "id": "tenant-1" },
+  "requestedCapabilities": ["knowledge:read"],
+  "resourceScopeCeiling": [],
+  "budget": {
+    "maxTurns": 3,
+    "maxModelCalls": 3,
+    "maxToolCalls": 3,
+    "maxActiveExecutionMs": 30000
+  },
+  "workOrderBindingDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "kind": "agent",
+  "executionDefinition": {
+    "kind": "agent",
+    "id": "fixture-agent",
+    "version": "1.0.0",
+    "agentDefinitionDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "executionDefinitionDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "modelSecurityProfileDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "modelResourceProfileDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "modelAdapterRegistrationDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}

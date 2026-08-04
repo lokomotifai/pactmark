@@ -1,0 +1,10 @@
+[
+  {
+    "id": "fixture-release-note",
+    "title": "Fixture release note",
+    "url": "https://example.invalid/releases/fixture",
+    "publishedAt": "2025-12-15T00:00:00.000Z",
+    "observedAt": "2026-01-01T00:00:00.000Z",
+    "body": "The fixture package supports deterministic offline verification."
+  }
+]

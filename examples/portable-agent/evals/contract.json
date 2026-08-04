@@ -1,0 +1,5 @@
+{
+  "input": { "sku": "P-100" },
+  "expectedSummary": "Portable notebook is available.",
+  "expectedError": "KAF_EXAMPLE_SKU_NOT_FOUND"
+}
