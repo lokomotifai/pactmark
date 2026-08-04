@@ -1,8 +1,10 @@
 # Pactmark naming readiness
 
-Status: `KAF_NAMING_FREEZE_APPROVED`; GitHub authority verified; npm ownership unverified  
-Checked: 2026-08-03 public search; 2026-08-04 authenticated GitHub inspection  
-Check type: public registry search plus authenticated repository/organization inspection
+Status: `KAF_NAMING_FREEZE_APPROVED`; GitHub and npm organization authority verified
+
+Checked: 2026-08-03 public search; 2026-08-04 authenticated GitHub and npm inspection
+
+Check type: public registry search plus authenticated repository/organization inspection and authorized organization creation
 
 The user selected **Pactmark** as the framework name. Local implementation therefore uses these provisional technical names:
 
@@ -53,7 +55,9 @@ Candidate scoped packages checked:
 @pactmark/cli
 ```
 
-No package collision was observed. npm organization/user pages did not provide authenticated ownership evidence, so the `@pactmark` scope may not be treated as available, reserved, or controlled by this project. The names remain exposed to a race until an authorized owner verifies or creates them.
+No package collision was observed in the time-bound public search. On 2026-08-04, authenticated npm browser inspection verified owner `fatihguner` with Komünite-branded package metadata, publishing-capable 2FA, and one registered security key. The authorized workflow created the free public-package organization [`pactmark`](https://www.npmjs.com/org/pactmark), enabled organization-wide 2FA enforcement, and verified one owner/member with 2FA, zero members without 2FA, a default `developers` team, zero packages, and a `$0` monthly bill.
+
+The organization establishes control of the `@pactmark` scope. It does not reserve the unscoped `create-pactmark` initializer or publish any scoped package. No token, trusted publisher, package transfer, paid plan, or registry release was created.
 
 ## GitHub evidence
 
@@ -84,16 +88,20 @@ carry exact release-profile metadata with
 
 - Public npm package collision at check time: not observed.
 - Public GitHub exact-name collision at check time: not observed.
-- npm scope ownership/publish authority: unverified.
+- npm organization and `@pactmark` scope ownership: verified 2026-08-04.
+- npm package publication authority: not exercised; zero packages and no trusted publisher exist.
+- Unscoped `create-pactmark` ownership: unreserved and subject to a time-sensitive collision check before bootstrap.
 - Local GitHub owner/repository naming decision: approved as `pactmark/pactmark`.
 - GitHub owner/repository authority and existence: verified 2026-08-04.
 - Trademark/legal clearance: not performed.
 - External mutation performed: public repository and `main` branch created; 733
-  source files pushed; Codex App installed and restricted to that repository; no
-  tag, GitHub Release, npm publication, or deployment.
+  source files pushed; Codex App installed and restricted to that repository; npm
+  organization `pactmark` created on the free plan with enforced 2FA; no tag,
+  GitHub Release, npm package publication, trusted publisher, or deployment.
 
-GitHub release-profile identity is now frozen. Before package publication, an
-authenticated npm owner must still verify or create the npm scope and authorize the
-corresponding registry writes. Public searches are time-sensitive and must be
-repeated immediately before any authorized release operation. The approved trademark
-posture remains the cautious limitation in `TRADEMARKS.md`, not a clearance finding.
+GitHub release-profile identity and npm organization ownership are now established.
+Before package publication, the authenticated npm owner must separately authorize the
+package bootstrap and trusted-publisher writes. The unscoped initializer search and
+all other public searches are time-sensitive and must be repeated immediately before
+any authorized release operation. The approved trademark posture remains the cautious
+limitation in `TRADEMARKS.md`, not a clearance finding.
