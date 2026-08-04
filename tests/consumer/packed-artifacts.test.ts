@@ -35,6 +35,7 @@ const lockTemplatePath = join(
   "pnpm-lock.template.yaml",
 );
 const tarballRootPlaceholder = "__PACTMARK_TARBALL_ROOT__";
+const packedArtifactTimeout = process.platform === "win32" ? 300_000 : 120_000;
 
 function materializeLockTemplate(template: string): string {
   let lockfile = template.replaceAll(tarballRootPlaceholder, join(root, "tarballs"));
@@ -54,7 +55,7 @@ beforeAll(async () => {
     npmCacheDirectory: join(root, "npm-cache"),
     verifyNpmDeterminism: true,
   });
-}, 120_000);
+}, packedArtifactTimeout);
 
 afterAll(async () => {
   if (root.length > 0) await rm(root, { recursive: true, force: true });
@@ -239,34 +240,38 @@ describe("packed artifact acceptance", () => {
     expect(second).toEqual(first);
   });
 
-  it("installs absolute tarballs into independent NodeNext and Bundler consumers", async () => {
-    for (const resolution of ["NodeNext", "Bundler"] as const) {
-      const consumer = await makeConsumer(`consumer-${resolution.toLowerCase()}`, resolution);
-      assertNoWorkspaceResolution(consumer);
-      const installedCore = join(consumer, "node_modules", "@pactmark", "core");
-      expect(lstatSync(installedCore).isSymbolicLink()).toBe(true);
-      expect(relative(join(repositoryRoot, "packages"), realpathSync(installedCore))).toMatch(
-        /^\.\./u,
-      );
-      execFileSync(
-        process.execPath,
-        [join(consumer, "node_modules", "typescript", "bin", "tsc"), "-p", "tsconfig.json"],
-        {
-          cwd: consumer,
-          encoding: "utf8",
-          stdio: "pipe",
-        },
-      );
-      if (resolution === "NodeNext") {
-        const output = execFileSync(process.execPath, [join(consumer, "dist", "index.js")], {
-          cwd: consumer,
-          encoding: "utf8",
-        });
-        expect(output).toBe("PACKED_EXPORTS_OK\n");
+  it(
+    "installs absolute tarballs into independent NodeNext and Bundler consumers",
+    async () => {
+      for (const resolution of ["NodeNext", "Bundler"] as const) {
+        const consumer = await makeConsumer(`consumer-${resolution.toLowerCase()}`, resolution);
+        assertNoWorkspaceResolution(consumer);
+        const installedCore = join(consumer, "node_modules", "@pactmark", "core");
+        expect(lstatSync(installedCore).isSymbolicLink()).toBe(true);
+        expect(relative(join(repositoryRoot, "packages"), realpathSync(installedCore))).toMatch(
+          /^\.\./u,
+        );
+        execFileSync(
+          process.execPath,
+          [join(consumer, "node_modules", "typescript", "bin", "tsc"), "-p", "tsconfig.json"],
+          {
+            cwd: consumer,
+            encoding: "utf8",
+            stdio: "pipe",
+          },
+        );
+        if (resolution === "NodeNext") {
+          const output = execFileSync(process.execPath, [join(consumer, "dist", "index.js")], {
+            cwd: consumer,
+            encoding: "utf8",
+          });
+          expect(output).toBe("PACKED_EXPORTS_OK\n");
+        }
+        const lockfile = readFileSync(join(consumer, "pnpm-lock.yaml"), "utf8");
+        expect(lockfile).toContain(".tgz");
+        expect(lockfile).not.toContain("workspace:");
       }
-      const lockfile = readFileSync(join(consumer, "pnpm-lock.yaml"), "utf8");
-      expect(lockfile).toContain(".tgz");
-      expect(lockfile).not.toContain("workspace:");
-    }
-  }, 120_000);
+    },
+    packedArtifactTimeout,
+  );
 });

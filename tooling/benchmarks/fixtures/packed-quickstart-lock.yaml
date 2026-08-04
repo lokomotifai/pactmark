@@ -1,0 +1,108 @@
+lockfileVersion: "9.0"
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+overrides:
+  "@pactmark/agent": file:tarballs/pactmark-agent-0.1.0.tgz
+  "@pactmark/core": file:tarballs/pactmark-core-0.1.0.tgz
+  "@pactmark/evidence": file:tarballs/pactmark-evidence-0.1.0.tgz
+  "@pactmark/executor-in-process": file:tarballs/pactmark-executor-in-process-0.1.0.tgz
+  "@pactmark/policy": file:tarballs/pactmark-policy-0.1.0.tgz
+  "@pactmark/runtime": file:tarballs/pactmark-runtime-0.1.0.tgz
+  "@pactmark/store-memory": file:tarballs/pactmark-store-memory-0.1.0.tgz
+
+importers:
+  .:
+    dependencies:
+      "@pactmark/agent":
+        specifier: file:tarballs/pactmark-agent-0.1.0.tgz
+        version: file:tarballs/pactmark-agent-0.1.0.tgz
+      "@pactmark/core":
+        specifier: file:tarballs/pactmark-core-0.1.0.tgz
+        version: file:tarballs/pactmark-core-0.1.0.tgz
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
+packages:
+  "@pactmark/agent@file:tarballs/pactmark-agent-0.1.0.tgz":
+    resolution:
+      integrity: __PACTMARK_AGENT_INTEGRITY__
+      tarball: file:tarballs/pactmark-agent-0.1.0.tgz
+    version: 0.1.0
+    engines: { node: ^22.14.0 || ^24.0.0 }
+
+  "@pactmark/core@file:tarballs/pactmark-core-0.1.0.tgz":
+    resolution:
+      integrity: __PACTMARK_CORE_INTEGRITY__
+      tarball: file:tarballs/pactmark-core-0.1.0.tgz
+    version: 0.1.0
+    engines: { node: ^22.14.0 || ^24.0.0 }
+
+  "@pactmark/evidence@file:tarballs/pactmark-evidence-0.1.0.tgz":
+    resolution:
+      integrity: __PACTMARK_EVIDENCE_INTEGRITY__
+      tarball: file:tarballs/pactmark-evidence-0.1.0.tgz
+    version: 0.1.0
+    engines: { node: ^22.14.0 || ^24.0.0 }
+
+  "@pactmark/executor-in-process@file:tarballs/pactmark-executor-in-process-0.1.0.tgz":
+    resolution:
+      integrity: __PACTMARK_EXECUTOR_IN_PROCESS_INTEGRITY__
+      tarball: file:tarballs/pactmark-executor-in-process-0.1.0.tgz
+    version: 0.1.0
+    engines: { node: ^22.14.0 || ^24.0.0 }
+
+  "@pactmark/runtime@file:tarballs/pactmark-runtime-0.1.0.tgz":
+    resolution:
+      integrity: __PACTMARK_RUNTIME_INTEGRITY__
+      tarball: file:tarballs/pactmark-runtime-0.1.0.tgz
+    version: 0.1.0
+    engines: { node: ^22.14.0 || ^24.0.0 }
+
+  "@pactmark/store-memory@file:tarballs/pactmark-store-memory-0.1.0.tgz":
+    resolution:
+      integrity: __PACTMARK_STORE_MEMORY_INTEGRITY__
+      tarball: file:tarballs/pactmark-store-memory-0.1.0.tgz
+    version: 0.1.0
+    engines: { node: ^22.14.0 || ^24.0.0 }
+
+  zod@4.4.3:
+    resolution:
+      integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==
+
+snapshots:
+  "@pactmark/agent@file:tarballs/pactmark-agent-0.1.0.tgz":
+    dependencies:
+      "@pactmark/core": file:tarballs/pactmark-core-0.1.0.tgz
+      "@pactmark/evidence": file:tarballs/pactmark-evidence-0.1.0.tgz
+      "@pactmark/executor-in-process": file:tarballs/pactmark-executor-in-process-0.1.0.tgz
+      "@pactmark/runtime": file:tarballs/pactmark-runtime-0.1.0.tgz
+      "@pactmark/store-memory": file:tarballs/pactmark-store-memory-0.1.0.tgz
+      zod: 4.4.3
+
+  "@pactmark/core@file:tarballs/pactmark-core-0.1.0.tgz":
+    dependencies:
+      zod: 4.4.3
+
+  "@pactmark/evidence@file:tarballs/pactmark-evidence-0.1.0.tgz":
+    dependencies:
+      "@pactmark/core": file:tarballs/pactmark-core-0.1.0.tgz
+      zod: 4.4.3
+
+  "@pactmark/executor-in-process@file:tarballs/pactmark-executor-in-process-0.1.0.tgz":
+    dependencies:
+      "@pactmark/core": file:tarballs/pactmark-core-0.1.0.tgz
+
+  "@pactmark/runtime@file:tarballs/pactmark-runtime-0.1.0.tgz":
+    dependencies:
+      "@pactmark/core": file:tarballs/pactmark-core-0.1.0.tgz
+      zod: 4.4.3
+
+  "@pactmark/store-memory@file:tarballs/pactmark-store-memory-0.1.0.tgz":
+    dependencies:
+      "@pactmark/core": file:tarballs/pactmark-core-0.1.0.tgz
+
+  zod@4.4.3: {}
