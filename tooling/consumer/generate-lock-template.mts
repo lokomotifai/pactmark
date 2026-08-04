@@ -15,8 +15,13 @@ const outputPath = join(
   "packed-consumer",
   "pnpm-lock.template.yaml",
 );
+const pnpmCliPath = join(repositoryRoot, "node_modules", "pnpm", "bin", "pnpm.mjs");
 const pnpmStoreDirectory =
-  process.env["PACTMARK_PNPM_STORE"] ?? join(repositoryRoot, ".pnpm-store");
+  process.env["PACTMARK_PNPM_STORE"] ??
+  execFileSync(process.execPath, [pnpmCliPath, "store", "path"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
 const tarballRootPlaceholder = "__PACTMARK_TARBALL_ROOT__";
 
 rmSync(fixtureRoot, { recursive: true, force: true });
@@ -60,8 +65,9 @@ writeFileSync(
 );
 
 execFileSync(
-  join(repositoryRoot, "node_modules", ".bin", "pnpm"),
+  process.execPath,
   [
+    pnpmCliPath,
     "install",
     "--lockfile-only",
     "--offline",

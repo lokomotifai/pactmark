@@ -8,8 +8,13 @@ import { performance } from "node:perf_hooks";
 
 import { repositoryRoot } from "../lib/repository.mjs";
 
+const pnpmCliPath = join(repositoryRoot, "node_modules", "pnpm", "bin", "pnpm.mjs");
 const pnpmStoreDirectory =
-  process.env["PACTMARK_PNPM_STORE"] ?? join(repositoryRoot, ".pnpm-store");
+  process.env["PACTMARK_PNPM_STORE"] ??
+  execFileSync(process.execPath, [pnpmCliPath, "store", "path"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
 
 export function nearestRankPercentile(values: readonly number[], percentile: number): number {
   if (values.length === 0 || !Number.isFinite(percentile) || percentile <= 0 || percentile > 1)
@@ -73,8 +78,9 @@ export async function runPackedQuickstartBenchmark(
         .join("\n")}\n`,
     );
     execFileSync(
-      join(repositoryRoot, "node_modules", ".bin", "pnpm"),
+      process.execPath,
       [
+        pnpmCliPath,
         "install",
         "--offline",
         "--ignore-scripts",

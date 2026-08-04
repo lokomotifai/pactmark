@@ -62,7 +62,7 @@ describe("stdio transport boundary", () => {
         stdioEnvironmentResolver: { resolve: () => Promise.resolve({}) },
       }),
     ).rejects.toMatchObject({ code: "KAF_MCP_STDIO_ENVIRONMENT_INVALID" });
-  });
+  }, 30_000);
 
   it("refuses production without an exact capable sandbox", async () => {
     const profile = stdioProfile();

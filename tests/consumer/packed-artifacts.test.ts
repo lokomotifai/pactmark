@@ -20,8 +20,13 @@ import { repositoryRoot } from "../../tooling/lib/repository.mjs";
 
 let root = "";
 let artifacts: readonly PackedArtifact[] = [];
+const pnpmCliPath = join(repositoryRoot, "node_modules", "pnpm", "bin", "pnpm.mjs");
 const pnpmStoreDirectory =
-  process.env["PACTMARK_PNPM_STORE"] ?? join(repositoryRoot, ".pnpm-store");
+  process.env["PACTMARK_PNPM_STORE"] ??
+  execFileSync(process.execPath, [pnpmCliPath, "store", "path"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
 const lockTemplatePath = join(
   repositoryRoot,
   "tests",
@@ -139,7 +144,7 @@ async function makeConsumer(
     execFileSync(
       process.execPath,
       [
-        join(repositoryRoot, "node_modules", "pnpm", "bin", "pnpm.mjs"),
+        pnpmCliPath,
         "install",
         "--offline",
         "--ignore-scripts",
@@ -156,11 +161,11 @@ async function makeConsumer(
       },
     );
   } catch (error) {
-    const stderr =
+    const output =
       typeof error === "object" && error !== null && "stderr" in error
-        ? String(error.stderr)
+        ? `${"stdout" in error ? String(error.stdout) : ""}\n${String(error.stderr)}`
         : "KAF_CONSUMER_INSTALL_STDERR_UNAVAILABLE";
-    throw new Error(`KAF_CONSUMER_INSTALL_FAILED\n${stderr}`, { cause: error });
+    throw new Error(`KAF_CONSUMER_INSTALL_FAILED\n${output}`, { cause: error });
   }
   return directory;
 }
