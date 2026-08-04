@@ -1,8 +1,10 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { canonicalJson, readNpmPackedManifest, sha256Bytes } from "./lib/release-integrity.mjs";
+import { gitFiles, gitSourceState, repositoryRoot, sha256File } from "./lib/repository.mjs";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -22,6 +24,8 @@ export interface PublicAuthorization {
   readonly npmVersion: string;
   readonly minimumNodeVersion: string;
   readonly minimumNpmVersion: string;
+  readonly bootstrapUser?: string;
+  readonly bootstrapOrganization?: string;
   readonly packageAuthorities: Readonly<
     Record<
       string,
@@ -69,8 +73,22 @@ export function npmPublishArguments(operation: PublishOperation): readonly strin
     operation.tarballPath,
     `--registry=${operation.registry}`,
     `--tag=${operation.tag}`,
+    "--ignore-scripts",
     ...(operation.access === "public" ? ["--access=public"] : []),
   ];
+}
+
+export interface PublicExecutionInput {
+  readonly manifestPath: string;
+  readonly manifestSha256: string;
+  readonly sourceManifestPath: string;
+  readonly authorizationFlag: string;
+}
+
+export interface PublicPublicationResult {
+  readonly manifestDigest: string;
+  readonly publishedPackages: number;
+  readonly publication: "executed";
 }
 
 function record(value: unknown, code: string): JsonRecord {
@@ -136,6 +154,8 @@ function publicAuthorization(
     "KAF_RELEASE_NODE_FLOOR_UNMET",
   );
   atLeast(authorization.npmVersion, authorization.minimumNpmVersion, "KAF_RELEASE_NPM_FLOOR_UNMET");
+  atLeast(authorization.nodeVersion, "22.14.0", "KAF_RELEASE_NODE_FLOOR_UNMET");
+  atLeast(authorization.npmVersion, "11.5.1", "KAF_RELEASE_NPM_FLOOR_UNMET");
   if (authorization.authMode === "interactive-bootstrap" && !authorization.tty) {
     throw new Error("KAF_RELEASE_INTERACTIVE_TTY_REQUIRED");
   }
@@ -221,8 +241,6 @@ export function preparePublishPlan(input: PreparePublishInput): PublishPlan {
         ) {
           throw new Error("KAF_RELEASE_TRUSTED_PUBLISHER_MISMATCH");
         }
-      } else if (packageAuthority.packageExists) {
-        throw new Error("KAF_RELEASE_BOOTSTRAP_PACKAGE_ALREADY_EXISTS");
       }
       const directory = text(entry.directory, "KAF_RELEASE_DIRECTORY_INVALID");
       const repository = record(packed.repository, "KAF_RELEASE_PACKED_REPOSITORY_REQUIRED");
@@ -299,6 +317,301 @@ export type RegistryInspection =
   | { readonly state: "absent" }
   | { readonly state: "present"; readonly public: boolean; readonly tarballSha256: string }
   | { readonly state: "uncertain" };
+
+type FetchImplementation = typeof fetch;
+
+function packageVersionUrl(operation: PublishOperation): URL {
+  const base = new URL(operation.registry);
+  const encodedName = encodeURIComponent(operation.packageName).replace("%40", "@");
+  return new URL(`${encodedName}/${encodeURIComponent(operation.version)}`, base);
+}
+
+async function inspectPackagePresence(
+  operation: PublishOperation,
+  fetchImplementation: FetchImplementation,
+): Promise<boolean | undefined> {
+  try {
+    const base = new URL(operation.registry);
+    const encodedName = encodeURIComponent(operation.packageName).replace("%40", "@");
+    const packageUrl = new URL(encodedName, base);
+    packageUrl.searchParams.set("pactmark_authority_check", Date.now().toString());
+    const response = await fetchImplementation(packageUrl, {
+      headers: { accept: "application/json" },
+      cache: "no-store",
+      redirect: "error",
+    });
+    if (response.status === 404) return false;
+    if (response.ok) return true;
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Inspect npm anonymously and hash the registry-served tarball, never local metadata alone. */
+export async function inspectPublicRegistry(
+  operation: PublishOperation,
+  fetchImplementation: FetchImplementation = fetch,
+): Promise<RegistryInspection> {
+  try {
+    const metadataUrl = packageVersionUrl(operation);
+    metadataUrl.searchParams.set("pactmark_check", Date.now().toString());
+    const metadataResponse = await fetchImplementation(metadataUrl, {
+      headers: { accept: "application/json" },
+      cache: "no-store",
+      redirect: "error",
+    });
+    if (metadataResponse.status === 404) return { state: "absent" };
+    if (!metadataResponse.ok) return { state: "uncertain" };
+    const metadata = record(await metadataResponse.json(), "KAF_RELEASE_REGISTRY_METADATA_INVALID");
+    if (metadata.name !== operation.packageName || metadata.version !== operation.version) {
+      return { state: "uncertain" };
+    }
+    const dist = record(metadata.dist, "KAF_RELEASE_REGISTRY_DIST_INVALID");
+    const tarballUrl = new URL(text(dist.tarball, "KAF_RELEASE_REGISTRY_TARBALL_INVALID"));
+    if (tarballUrl.protocol !== "https:" || tarballUrl.hostname !== "registry.npmjs.org") {
+      return { state: "uncertain" };
+    }
+    const tarballResponse = await fetchImplementation(tarballUrl, {
+      cache: "no-store",
+      redirect: "error",
+    });
+    if (!tarballResponse.ok) return { state: "uncertain" };
+    return {
+      state: "present",
+      public: true,
+      tarballSha256: sha256Bytes(Buffer.from(await tarballResponse.arrayBuffer())),
+    };
+  } catch {
+    return { state: "uncertain" };
+  }
+}
+
+function sourceFiles(sourceManifest: JsonRecord): readonly { path: string; digest: string }[] {
+  if (!Array.isArray(sourceManifest.files) || sourceManifest.files.length === 0) {
+    throw new Error("KAF_RELEASE_SOURCE_MANIFEST_FILES_INVALID");
+  }
+  return sourceManifest.files.map((value) => {
+    const entry = record(value, "KAF_RELEASE_SOURCE_MANIFEST_ENTRY_INVALID");
+    const path = text(entry.path, "KAF_RELEASE_SOURCE_MANIFEST_PATH_INVALID");
+    if (path.startsWith("/") || path.includes("..") || path.includes("\\")) {
+      throw new Error("KAF_RELEASE_SOURCE_MANIFEST_PATH_INVALID");
+    }
+    return {
+      path,
+      digest: text(entry.digest, "KAF_RELEASE_SOURCE_MANIFEST_DIGEST_INVALID"),
+    };
+  });
+}
+
+/** Bind an executing public release to the exact clean source recorded by the candidate. */
+export function verifyExecutingSource(manifest: unknown, sourceManifestPath: string): void {
+  const releaseManifest = record(manifest, "KAF_RELEASE_MANIFEST_INVALID");
+  const source = record(releaseManifest.source, "KAF_RELEASE_SOURCE_INVALID");
+  const sourceManifest = record(
+    JSON.parse(readFileSync(sourceManifestPath, "utf8")) as unknown,
+    "KAF_RELEASE_SOURCE_MANIFEST_INVALID",
+  );
+  if (
+    sourceManifest.profile !== "release" ||
+    sourceManifest.publication !== "not_authorized" ||
+    source.tree !== sha256Bytes(Buffer.from(canonicalJson(sourceManifest)))
+  ) {
+    throw new Error("KAF_RELEASE_SOURCE_MANIFEST_MISMATCH");
+  }
+  const state = gitSourceState(repositoryRoot);
+  if (!state.clean || state.commit !== source.commit)
+    throw new Error("KAF_RELEASE_EXECUTING_SOURCE_MISMATCH");
+  const expected = sourceFiles(sourceManifest);
+  const actualPaths = gitFiles()
+    .filter((path) => !path.startsWith("briefs/") && !path.startsWith("research/"))
+    .sort();
+  if (canonicalJson(actualPaths) !== canonicalJson(expected.map(({ path }) => path).sort())) {
+    throw new Error("KAF_RELEASE_EXECUTING_SOURCE_FILES_MISMATCH");
+  }
+  for (const entry of expected) {
+    if (sha256File(resolve(repositoryRoot, entry.path)) !== entry.digest) {
+      throw new Error("KAF_RELEASE_EXECUTING_SOURCE_DIGEST_MISMATCH");
+    }
+  }
+}
+
+function commandVersion(command: string): string {
+  const result = spawnSync(command, ["--version"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  if (result.status !== 0) throw new Error("KAF_RELEASE_TOOLCHAIN_UNAVAILABLE");
+  return result.stdout.trim();
+}
+
+function verifyInteractiveExecutionAuthorization(
+  authorization: PublicAuthorization,
+  releaseVersion: string,
+  authorizationFlag: string,
+): void {
+  if (authorization.authMode !== "interactive-bootstrap") {
+    throw new Error("KAF_RELEASE_EXECUTION_MODE_UNSUPPORTED");
+  }
+  if (authorizationFlag !== `publish-pactmark-${releaseVersion}`) {
+    throw new Error("KAF_RELEASE_AUTHORIZATION_FLAG_INVALID");
+  }
+  if (process.env["CI"] !== undefined || process.env["GITHUB_ACTIONS"] !== undefined) {
+    throw new Error("KAF_RELEASE_BOOTSTRAP_CI_FORBIDDEN");
+  }
+  if (!process.stdin.isTTY || !process.stdout.isTTY || !authorization.tty) {
+    throw new Error("KAF_RELEASE_INTERACTIVE_TTY_REQUIRED");
+  }
+  if (process.env["NODE_AUTH_TOKEN"] !== undefined || process.env["NPM_TOKEN"] !== undefined) {
+    throw new Error("KAF_RELEASE_AUTOMATION_TOKEN_FORBIDDEN");
+  }
+  if (
+    authorization.bootstrapUser === undefined ||
+    authorization.bootstrapOrganization !== "pactmark"
+  ) {
+    throw new Error("KAF_RELEASE_BOOTSTRAP_IDENTITY_REQUIRED");
+  }
+  const actualNodeVersion = process.version.replace(/^v/u, "");
+  const actualNpmVersion = commandVersion("npm");
+  if (
+    actualNodeVersion !== authorization.nodeVersion ||
+    actualNpmVersion !== authorization.npmVersion
+  ) {
+    throw new Error("KAF_RELEASE_TOOLCHAIN_CONTEXT_MISMATCH");
+  }
+  const now = Date.now();
+  for (const authority of Object.values(authorization.packageAuthorities)) {
+    const inspectedAt = new Date(authority.inspectedAt).valueOf();
+    if (!Number.isFinite(inspectedAt) || inspectedAt > now || now - inspectedAt > 15 * 60 * 1000) {
+      throw new Error("KAF_RELEASE_PACKAGE_AUTHORITY_STALE");
+    }
+  }
+}
+
+function npmCommand(
+  args: readonly string[],
+  stdio: "inherit" | ["ignore", "pipe", "pipe"],
+): ReturnType<typeof spawnSync> {
+  return spawnSync("npm", [...args], {
+    cwd: repositoryRoot,
+    env: { ...process.env, npm_config_provenance: "false" },
+    stdio,
+    encoding: stdio === "inherit" ? undefined : "utf8",
+    timeout: 15 * 60 * 1000,
+  });
+}
+
+function authenticatedNpmUser(registry: string): string | undefined {
+  const result = npmCommand(["whoami", `--registry=${registry}`], ["ignore", "pipe", "pipe"]);
+  if (result.status !== 0 || typeof result.stdout !== "string") return undefined;
+  const user = result.stdout.trim();
+  return user.length > 0 ? user : undefined;
+}
+
+function loginForBootstrap(authorization: PublicAuthorization, registry: string): void {
+  const expectedUser = authorization.bootstrapUser;
+  if (expectedUser === undefined) throw new Error("KAF_RELEASE_BOOTSTRAP_IDENTITY_REQUIRED");
+  const currentUser = authenticatedNpmUser(registry);
+  if (currentUser !== undefined && currentUser !== expectedUser) {
+    throw new Error("KAF_RELEASE_NPM_IDENTITY_MISMATCH");
+  }
+  if (currentUser === undefined) {
+    const login = npmCommand(["login", "--auth-type=web", `--registry=${registry}`], "inherit");
+    if (login.status !== 0) throw new Error("KAF_RELEASE_NPM_LOGIN_FAILED");
+  }
+  if (authenticatedNpmUser(registry) !== expectedUser) {
+    if (currentUser === undefined) logoutBootstrap(registry);
+    throw new Error("KAF_RELEASE_NPM_IDENTITY_MISMATCH");
+  }
+}
+
+function logoutBootstrap(registry: string): void {
+  const result = npmCommand(["logout", `--registry=${registry}`], "inherit");
+  if (result.status !== 0) throw new Error("KAF_RELEASE_NPM_LOGOUT_FAILED");
+}
+
+export async function executeInteractiveBootstrap(
+  plan: PublishPlan,
+  authorization: PublicAuthorization,
+  fetchImplementation: FetchImplementation = fetch,
+): Promise<void> {
+  const awaitingVisibility = new Set<string>();
+  const initial = await Promise.all(
+    plan.operations.map(async (operation) => ({
+      operation,
+      packagePresent: await inspectPackagePresence(operation, fetchImplementation),
+      inspection: await inspectPublicRegistry(operation, fetchImplementation),
+    })),
+  );
+  let missing = 0;
+  for (const { operation, packagePresent, inspection } of initial) {
+    const authority = authorization.packageAuthorities[operation.packageName];
+    if (packagePresent === undefined) throw new Error("KAF_RELEASE_REGISTRY_STATE_UNCERTAIN");
+    if (authority === undefined || packagePresent !== authority.packageExists) {
+      throw new Error("KAF_RELEASE_PACKAGE_AUTHORITY_STALE");
+    }
+    if (inspection.state === "uncertain") throw new Error("KAF_RELEASE_REGISTRY_STATE_UNCERTAIN");
+    if (inspection.state === "absent") {
+      missing += 1;
+      continue;
+    }
+    if (
+      !inspection.public ||
+      inspection.tarballSha256 !== sha256Bytes(readFileSync(operation.tarballPath))
+    ) {
+      throw new Error("KAF_RELEASE_EXISTING_BYTES_MISMATCH");
+    }
+  }
+  if (missing === 0) return;
+  const registry = plan.operations[0]?.registry ?? "https://registry.npmjs.org/";
+  loginForBootstrap(authorization, registry);
+  try {
+    await executePublishPlanAsync(plan, {
+      inspect: async (operation) => {
+        const key = `${operation.packageName}@${operation.version}`;
+        const attempts = awaitingVisibility.has(key) ? 10 : 1;
+        for (let attempt = 0; attempt < attempts; attempt += 1) {
+          const inspection = await inspectPublicRegistry(operation, fetchImplementation);
+          if (inspection.state !== "absent" || attempt === attempts - 1) return inspection;
+          await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
+        }
+        return { state: "uncertain" };
+      },
+      publish: async (operation) => {
+        const result = npmCommand(npmPublishArguments(operation), "inherit");
+        if (result.status === 0) {
+          awaitingVisibility.add(`${operation.packageName}@${operation.version}`);
+          return { state: "published" };
+        }
+        const afterFailure = await inspectPublicRegistry(operation, fetchImplementation);
+        if (
+          afterFailure.state === "present" &&
+          afterFailure.public &&
+          afterFailure.tarballSha256 === sha256Bytes(readFileSync(operation.tarballPath))
+        ) {
+          return { state: "published" };
+        }
+        return { state: "uncertain" };
+      },
+    });
+  } catch (error) {
+    try {
+      logoutBootstrap(registry);
+    } catch (logoutError) {
+      throw new AggregateError(
+        [
+          error instanceof Error ? error : new Error("KAF_RELEASE_PUBLICATION_FAILED"),
+          logoutError instanceof Error ? logoutError : new Error("KAF_RELEASE_NPM_LOGOUT_FAILED"),
+        ],
+        "KAF_RELEASE_PUBLICATION_AND_LOGOUT_FAILED",
+        { cause: logoutError },
+      );
+    }
+    throw error instanceof Error ? error : new Error("KAF_RELEASE_PUBLICATION_FAILED");
+  }
+  logoutBootstrap(registry);
+}
 
 export interface PublishExecutor {
   inspect(operation: PublishOperation): RegistryInspection;
@@ -396,7 +709,68 @@ export function runReleasePublisherDryRun(argv: readonly string[]): PublishPlan 
   });
 }
 
+export async function runReleasePublisher(
+  argv: readonly string[],
+): Promise<PublicPublicationResult> {
+  if (argv.length !== 4 || argv[0] !== "--config" || argv[2] !== "--authorize-public-release") {
+    throw new Error(
+      "Usage: release-publish.mts --config <validated-local-config.json> --authorize-public-release <flag>",
+    );
+  }
+  const configPath = argv[1];
+  const authorizationFlag = argv[3];
+  if (configPath === undefined || authorizationFlag === undefined) {
+    throw new Error("KAF_RELEASE_CONFIG_REQUIRED");
+  }
+  const parsed = record(
+    JSON.parse(readFileSync(configPath, "utf8")) as unknown,
+    "KAF_RELEASE_CONFIG_INVALID",
+  );
+  if (parsed.execute !== true || parsed.mode !== "public") {
+    throw new Error("KAF_RELEASE_PUBLIC_EXECUTION_REQUIRED");
+  }
+  const manifestPath = text(parsed.manifestPath, "KAF_RELEASE_MANIFEST_PATH_REQUIRED");
+  const expectedManifestSha256 = text(
+    parsed.manifestSha256,
+    "KAF_RELEASE_MANIFEST_DIGEST_REQUIRED",
+  );
+  const manifestBytes = readFileSync(manifestPath);
+  if (sha256Bytes(manifestBytes) !== expectedManifestSha256) {
+    throw new Error("KAF_RELEASE_MANIFEST_DIGEST_MISMATCH");
+  }
+  const manifest = record(
+    JSON.parse(manifestBytes.toString("utf8")) as unknown,
+    "KAF_RELEASE_MANIFEST_INVALID",
+  );
+  const releaseVersion = text(manifest.releaseVersion, "KAF_RELEASE_VERSION_INVALID");
+  const authorization = parsed.publicAuthorization as PublicAuthorization | undefined;
+  if (authorization === undefined) throw new Error("KAF_RELEASE_EXTERNAL_AUTHORIZATION_REQUIRED");
+  verifyInteractiveExecutionAuthorization(authorization, releaseVersion, authorizationFlag);
+  verifyExecutingSource(
+    manifest,
+    text(parsed.sourceManifestPath, "KAF_RELEASE_SOURCE_MANIFEST_REQUIRED"),
+  );
+  const plan = preparePublishPlan({
+    mode: "public",
+    registry: text(parsed.registry, "KAF_RELEASE_REGISTRY_INVALID"),
+    manifest,
+    tarballDirectory: text(parsed.tarballDirectory, "KAF_RELEASE_TARBALL_DIRECTORY_INVALID"),
+    publicAuthorization: authorization,
+  });
+  await executeInteractiveBootstrap(plan, authorization);
+  return {
+    manifestDigest: plan.manifestDigest,
+    publishedPackages: plan.operations.length,
+    publication: "executed",
+  };
+}
+
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const plan = runReleasePublisherDryRun(process.argv.slice(2));
-  process.stdout.write(`${canonicalJson({ ...plan, publication: "not_executed" })}\n`);
+  const argv = process.argv.slice(2);
+  if (argv.length === 2) {
+    const plan = runReleasePublisherDryRun(argv);
+    process.stdout.write(`${canonicalJson({ ...plan, publication: "not_executed" })}\n`);
+  } else {
+    process.stdout.write(`${canonicalJson(await runReleasePublisher(argv))}\n`);
+  }
 }

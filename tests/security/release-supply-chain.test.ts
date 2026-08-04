@@ -9,8 +9,10 @@ import casesJson from "../../fixtures/security/release-boundary-cases.json" with
 import { sha256Bytes } from "../../tooling/lib/release-integrity.mjs";
 import {
   executePublishPlan,
+  inspectPublicRegistry,
   npmPublishArguments,
   preparePublishPlan,
+  runReleasePublisher,
   type PublicAuthorization,
   type PublishOperation,
 } from "../../tooling/release-publish.mjs";
@@ -234,6 +236,7 @@ describe("guarded release publisher adversarial matrix", () => {
       plan.operations[0]!.tarballPath,
       "--registry=http://127.0.0.1:4873/",
       "--tag=candidate",
+      "--ignore-scripts",
       "--access=public",
     ]);
   });
@@ -253,8 +256,140 @@ describe("guarded release publisher adversarial matrix", () => {
       plan.operations[0]!.tarballPath,
       "--registry=https://registry.npmjs.org/",
       "--tag=latest",
+      "--ignore-scripts",
       "--access=public",
     ]);
+  });
+
+  it("permits an exact-byte interactive bootstrap resume for an already-created package", () => {
+    const state = context();
+    const authorization = {
+      ...state.authorization,
+      authMode: "interactive-bootstrap" as const,
+      tty: true,
+    };
+    const plan = preparePublishPlan({
+      mode: "public",
+      registry: "https://registry.npmjs.org/",
+      manifest: state.manifest,
+      tarballDirectory: temporary,
+      publicAuthorization: authorization,
+    });
+    expect(plan.operations).toHaveLength(1);
+  });
+
+  it("enforces the current trusted-publishing toolchain floor independently of config", () => {
+    const state = context();
+    const authorization = {
+      ...state.authorization,
+      nodeVersion: "22.13.0",
+      npmVersion: "11.5.0",
+      minimumNodeVersion: "0.0.0",
+      minimumNpmVersion: "0.0.0",
+    };
+    expect(() =>
+      preparePublishPlan({
+        mode: "public",
+        registry: "https://registry.npmjs.org/",
+        manifest: state.manifest,
+        tarballDirectory: temporary,
+        publicAuthorization: authorization,
+      }),
+    ).toThrow("KAF_RELEASE_NODE_FLOOR_UNMET");
+  });
+
+  it("inspects public registry bytes anonymously instead of trusting metadata alone", async () => {
+    const state = context();
+    const plan = preparePublishPlan({
+      mode: "public",
+      registry: "https://registry.npmjs.org/",
+      manifest: state.manifest,
+      tarballDirectory: temporary,
+      publicAuthorization: state.authorization,
+    });
+    const operation = plan.operations[0]!;
+    const tarball = readFileSync(operation.tarballPath);
+    const inspection = await inspectPublicRegistry(operation, (input) => {
+      const url =
+        input instanceof URL ? input : new URL(typeof input === "string" ? input : input.url);
+      return Promise.resolve(
+        url.pathname.endsWith(".tgz")
+          ? new Response(Uint8Array.from(tarball))
+          : Response.json({
+              name: operation.packageName,
+              version: operation.version,
+              dist: {
+                tarball: "https://registry.npmjs.org/@pactmark/core/-/core-0.1.0.tgz",
+              },
+            }),
+      );
+    });
+    expect(inspection).toEqual({
+      state: "present",
+      public: true,
+      tarballSha256: sha256Bytes(tarball),
+    });
+  });
+
+  it("refuses public execution without a real human-attended TTY", async () => {
+    const state = context();
+    const manifestPath = join(temporary, `manifest-${String(sequence)}.json`);
+    const sourceManifestPath = join(temporary, `source-${String(sequence)}.json`);
+    const configPath = join(temporary, `config-${String(sequence)}.json`);
+    const manifestBytes = Buffer.from(`${JSON.stringify(state.manifest)}\n`);
+    writeFileSync(manifestPath, manifestBytes);
+    writeFileSync(sourceManifestPath, "{}\n");
+    const authorization = {
+      ...state.authorization,
+      authMode: "interactive-bootstrap" as const,
+      tty: true,
+      bootstrapUser: "fatihguner",
+      bootstrapOrganization: "pactmark",
+      packageAuthorities: {
+        "@pactmark/core": {
+          packageExists: false,
+          scopeOwned: true,
+          inspectedAt: new Date().toISOString(),
+        },
+      },
+    };
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        execute: true,
+        mode: "public",
+        registry: "https://registry.npmjs.org/",
+        manifestPath,
+        manifestSha256: sha256Bytes(manifestBytes),
+        sourceManifestPath,
+        tarballDirectory: temporary,
+        publicAuthorization: authorization,
+      }),
+    );
+    const previousCi = process.env["CI"];
+    const previousGitHubActions = process.env["GITHUB_ACTIONS"];
+    const executionArguments = [
+      "--config",
+      configPath,
+      "--authorize-public-release",
+      "publish-pactmark-0.1.0",
+    ];
+    try {
+      process.env["CI"] = "true";
+      await expect(runReleasePublisher(executionArguments)).rejects.toThrow(
+        "KAF_RELEASE_BOOTSTRAP_CI_FORBIDDEN",
+      );
+      delete process.env["CI"];
+      delete process.env["GITHUB_ACTIONS"];
+      await expect(runReleasePublisher(executionArguments)).rejects.toThrow(
+        "KAF_RELEASE_INTERACTIVE_TTY_REQUIRED",
+      );
+    } finally {
+      if (previousCi === undefined) delete process.env["CI"];
+      else process.env["CI"] = previousCi;
+      if (previousGitHubActions === undefined) delete process.env["GITHUB_ACTIONS"];
+      else process.env["GITHUB_ACTIONS"] = previousGitHubActions;
+    }
   });
 
   it("never retries an uncertain registry write", () => {
