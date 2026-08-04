@@ -153,6 +153,8 @@ describe("OCI conformance runner", () => {
     expect(deploy?.args[0]).toMatch(/[\\/]node_modules[\\/]pnpm[\\/]bin[\\/]pnpm\.mjs$/u);
     expect(deploy?.args).toContain("deploy");
     expect(deploy?.args).toContain("--offline");
+    expect(deploy?.args).toContain("--config.inject-workspace-packages=true");
+    expect(deploy?.args).not.toContain("--legacy");
     expect(deploy?.args).not.toContain("install");
     const build = docker.requests.find((request) => request.args[0] === "build");
     expect(build?.args).toContain("--network=none");

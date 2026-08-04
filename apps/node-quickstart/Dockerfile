@@ -6,7 +6,7 @@ RUN corepack enable && corepack prepare pnpm@11.18.0 --activate
 COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter pactmark-node-quickstart build
-RUN pnpm --filter pactmark-node-quickstart deploy --legacy --prod --offline --trust-lockfile /product
+RUN pnpm --filter pactmark-node-quickstart deploy --prod --offline --trust-lockfile --config.inject-workspace-packages=true --config.dedupe-injected-deps=false /product
 
 FROM node:24.18.1-alpine AS runtime
 ENV NODE_ENV=production

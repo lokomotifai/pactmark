@@ -44,7 +44,7 @@ afterAll(async () => {
 describe("packed initializer", () => {
   it("contains only allowlisted runtime, metadata, documentation, and license files", async () => {
     const listed = await run("tar", ["-tzf", tarball]);
-    const entries = listed.stdout.trim().split("\n");
+    const entries = listed.stdout.trim().split(/\r?\n/u);
     expect(entries).toContain("package/package.json");
     expect(entries).toContain("package/README.md");
     expect(entries).toContain("package/LICENSE");
@@ -77,7 +77,7 @@ describe("packed initializer", () => {
     const bin = path.join(unpacked, "package", "dist", "bin.js");
     await chmod(bin, 0o755);
     const version = await run(process.execPath, [bin, "--version"]);
-    expect(version.stdout).toBe("0.1.0\n");
+    expect(version.stdout.trim()).toBe("0.1.0");
 
     for (const template of ["library", "node-server", "vercel-next", "cloudflare-worker"]) {
       const target = `packed-${template}`;
@@ -124,6 +124,6 @@ describe("packed initializer", () => {
       cwd: workRoot,
       env: { ...process.env, npm_config_cache: path.join(workRoot, "exec-cache") },
     });
-    expect(executed.stdout).toBe("0.1.0\n");
+    expect(executed.stdout.trim()).toBe("0.1.0");
   });
 });
