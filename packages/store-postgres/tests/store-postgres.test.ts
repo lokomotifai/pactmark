@@ -34,6 +34,8 @@ import { createPostgresStoreSuite, createPostgresStoreSuiteFromConfig } from "..
 
 const instant = "2026-08-03T10:00:00.000Z";
 const digest = (value: string) => digestBytes(new TextEncoder().encode(value));
+const normalizeLineEndings = (value: string) =>
+  value.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
 const executionDefinition = {
   kind: "agent" as const,
   id: "support-agent",
@@ -231,9 +233,8 @@ describe("migration constraints", () => {
     );
     expect(POSTGRES_EVIDENCE_RECORDS_SCHEMA_SQL.match(/BEFORE UPDATE OR DELETE/gu)).toHaveLength(3);
     expect(
-      readFileSync(
-        new URL("../migrations/008_evidence_records.sql", import.meta.url),
-        "utf8",
+      normalizeLineEndings(
+        readFileSync(new URL("../migrations/008_evidence_records.sql", import.meta.url), "utf8"),
       ).trim(),
     ).toBe(POSTGRES_EVIDENCE_RECORDS_SCHEMA_SQL.trim());
     expect(POSTGRES_MIGRATIONS.at(-3)).toMatchObject({ version: "008", reversibleSafe: false });
@@ -263,9 +264,11 @@ describe("migration constraints", () => {
       /(?:plaintext|result_json|result_value|payload_json)/iu,
     );
     expect(
-      readFileSync(
-        new URL("../migrations/009_acknowledged_effect_results.sql", import.meta.url),
-        "utf8",
+      normalizeLineEndings(
+        readFileSync(
+          new URL("../migrations/009_acknowledged_effect_results.sql", import.meta.url),
+          "utf8",
+        ),
       ).trim(),
     ).toBe(POSTGRES_ACKNOWLEDGED_EFFECT_RESULTS_SCHEMA_SQL.trim());
     expect(POSTGRES_MIGRATIONS.at(-2)).toMatchObject({ version: "009", reversibleSafe: false });
@@ -289,9 +292,11 @@ describe("migration constraints", () => {
     );
     expect(POSTGRES_PROTECTED_REFERENCE_DIGESTS_SCHEMA_SQL.match(/tenant_id,/gu)).toHaveLength(5);
     expect(
-      readFileSync(
-        new URL("../migrations/010_protected_reference_digests.sql", import.meta.url),
-        "utf8",
+      normalizeLineEndings(
+        readFileSync(
+          new URL("../migrations/010_protected_reference_digests.sql", import.meta.url),
+          "utf8",
+        ),
       ).trim(),
     ).toBe(POSTGRES_PROTECTED_REFERENCE_DIGESTS_SCHEMA_SQL.trim());
     expect(POSTGRES_MIGRATIONS.at(-1)).toMatchObject({ version: "010", reversibleSafe: false });

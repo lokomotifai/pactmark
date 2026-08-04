@@ -92,7 +92,7 @@ if (inheritedUrl !== undefined && inheritedUrl.length > 0) {
     "POSTGRES_DB=pactmark",
     "-p",
     "127.0.0.1::5432",
-    "postgres:17-alpine",
+    "postgres:17",
   ]);
   if (started.status !== 0) throw new Error("KAF_POSTGRES_SERVICE_CONTAINER_START_FAILED");
 

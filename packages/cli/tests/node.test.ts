@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { join } from "node:path";
 
 import { createNodeCliIo } from "../src/index.js";
 
@@ -7,11 +8,10 @@ describe("Node CLI environment", () => {
 
   it("resolves paths, reads UTF-8, and returns undefined without a config", async () => {
     const io = createNodeCliIo({ cwd: import.meta.dirname, configPath: "", isTty: false });
-    expect(io.resolvePath("fixture.txt")).toBe(`${import.meta.dirname}/fixture.txt`);
+    const fixturePath = join(import.meta.dirname, "fixture.txt");
+    expect(io.resolvePath("fixture.txt")).toBe(fixturePath);
     expect(io.resolvePath(import.meta.filename)).toBe(import.meta.filename);
-    await expect(io.readTextFile(`${import.meta.dirname}/fixture.txt`)).resolves.toContain(
-      "fixture",
-    );
+    await expect(io.readTextFile(fixturePath)).resolves.toContain("fixture");
     await expect(io.loadHost()).resolves.toBeUndefined();
   });
 
