@@ -36,8 +36,8 @@ jobs:
         with:
           node-version: 24.18.1
           package-manager-cache: false
-      - name: Install pinned pnpm and npm release CLI
-        run: npm install --global pnpm@11.18.0 npm@12.0.2
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.18.0
       - name: Install frozen dependency graph
         run: pnpm install --frozen-lockfile
       - name: Bootstrap digest-pinned sandbox base image

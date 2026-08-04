@@ -116,4 +116,13 @@ describe("public repository boundary", () => {
     }
     expect(mutable).toEqual([]);
   });
+
+  it("does not replace setup-node npm inside the non-publishing candidate workflow", () => {
+    const releaseWorkflow = readFileSync(
+      join(repositoryRoot, ".github", "workflows", "release.yml"),
+      "utf8",
+    );
+    expect(releaseWorkflow).toContain("npm install --global pnpm@11.18.0");
+    expect(releaseWorkflow).not.toMatch(/npm install --global[^\n]*\bnpm@/u);
+  });
 });

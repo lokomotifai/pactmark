@@ -31,7 +31,9 @@ beforeAll(async () => {
     env: { ...process.env, npm_config_cache: path.join(workRoot, "npm-cache") },
   });
   const result = JSON.parse(packed.stdout) as Array<{ filename: string }>;
-  tarball = path.join(workRoot, result[0]!.filename);
+  const packedEntry = result[0];
+  if (packedEntry === undefined) throw new Error("KAF_TEST_NPM_PACK_RESULT_INVALID");
+  tarball = path.join(workRoot, packedEntry.filename);
   unpacked = path.join(workRoot, "unpacked");
   await import("node:fs/promises").then(({ mkdir }) => mkdir(unpacked));
   await run("tar", ["-xzf", tarball, "-C", unpacked]);
