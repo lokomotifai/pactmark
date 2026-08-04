@@ -26,5 +26,9 @@ jobs:
         run: npm install --global pnpm@11.18.0
       - name: Install frozen dependency graph
         run: pnpm install --frozen-lockfile
+      - name: Bootstrap digest-pinned sandbox base image
+        run: pnpm bootstrap:sandbox-container-base
+      - name: Build workspace packages
+        run: pnpm build
       - name: Run deterministic security gate
         run: pnpm security:verify
