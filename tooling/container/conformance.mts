@@ -55,7 +55,7 @@ export class ContainerConformanceError extends Error {
 
 class ContainerCommandError extends Error {
   constructor(
-    readonly stderr: string,
+    readonly output: string,
     options: Readonly<{ cause: unknown }>,
   ) {
     super("KAF_CONTAINER_COMMAND_FAILED", { cause: options.cause });
@@ -104,7 +104,11 @@ function runCommand(request: CommandRequest): Promise<CommandResult> {
       { cwd: request.cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024 },
       (error, stdout, stderr) => {
         if (error !== null) {
-          reject(new ContainerCommandError(stderr, { cause: error }));
+          reject(
+            new ContainerCommandError([stdout, stderr].filter(Boolean).join("\n"), {
+              cause: error,
+            }),
+          );
           return;
         }
         resolve({ stdout, stderr });
@@ -124,8 +128,8 @@ function hasCanonicalRuntimeStage(sourceDockerfile: string): boolean {
   return sourceDockerfile.replaceAll("\r\n", "\n").replaceAll("\r", "\n").includes(runtimeStage);
 }
 
-function redactCommandFailureDetail(stderr: string): string | undefined {
-  const redacted = stderr
+function redactCommandFailureDetail(output: string): string | undefined {
+  const redacted = output
     .replace(/([A-Za-z][A-Za-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gu, "$1[redacted]@")
     .replace(/(?:token|password|secret|credential)\s*[=:]\s*\S+/giu, "[redacted]")
     .trim();
@@ -140,7 +144,7 @@ export const containerConformanceInternals = Object.freeze({
     let current = error;
     while (current instanceof Error) {
       if (current instanceof ContainerCommandError) {
-        return redactCommandFailureDetail(current.stderr);
+        return redactCommandFailureDetail(current.output);
       }
       current = current.cause;
     }

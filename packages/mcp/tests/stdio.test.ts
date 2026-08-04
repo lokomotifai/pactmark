@@ -1,6 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -115,11 +113,7 @@ describe("stdio transport boundary", () => {
       }),
     );
 
-    const executablePath = "/bin/echo";
-    const executableArtifactDigest = `sha256:${createHash("sha256")
-      .update(await readFile(executablePath))
-      .digest("hex")}`;
-    const verifiedProfile = stdioProfile({ executablePath, executableArtifactDigest });
+    const verifiedProfile = stdioProfile();
     const transport = await createOfficialMCPTransport(verifiedProfile, {
       runtimeProfile: "preview",
     });
@@ -129,8 +123,7 @@ describe("stdio transport boundary", () => {
     await expect(
       createOfficialMCPTransport(
         stdioProfile({
-          executablePath,
-          executableArtifactDigest: profile.executableArtifactDigest,
+          executableArtifactDigest: `sha256:${"0".repeat(64)}`,
         }),
         { runtimeProfile: "preview" },
       ),
