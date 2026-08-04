@@ -114,6 +114,18 @@ describe("OCI conformance runner", () => {
     ).toBe(false);
   });
 
+  it("redacts bounded command diagnostics without changing stable failure codes", () => {
+    expect(
+      containerConformanceInternals.redactCommandFailureDetail(
+        "ERR https://user:password@example.test token=top-secret\n",
+      ),
+    ).toBe("ERR https://[redacted]@example.test [redacted]");
+    expect(containerConformanceInternals.redactCommandFailureDetail(" ")).toBeUndefined();
+    expect(
+      containerConformanceInternals.redactCommandFailureDetail("x".repeat(5_000)),
+    ).toHaveLength(4_096);
+  });
+
   it("builds the exact Dockerfile and verifies the localhost HTTP contract", async () => {
     const docker = new DockerDouble();
     const urls: string[] = [];

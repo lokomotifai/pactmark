@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { chmod, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -12,9 +13,20 @@ let workRoot = "";
 let tarball = "";
 let unpacked = "";
 
+function npmInvocation(args: readonly string[]): readonly [string, string[]] {
+  if (process.platform !== "win32") return ["npm", [...args]];
+  const npmCli = (process.env["PATH"] ?? "")
+    .split(path.delimiter)
+    .map((directory) => path.join(directory, "node_modules", "npm", "bin", "npm-cli.js"))
+    .find((candidate) => existsSync(candidate));
+  if (npmCli === undefined) throw new Error("KAF_TEST_NPM_CLI_NOT_FOUND");
+  return [process.execPath, [npmCli, ...args]];
+}
+
 beforeAll(async () => {
   workRoot = await mkdtemp(path.join(tmpdir(), "create-pactmark-pack-"));
-  const packed = await run("npm", ["pack", "--json", "--pack-destination", workRoot], {
+  const [packCommand, packArgs] = npmInvocation(["pack", "--json", "--pack-destination", workRoot]);
+  const packed = await run(packCommand, packArgs, {
     cwd: packageRoot,
     env: { ...process.env, npm_config_cache: path.join(workRoot, "npm-cache") },
   });
@@ -99,14 +111,19 @@ describe("packed initializer", () => {
   });
 
   it("resolves the declared binary through npm exec from the absolute tarball", async () => {
-    const executed = await run(
-      "npm",
-      ["exec", "--offline", "--yes", `--package=${tarball}`, "--", "create-pactmark", "--version"],
-      {
-        cwd: workRoot,
-        env: { ...process.env, npm_config_cache: path.join(workRoot, "exec-cache") },
-      },
-    );
+    const [command, args] = npmInvocation([
+      "exec",
+      "--offline",
+      "--yes",
+      `--package=${tarball}`,
+      "--",
+      "create-pactmark",
+      "--version",
+    ]);
+    const executed = await run(command, args, {
+      cwd: workRoot,
+      env: { ...process.env, npm_config_cache: path.join(workRoot, "exec-cache") },
+    });
     expect(executed.stdout).toBe("0.1.0\n");
   });
 });

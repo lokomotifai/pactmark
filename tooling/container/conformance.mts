@@ -53,6 +53,16 @@ export class ContainerConformanceError extends Error {
   }
 }
 
+class ContainerCommandError extends Error {
+  constructor(
+    readonly stderr: string,
+    options: Readonly<{ cause: unknown }>,
+  ) {
+    super("KAF_CONTAINER_COMMAND_FAILED", { cause: options.cause });
+    this.name = "ContainerCommandError";
+  }
+}
+
 export interface ContainerConformanceResult {
   readonly schemaVersion: "1";
   readonly imageTag: string;
@@ -94,7 +104,7 @@ function runCommand(request: CommandRequest): Promise<CommandResult> {
       { cwd: request.cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024 },
       (error, stdout, stderr) => {
         if (error !== null) {
-          reject(new ContainerConformanceError("KAF_CONTAINER_COMMAND_FAILED", { cause: error }));
+          reject(new ContainerCommandError(stderr, { cause: error }));
           return;
         }
         resolve({ stdout, stderr });
@@ -114,9 +124,28 @@ function hasCanonicalRuntimeStage(sourceDockerfile: string): boolean {
   return sourceDockerfile.replaceAll("\r\n", "\n").replaceAll("\r", "\n").includes(runtimeStage);
 }
 
+function redactCommandFailureDetail(stderr: string): string | undefined {
+  const redacted = stderr
+    .replace(/([A-Za-z][A-Za-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gu, "$1[redacted]@")
+    .replace(/(?:token|password|secret|credential)\s*[=:]\s*\S+/giu, "[redacted]")
+    .trim();
+  return redacted.length === 0 ? undefined : redacted.slice(0, 4_096);
+}
+
 export const containerConformanceInternals = Object.freeze({
   hasCanonicalRuntimeStage,
+  redactCommandFailureDetail,
   runtimeStage,
+  safeCommandFailureDetail(error: unknown): string | undefined {
+    let current = error;
+    while (current instanceof Error) {
+      if (current instanceof ContainerCommandError) {
+        return redactCommandFailureDetail(current.stderr);
+      }
+      current = current.cause;
+    }
+    return undefined;
+  },
 });
 
 async function prepareOfflineBuildContext(runner: CommandRunner): Promise<OfflineBuildContext> {

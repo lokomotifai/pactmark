@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { isIP } from "node:net";
+import { isAbsolute } from "node:path";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
   MCPHttpCredentialBindingSchema,
@@ -749,7 +750,7 @@ export function evaluateMCPReadiness(
       ? [
           {
             code: "KAF_MCP_STDIO_PROFILE_PINNED",
-            passed: parsed.executablePath.startsWith("/"),
+            passed: isAbsolute(parsed.executablePath),
             remediation: "pin-stdio-executable-args-cwd-env-and-limits",
           },
           {
