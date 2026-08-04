@@ -66,9 +66,11 @@ Anonymous exact searches returned no public match at check time:
 - [repository-name search](https://api.github.com/search/repositories?q=pactmark%20in%3Aname&per_page=100): zero results.
 
 On 2026-08-04, authenticated GitHub inspection established that `fatihguner` is an
-active admin of organization `pactmark`. The authorized workflow then created the
-empty public repository [`pactmark/pactmark`](https://github.com/pactmark/pactmark)
-without README, commit, tag, release, or package publication. The repository ID is
+active admin of organization `pactmark`. The authorized workflow created the
+initially empty public repository [`pactmark/pactmark`](https://github.com/pactmark/pactmark).
+Separate source-publication authorization then pushed 733 reviewed files in root
+commit `3234ae5e0d5e7855d67aa3010cd2a12f88e86d3d` to the default `main` branch. No tag,
+release, package publication, or deployment was created. The repository ID is
 `1322668131`; its canonical HTTPS clone URL is
 `https://github.com/pactmark/pactmark.git`. The local checkout uses that exact URL as
 `origin`.
@@ -86,8 +88,9 @@ carry exact release-profile metadata with
 - Local GitHub owner/repository naming decision: approved as `pactmark/pactmark`.
 - GitHub owner/repository authority and existence: verified 2026-08-04.
 - Trademark/legal clearance: not performed.
-- External mutation performed: public empty repository created; Codex App installed
-  and restricted to that repository; no source push/release/publication.
+- External mutation performed: public repository and `main` branch created; 733
+  source files pushed; Codex App installed and restricted to that repository; no
+  tag, GitHub Release, npm publication, or deployment.
 
 GitHub release-profile identity is now frozen. Before package publication, an
 authenticated npm owner must still verify or create the npm scope and authorize the

@@ -156,8 +156,12 @@ writeFileSync(
 
 const formattedTargets = [generatedDocs, join(publicDirectory, "package-docs-index.json")];
 execFileSync(
-  join(repositoryRoot, "node_modules", ".bin", "prettier"),
-  ["--write", ...formattedTargets],
+  process.execPath,
+  [
+    join(repositoryRoot, "node_modules", "prettier", "bin", "prettier.cjs"),
+    "--write",
+    ...formattedTargets,
+  ],
   {
     cwd: repositoryRoot,
     stdio: "ignore",

@@ -137,8 +137,9 @@ async function makeConsumer(
   );
   try {
     execFileSync(
-      join(repositoryRoot, "node_modules", ".bin", "pnpm"),
+      process.execPath,
       [
+        join(repositoryRoot, "node_modules", "pnpm", "bin", "pnpm.mjs"),
         "install",
         "--offline",
         "--ignore-scripts",
@@ -242,11 +243,15 @@ describe("packed artifact acceptance", () => {
       expect(relative(join(repositoryRoot, "packages"), realpathSync(installedCore))).toMatch(
         /^\.\./u,
       );
-      execFileSync(join(consumer, "node_modules", ".bin", "tsc"), ["-p", "tsconfig.json"], {
-        cwd: consumer,
-        encoding: "utf8",
-        stdio: "pipe",
-      });
+      execFileSync(
+        process.execPath,
+        [join(consumer, "node_modules", "typescript", "bin", "tsc"), "-p", "tsconfig.json"],
+        {
+          cwd: consumer,
+          encoding: "utf8",
+          stdio: "pipe",
+        },
+      );
       if (resolution === "NodeNext") {
         const output = execFileSync(process.execPath, [join(consumer, "dist", "index.js")], {
           cwd: consumer,

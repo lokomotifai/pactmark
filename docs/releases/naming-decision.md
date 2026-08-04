@@ -53,3 +53,12 @@ current/future repositories to the single `pactmark/pactmark` repository.
 This amendment establishes repository authority and exact package repository
 metadata. It does not authorize or claim a source push, tag, release, npm ownership,
 package publication, deployment, trademark clearance, or production verification.
+
+## Source-publication amendment
+
+At `2026-08-04T08:15:17Z`, the owner explicitly authorized the first public source
+commit and `main` push. Root commit
+`3234ae5e0d5e7855d67aa3010cd2a12f88e86d3d` published the reviewed 733-file source
+set to `pactmark/pactmark`. This amendment authorizes and records that source-control
+write only; it does not authorize a tag, GitHub Release, npm scope/package write,
+deployment, trademark-clearance claim, or production-readiness claim.
