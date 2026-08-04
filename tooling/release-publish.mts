@@ -13,6 +13,7 @@ export interface PublicAuthorization {
   readonly authMode: "oidc" | "interactive-bootstrap";
   readonly repository: string;
   readonly workflow: string;
+  readonly publisherWorkflow: string;
   readonly ref: string;
   readonly environment: string;
   readonly runner: string;
@@ -214,7 +215,7 @@ export function preparePublishPlan(input: PreparePublishInput): PublishPlan {
         }
         if (
           trusted.repository !== authorization.repository ||
-          trusted.workflow !== authorization.workflow ||
+          trusted.workflow !== authorization.publisherWorkflow ||
           trusted.environment !== authorization.environment ||
           trusted.runner !== authorization.runner
         ) {

@@ -170,7 +170,7 @@ export function generateReleaseArtifacts(input: ReleaseArtifactInput): {
   const manifestPath = join(input.outputDirectory, "release-manifest.json");
   writeFileSync(manifestPath, `${canonicalJson(manifest)}\n`, { mode: 0o600 });
   const checksums = [
-    ...packages.map((entry) => `${entry.tarballSha256.slice(7)}  ${entry.tarball}`),
+    ...packages.map((entry) => `${entry.tarballSha256.slice(7)}  tarballs/${entry.tarball}`),
     `${sbomSha256.slice(7)}  ${basename(sbomPath)}`,
     `${sha256Bytes(readFileSync(manifestPath)).slice(7)}  ${basename(manifestPath)}`,
   ].sort();

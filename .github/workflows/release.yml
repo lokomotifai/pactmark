@@ -1,0 +1,91 @@
+name: Release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type freeze-candidate-0.1.0 to build and attest the candidate
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-candidate-0.1.0
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    name: Build and attest v0.1.0 candidate
+    if: >-
+      github.repository == 'pactmark/pactmark' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.confirmation == 'freeze-candidate-0.1.0'
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # actions/setup-node v7.0.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.18.1
+          package-manager-cache: false
+      - name: Install pinned pnpm and npm release CLI
+        run: npm install --global pnpm@11.18.0 npm@12.0.2
+      - name: Install frozen dependency graph
+        run: pnpm install --frozen-lockfile
+      - name: Bootstrap digest-pinned sandbox base image
+        run: pnpm bootstrap:sandbox-container-base
+      - name: Run canonical deterministic gate
+        run: pnpm verify
+      - name: Run current network freshness gates
+        run: |
+          pnpm audit:dependencies:live
+          pnpm docs:external-links:live
+      - name: Build exact release artifacts from the approved source
+        run: |
+          SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)" pnpm release:dry-run
+          pnpm release:candidate:finalize
+        env:
+          PACTMARK_RELEASE_ENVIRONMENT: release
+          PACTMARK_RELEASE_RUNNER: github-hosted
+      - name: Verify exact candidate checksums
+        working-directory: .artifacts/release-dry-run
+        run: sha256sum --check SHA256SUMS
+      - name: Generate GitHub build provenance
+        id: provenance
+        # actions/attest v4
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d
+        with:
+          subject-checksums: .artifacts/release-dry-run/SHA256SUMS
+      - name: Generate GitHub SBOM attestation
+        id: sbom
+        # actions/attest v4
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d
+        with:
+          subject-path: .artifacts/release-dry-run/tarballs/*.tgz
+          sbom-path: .artifacts/release-dry-run/pactmark-release.cdx.json
+      - name: Retain attestation bundles beside the frozen artifacts
+        run: |
+          mkdir -p .artifacts/release-dry-run/attestations
+          cp "$PROVENANCE_BUNDLE" .artifacts/release-dry-run/attestations/provenance.jsonl
+          cp "$SBOM_BUNDLE" .artifacts/release-dry-run/attestations/sbom.jsonl
+        env:
+          PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          SBOM_BUNDLE: ${{ steps.sbom.outputs.bundle-path }}
+      - name: Upload frozen candidate
+        # actions/upload-artifact v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pactmark-v0.1.0-candidate-${{ github.sha }}
+          path: .artifacts/release-dry-run
+          if-no-files-found: error
+          include-hidden-files: true
+          compression-level: 0
+          retention-days: 14

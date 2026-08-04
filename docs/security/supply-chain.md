@@ -17,3 +17,11 @@ NodeNext, Bundler, Yarn, Bun, and loopback-registry fixtures consume packed byte
 Release dry-run produces checksums, CycloneDX SBOM, manifests, and attestation input
 without signing or publishing. Provenance and public registry claims require the
 authorized GitHub release path and exact anonymous byte verification.
+
+The protected `release.yml` candidate job is manual, `main`-only, and bound to the
+reviewer-gated `release` environment. It reruns deterministic and live freshness
+gates, freezes exact tarball/SBOM/manifest checksum subjects, and uploads a candidate
+only after GitHub build-provenance and SBOM attestations succeed. It has no npm,
+deployment, tag, or GitHub Release write. Brand-new npm packages cannot use staged
+publishing or trusted publishing before they exist, so the first public release
+remains a later human-attended 2FA bootstrap after the exact-byte Vercel gate.

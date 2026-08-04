@@ -120,6 +120,13 @@
     "error": "KAF_RELEASE_ATTESTATION_CONTEXT_MISMATCH"
   },
   {
+    "id": "wrong-trusted-publisher-workflow-filename",
+    "kind": "authorization",
+    "field": "publisherWorkflow",
+    "value": ".github/workflows/release.yml",
+    "error": "KAF_RELEASE_TRUSTED_PUBLISHER_MISMATCH"
+  },
+  {
     "id": "wrong-ref-context",
     "kind": "authorization",
     "field": "ref",

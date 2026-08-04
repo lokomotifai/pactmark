@@ -10,6 +10,7 @@ import { verifyAdvisorySnapshot } from "../../tooling/advisory-snapshot.mjs";
 import { auditReleaseCommands } from "../../tooling/audit-release-commands.mjs";
 import { canonicalJson, sha256Bytes } from "../../tooling/lib/release-integrity.mjs";
 import { repositoryRoot } from "../../tooling/lib/repository.mjs";
+import { finalizeReleaseCandidate } from "../../tooling/finalize-release-candidate.mjs";
 import { generateReleaseArtifacts } from "../../tooling/release-artifacts.mjs";
 import verifyManifestJson from "../../tooling/verify-gates.json" with { type: "json" };
 import { parseVerifyGateManifest, verifyGateScripts } from "../../tooling/verify-gate-manifest.mjs";
@@ -159,6 +160,87 @@ describe("deterministic release artifacts", () => {
           resolvedExternalDependencies: {},
         }),
       ).toThrow("KAF_RELEASE_INTERNAL_DEPENDENCY_NOT_EXACT");
+    });
+  });
+
+  it("freezes exact release subjects for the protected GitHub attestation context", () => {
+    withTemporary((directory) => {
+      const artifactDirectory = join(directory, "candidate");
+      const tarballDirectory = join(artifactDirectory, "tarballs");
+      mkdirSync(tarballDirectory, { recursive: true });
+      const core = join(tarballDirectory, "pactmark-core.tgz");
+      writeFileSync(core, tarball({ name: "@pactmark/core", version: "0.1.0" }));
+      generateReleaseArtifacts({
+        outputDirectory: artifactDirectory,
+        metadataProfile: "release",
+        releaseVersion: "0.1.0",
+        source: { commit: "a".repeat(40), tree: "b".repeat(64), clean: true },
+        sourceDateEpoch: 1_775_347_200,
+        tarballs: [{ path: core, packageDirectory: "packages/core" }],
+        verificationArtifactPaths: [],
+        nodeVersion: "24.18.1",
+        pnpmVersion: "11.18.0",
+        resolvedExternalDependencies: {},
+      });
+      const result = finalizeReleaseCandidate(artifactDirectory, {
+        repository: "pactmark/pactmark",
+        workflow: ".github/workflows/release.yml",
+        ref: "refs/heads/main",
+        environment: "release",
+        runner: "github-hosted",
+        sourceCommit: "a".repeat(40),
+      });
+      expect(result).toMatchObject({ subjectCount: 3 });
+      expect(
+        JSON.parse(readFileSync(join(artifactDirectory, "release-manifest.json"), "utf8")),
+      ).toMatchObject({
+        status: "attested",
+        publication: "not_authorized",
+        attestation: {
+          repository: "pactmark/pactmark",
+          workflow: ".github/workflows/release.yml",
+          ref: "refs/heads/main",
+          environment: "release",
+          runner: "github-hosted",
+        },
+      });
+      const checksums = readFileSync(join(artifactDirectory, "SHA256SUMS"), "utf8");
+      expect(checksums).toContain("  tarballs/pactmark-core.tgz");
+      expect(checksums).toContain("  release-manifest.json");
+      expect(
+        JSON.parse(readFileSync(join(artifactDirectory, "attestation-input.json"), "utf8")),
+      ).toMatchObject({ claim: "github_artifact_attestation_pending" });
+    });
+  });
+
+  it("refuses to freeze a dirty or different source commit", () => {
+    withTemporary((directory) => {
+      const tarballDirectory = join(directory, "tarballs");
+      mkdirSync(tarballDirectory, { recursive: true });
+      const core = join(tarballDirectory, "core.tgz");
+      writeFileSync(core, tarball({ name: "@pactmark/core", version: "0.1.0" }));
+      generateReleaseArtifacts({
+        outputDirectory: directory,
+        metadataProfile: "release",
+        releaseVersion: "0.1.0",
+        source: { commit: "a".repeat(40), tree: "b".repeat(64), clean: true },
+        sourceDateEpoch: 1,
+        tarballs: [{ path: core, packageDirectory: "packages/core" }],
+        verificationArtifactPaths: [],
+        nodeVersion: "24.18.1",
+        pnpmVersion: "11.18.0",
+        resolvedExternalDependencies: {},
+      });
+      expect(() =>
+        finalizeReleaseCandidate(directory, {
+          repository: "pactmark/pactmark",
+          workflow: ".github/workflows/release.yml",
+          ref: "refs/heads/main",
+          environment: "release",
+          runner: "github-hosted",
+          sourceCommit: "c".repeat(40),
+        }),
+      ).toThrow("KAF_RELEASE_CANDIDATE_SOURCE_MISMATCH");
     });
   });
 });
