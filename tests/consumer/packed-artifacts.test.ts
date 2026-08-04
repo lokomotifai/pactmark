@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { lstatSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { mkdtemp, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -256,9 +256,15 @@ describe("packed artifact acceptance", () => {
         assertNoWorkspaceResolution(consumer);
         const installedCore = join(consumer, "node_modules", "@pactmark", "core");
         expect(lstatSync(installedCore).isSymbolicLink()).toBe(true);
-        expect(relative(join(repositoryRoot, "packages"), realpathSync(installedCore))).toMatch(
-          /^\.\./u,
+        const relativeToWorkspace = relative(
+          join(repositoryRoot, "packages"),
+          realpathSync(installedCore),
         );
+        expect(
+          isAbsolute(relativeToWorkspace) ||
+            relativeToWorkspace === ".." ||
+            relativeToWorkspace.startsWith(`..${sep}`),
+        ).toBe(true);
         execFileSync(
           process.execPath,
           [join(consumer, "node_modules", "typescript", "bin", "tsc"), "-p", "tsconfig.json"],
