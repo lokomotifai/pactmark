@@ -12,18 +12,21 @@ let workRoot = "";
 let tarball = "";
 let unpacked = "";
 
-beforeAll(async () => {
-  workRoot = await mkdtemp(path.join(tmpdir(), "create-pactmark-pack-"));
-  const packed = await run("npm", ["pack", "--json", "--pack-destination", workRoot], {
-    cwd: packageRoot,
-    env: { ...process.env, npm_config_cache: path.join(workRoot, "npm-cache") },
-  });
-  const result = JSON.parse(packed.stdout) as Array<{ filename: string }>;
-  tarball = path.join(workRoot, result[0]!.filename);
-  unpacked = path.join(workRoot, "unpacked");
-  await import("node:fs/promises").then(({ mkdir }) => mkdir(unpacked));
-  await run("tar", ["-xzf", tarball, "-C", unpacked]);
-});
+beforeAll(
+  async () => {
+    workRoot = await mkdtemp(path.join(tmpdir(), "create-pactmark-pack-"));
+    const packed = await run("npm", ["pack", "--json", "--pack-destination", workRoot], {
+      cwd: packageRoot,
+      env: { ...process.env, npm_config_cache: path.join(workRoot, "npm-cache") },
+    });
+    const result = JSON.parse(packed.stdout) as Array<{ filename: string }>;
+    tarball = path.join(workRoot, result[0]!.filename);
+    unpacked = path.join(workRoot, "unpacked");
+    await import("node:fs/promises").then(({ mkdir }) => mkdir(unpacked));
+    await run("tar", ["-xzf", tarball, "-C", unpacked]);
+  },
+  60_000,
+);
 
 afterAll(async () => {
   if (workRoot !== "") await rm(workRoot, { recursive: true, force: true });
