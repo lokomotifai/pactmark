@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  containerConformanceInternals,
   runContainerConformance,
   type CommandRequest,
   type CommandRunner,
@@ -95,6 +96,20 @@ function successfulFetch(urls: string[]): FetchLike {
 }
 
 describe("OCI conformance runner", () => {
+  it("accepts the canonical runtime stage across Git line-ending policies", () => {
+    const dockerfile = containerConformanceInternals.runtimeStage;
+
+    expect(containerConformanceInternals.hasCanonicalRuntimeStage(dockerfile)).toBe(true);
+    expect(
+      containerConformanceInternals.hasCanonicalRuntimeStage(dockerfile.replaceAll("\n", "\r\n")),
+    ).toBe(true);
+    expect(
+      containerConformanceInternals.hasCanonicalRuntimeStage(
+        dockerfile.replace("USER node", "USER root"),
+      ),
+    ).toBe(false);
+  });
+
   it("builds the exact Dockerfile and verifies the localhost HTTP contract", async () => {
     const docker = new DockerDouble();
     const urls: string[] = [];
@@ -118,7 +133,7 @@ describe("OCI conformance runner", () => {
       teardown: "container_removed",
     });
     const deploy = docker.requests[1];
-    expect(deploy?.file).toMatch(/\/node_modules\/\.bin\/pnpm$/u);
+    expect(deploy?.file).toMatch(/[\\/]node_modules[\\/]\.bin[\\/]pnpm$/u);
     expect(deploy?.args).toContain("deploy");
     expect(deploy?.args).toContain("--offline");
     expect(deploy?.args).not.toContain("install");

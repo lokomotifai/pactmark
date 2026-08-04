@@ -108,12 +108,21 @@ interface OfflineBuildContext {
   readonly dockerfile: string;
 }
 
+function hasCanonicalRuntimeStage(sourceDockerfile: string): boolean {
+  return sourceDockerfile.replaceAll("\r\n", "\n").replaceAll("\r", "\n").includes(runtimeStage);
+}
+
+export const containerConformanceInternals = Object.freeze({
+  hasCanonicalRuntimeStage,
+  runtimeStage,
+});
+
 async function prepareOfflineBuildContext(runner: CommandRunner): Promise<OfflineBuildContext> {
   const sourceDockerfile = await readFile(
     join(repositoryRoot, "apps", "node-quickstart", "Dockerfile"),
     "utf8",
   );
-  if (!sourceDockerfile.includes(runtimeStage)) {
+  if (!hasCanonicalRuntimeStage(sourceDockerfile)) {
     throw new ContainerConformanceError("KAF_CONTAINER_DOCKERFILE_RUNTIME_DRIFT");
   }
   const root = await mkdtemp(join(tmpdir(), "pactmark-container-conformance-"));
