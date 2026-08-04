@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -31,13 +31,18 @@ let zodTarballPath = "";
 beforeAll(async () => {
   root = await mkdtemp(join(tmpdir(), "pactmark-loopback-registry-"));
   const externalDirectory = join(root, "external-tarballs");
+  const externalSource = join(root, "external-zod");
   await mkdir(externalDirectory, { recursive: true });
+  cpSync(realpathSync(join(repositoryRoot, "node_modules", "zod")), externalSource, {
+    recursive: true,
+    dereference: true,
+  });
   const externalPack = JSON.parse(
     execFileSync(
       "npm",
       [
         "pack",
-        join(repositoryRoot, "node_modules", "zod"),
+        externalSource,
         "--json",
         "--ignore-scripts",
         "--pack-destination",
@@ -53,9 +58,15 @@ beforeAll(async () => {
         },
       },
     ),
-  ) as readonly { readonly filename: string }[];
+  ) as readonly {
+    readonly filename: string;
+    readonly files: readonly { readonly path: string }[];
+  }[];
   const externalFilename = externalPack[0]?.filename;
   if (externalFilename === undefined) throw new Error("KAF_TEST_EXTERNAL_PACK_MISSING");
+  if (!externalPack[0]?.files.some(({ path }) => path === "v4/core/json-schema.js")) {
+    throw new Error("KAF_TEST_EXTERNAL_PACK_INCOMPLETE");
+  }
   zodTarballPath = join(externalDirectory, externalFilename);
   artifacts = await packPublishablePackages({
     destination: join(root, "tarballs"),

@@ -648,10 +648,10 @@ packages:
       }
     engines: { node: ">= 0.4" }
 
-  hono@4.12.33:
+  hono@4.12.34:
     resolution:
       {
-        integrity: sha512-+SwvkaiJtxsiPjhy9LivY/1m7UsNqCJetM1BrZl9A5DkQhlbHQDU730mMiDPWjnoCYOM8Chf3WrCJw27kNTPFQ==,
+        integrity: sha512-GqXJqY/xJkJmuloTrnV1ZEXG3fqte+VjkUqoRNZXcrUidiUOP4fMSIHHY4tsqZBK++kVyWmt/AAfSUuy57/eSA==,
       }
     engines: { node: ">=16.9.0" }
 
@@ -1142,13 +1142,13 @@ snapshots:
     dependencies:
       json-schema: 0.4.0
 
-  "@hono/node-server@2.0.12(hono@4.12.33)":
+  "@hono/node-server@2.0.12(hono@4.12.34)":
     dependencies:
-      hono: 4.12.33
+      hono: 4.12.34
 
   "@modelcontextprotocol/sdk@1.30.0(zod@4.4.3)":
     dependencies:
-      "@hono/node-server": 2.0.12(hono@4.12.33)
+      "@hono/node-server": 2.0.12(hono@4.12.34)
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
@@ -1158,7 +1158,7 @@ snapshots:
       eventsource-parser: 3.1.0
       express: 5.2.1
       express-rate-limit: 8.6.1(express@5.2.1)
-      hono: 4.12.33
+      hono: 4.12.34
       jose: 6.2.7
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -1475,7 +1475,7 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
-  hono@4.12.33: {}
+  hono@4.12.34: {}
 
   http-errors@2.0.1:
     dependencies:

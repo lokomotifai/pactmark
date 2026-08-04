@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import process from "node:process";
 
 import {
   containerConformanceInternals,
@@ -16,7 +17,10 @@ class DockerDouble implements CommandRunner {
 
   run(request: CommandRequest): Promise<{ stdout: string; stderr: string }> {
     this.requests.push(request);
-    if (request.file.endsWith("/node_modules/.bin/pnpm")) {
+    if (
+      request.file === process.execPath &&
+      request.args[0]?.replaceAll("\\", "/").endsWith("/node_modules/pnpm/bin/pnpm.mjs") === true
+    ) {
       return Promise.resolve({ stdout: "offline deploy complete\n", stderr: "" });
     }
     const [operation, second, third] = request.args;
@@ -133,7 +137,8 @@ describe("OCI conformance runner", () => {
       teardown: "container_removed",
     });
     const deploy = docker.requests[1];
-    expect(deploy?.file).toMatch(/[\\/]node_modules[\\/]\.bin[\\/]pnpm$/u);
+    expect(deploy?.file).toBe(process.execPath);
+    expect(deploy?.args[0]).toMatch(/[\\/]node_modules[\\/]pnpm[\\/]bin[\\/]pnpm\.mjs$/u);
     expect(deploy?.args).toContain("deploy");
     expect(deploy?.args).toContain("--offline");
     expect(deploy?.args).not.toContain("install");

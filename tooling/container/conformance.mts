@@ -4,11 +4,13 @@ import { readFile, writeFile } from "node:fs/promises";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import process from "node:process";
 
 import { repositoryRoot } from "../lib/repository.mjs";
 
 export const CONTAINER_IMAGE_PREFIX = "pactmark-node-quickstart:conformance";
 export const CONTAINER_PORT = 3000;
+const pnpmCliPath = join(repositoryRoot, "node_modules", "pnpm", "bin", "pnpm.mjs");
 
 const runtimeStage = `FROM node:24.18.1-alpine AS runtime
 ENV NODE_ENV=production
@@ -135,8 +137,9 @@ async function prepareOfflineBuildContext(runner: CommandRunner): Promise<Offlin
     await writeFile(dockerfile, runtimeOnlyDockerfile, "utf8");
     try {
       await runner.run({
-        file: join(repositoryRoot, "node_modules", ".bin", "pnpm"),
+        file: process.execPath,
         args: [
+          pnpmCliPath,
           "--filter",
           "pactmark-node-quickstart",
           "deploy",
