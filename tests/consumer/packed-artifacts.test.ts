@@ -36,9 +36,13 @@ const lockTemplatePath = join(
 );
 const tarballRootPlaceholder = "__PACTMARK_TARBALL_ROOT__";
 const packedArtifactTimeout = process.platform === "win32" ? 300_000 : 120_000;
+const npmPackObservationTimeout = process.platform === "win32" ? 30_000 : 5_000;
 
 function materializeLockTemplate(template: string): string {
-  let lockfile = template.replaceAll(tarballRootPlaceholder, join(root, "tarballs"));
+  let lockfile = template.replaceAll(
+    tarballRootPlaceholder,
+    join(root, "tarballs").replaceAll("\\", "/"),
+  );
   for (const [index, artifact] of artifacts.entries()) {
     const placeholder = `__PACTMARK_TARBALL_INTEGRITY_${String(index)}__`;
     expect(lockfile).toContain(placeholder);
@@ -231,14 +235,18 @@ describe("packed artifact acceptance", () => {
     }).toThrow("KAF_PACK_UNSCOPED_ACCESS_INVALID");
   });
 
-  it("observes stable npm pack --json output for an independently selected package", () => {
-    const core = discoverPublishablePackages().find(({ name }) => name === "@pactmark/core");
-    expect(core).toBeDefined();
-    if (core === undefined) return;
-    const first = inspectNpmPack(core, { cacheDirectory: join(root, "npm-cache") });
-    const second = inspectNpmPack(core, { cacheDirectory: join(root, "npm-cache") });
-    expect(second).toEqual(first);
-  });
+  it(
+    "observes stable npm pack --json output for an independently selected package",
+    () => {
+      const core = discoverPublishablePackages().find(({ name }) => name === "@pactmark/core");
+      expect(core).toBeDefined();
+      if (core === undefined) return;
+      const first = inspectNpmPack(core, { cacheDirectory: join(root, "npm-cache") });
+      const second = inspectNpmPack(core, { cacheDirectory: join(root, "npm-cache") });
+      expect(second).toEqual(first);
+    },
+    npmPackObservationTimeout,
+  );
 
   it(
     "installs absolute tarballs into independent NodeNext and Bundler consumers",

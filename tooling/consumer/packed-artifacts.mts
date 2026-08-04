@@ -420,7 +420,7 @@ export function tarballDependencyMap(
   return Object.fromEntries(
     [...artifacts]
       .sort((left, right) => left.name.localeCompare(right.name))
-      .map((artifact) => [artifact.name, `file:${artifact.tarballPath}`]),
+      .map((artifact) => [artifact.name, `file:${artifact.tarballPath.replaceAll("\\", "/")}`]),
   );
 }
 
