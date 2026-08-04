@@ -36,6 +36,7 @@ const lockTemplatePath = join(
 );
 const tarballRootPlaceholder = "__PACTMARK_TARBALL_ROOT__";
 const packedArtifactTimeout = process.platform === "win32" ? 300_000 : 120_000;
+const packedArtifactCleanupTimeout = process.platform === "win32" ? 60_000 : 30_000;
 const npmPackObservationTimeout = process.platform === "win32" ? 30_000 : 5_000;
 
 function materializeLockTemplate(template: string): string {
@@ -63,7 +64,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (root.length > 0) await rm(root, { recursive: true, force: true });
-});
+}, packedArtifactCleanupTimeout);
 
 function packageImportSource(): string {
   return artifacts
