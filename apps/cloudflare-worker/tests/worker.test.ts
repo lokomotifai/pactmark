@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import worker, { CLOUDFLARE_COMPATIBILITY_DATE, cloudflareRuntime } from "../src/worker.js";
+import worker, { CLOUDFLARE_COMPATIBILITY_DATE, getCloudflareRuntime } from "../src/worker.js";
 
 const context = {
   waitUntil: (promise: Promise<unknown>) => {
@@ -47,7 +47,7 @@ describe("Cloudflare Module Worker", () => {
       context,
     );
     expect(readiness.status).toBe(503);
-    expect(cloudflareRuntime.getCapabilities()).toMatchObject({
+    expect(getCloudflareRuntime().getCapabilities()).toMatchObject({
       executionProfile: "ephemeral",
       durableStorage: false,
       backgroundWakeup: false,
