@@ -294,7 +294,7 @@ function modelSource(model: ModelName): TemplateFile {
   const switchText =
     model === "ai-sdk"
       ? "Set PACTMARK_MODEL_PROFILE=ai-sdk after configuring a sealed @pactmark/ai-sdk provider registration."
-      : "Install @pactmark/ai-sdk@0.1.0 when a reviewed remote provider is needed.";
+      : "Install @pactmark/ai-sdk@0.1.1 when a reviewed remote provider is needed.";
   return {
     path: "src/model.ts",
     content: `import {
