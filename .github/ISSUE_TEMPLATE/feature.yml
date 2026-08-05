@@ -1,0 +1,56 @@
+name: Feature or contract proposal
+description: Propose a focused capability or material public decision.
+title: "[Proposal]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Who encounters this problem, and what observable outcome is blocked? Avoid starting with an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Proposed outcome and non-goals
+      description: State the behavior that should become possible and what remains out of scope.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Authority, security, privacy, and evidence impact
+      description: Cover permissions, decision rights, tenants, data classes, credentials, external effects, artifacts, telemetry, and claims.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Portability and compatibility
+      description: Identify affected packages, schemas, runtimes, adapters, migrations, and whether the kernel can stay vendor-neutral.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include the current workaround and the cost of doing nothing.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence plan
+      description: What deterministic tests or observable behavior would demonstrate the proposal without a live provider key?
+    validations:
+      required: true
+  - type: checkboxes
+    id: process
+    attributes:
+      label: Process acknowledgement
+      options:
+        - label: I understand that a proposal is not a roadmap commitment or implementation assignment.
+          required: true
+        - label: I reviewed GOVERNANCE.md and will use an ADR if this material decision is accepted.
+          required: true

@@ -1,0 +1,79 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Pactmark authority boundary</title>
+  <desc id="desc">The model proposes a structured action. Pactmark validates policy, grants, approval and budget before the host executes an effect. Append-only events lead to artifacts, verification and evidence.</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#17191F" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#727780"/>
+    </marker>
+    <marker id="red-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#D11F26"/>
+    </marker>
+  </defs>
+  <rect width="1600" height="900" rx="36" fill="#F7F6F4"/>
+  <rect x="36" y="36" width="1528" height="828" rx="28" fill="white" stroke="#E6E1DD" stroke-width="2"/>
+
+  <rect x="88" y="78" width="46" height="46" fill="#D11F26"/>
+  <path d="M104 94H113C123 94 128 99 128 107C128 115 122 120 113 120H109V111H113C117 111 119 109 119 106C119 103 117 101 113 101H109V120H104V94Z" fill="white"/>
+  <path d="M112 116L117 111L122 116L130 108L135 113L122 126L112 116Z" fill="white"/>
+  <text x="154" y="105" fill="#17191F" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="700" letter-spacing="2">PACTMARK CONTROL PLANE</text>
+  <text x="88" y="172" fill="#17191F" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="50" font-weight="760">The model proposes. The host decides.</text>
+  <text x="88" y="216" fill="#626872" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="23">Authority, credentials and effect execution never move into model context.</text>
+
+  <rect x="88" y="274" width="370" height="354" rx="24" fill="#FFF4F3" stroke="#F2C8C6" stroke-width="2"/>
+  <rect x="112" y="298" width="178" height="34" rx="17" fill="#FDE1DF"/>
+  <circle cx="133" cy="315" r="6" fill="#D11F26"/>
+  <text x="149" y="322" fill="#9B1A20" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16" font-weight="700" letter-spacing="1">UNTRUSTED ZONE</text>
+  <text x="112" y="382" fill="#17191F" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="31" font-weight="730">Model output</text>
+  <text x="112" y="418" fill="#626872" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="20">Useful, fallible and non-authoritative.</text>
+  <rect x="112" y="462" width="322" height="112" rx="16" fill="white" stroke="#E4AAA7" stroke-width="2"/>
+  <text x="136" y="493" fill="#9B1A20" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700">ToolCall proposal</text>
+  <text x="136" y="526" fill="#41464E" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">tool: "message.send@1"</text>
+  <text x="136" y="552" fill="#41464E" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">input: { ...unknown }</text>
+
+  <line x1="458" y1="451" x2="516" y2="451" stroke="#D11F26" stroke-width="4" marker-end="url(#red-arrow)"/>
+
+  <rect x="526" y="274" width="548" height="354" rx="24" fill="#17191F" filter="url(#shadow)"/>
+  <rect x="550" y="298" width="236" height="34" rx="17" fill="#312B2B"/>
+  <circle cx="571" cy="315" r="6" fill="#EB4B50"/>
+  <text x="587" y="322" fill="#FFD5D2" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16" font-weight="700" letter-spacing="1">ENFORCEMENT BOUNDARY</text>
+  <text x="550" y="382" fill="white" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="31" font-weight="730">Deterministic admission</text>
+  <text x="550" y="418" fill="#B8BDC5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="20">Every gate must resolve before dispatch.</text>
+
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="650">
+    <rect x="550" y="462" width="150" height="48" rx="12" fill="#2A2D33" stroke="#545A64"/><text x="574" y="493" fill="white">01 · Schema</text>
+    <rect x="712" y="462" width="150" height="48" rx="12" fill="#2A2D33" stroke="#545A64"/><text x="737" y="493" fill="white">02 · Policy</text>
+    <rect x="874" y="462" width="176" height="48" rx="12" fill="#2A2D33" stroke="#545A64"/><text x="898" y="493" fill="white">03 · Capability</text>
+    <rect x="550" y="524" width="150" height="48" rx="12" fill="#2A2D33" stroke="#545A64"/><text x="571" y="555" fill="white">04 · Approval</text>
+    <rect x="712" y="524" width="150" height="48" rx="12" fill="#2A2D33" stroke="#545A64"/><text x="739" y="555" fill="white">05 · Budget</text>
+    <rect x="874" y="524" width="176" height="48" rx="12" fill="#472124" stroke="#D11F26"/><text x="905" y="555" fill="#FFD5D2">06 · Dispatch</text>
+  </g>
+  <text x="550" y="603" fill="#EB4B50" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="700">UNKNOWN OR UNSUPPORTED → DENY</text>
+
+  <line x1="1074" y1="451" x2="1132" y2="451" stroke="#727780" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <rect x="1142" y="274" width="370" height="354" rx="24" fill="#F1F5F3" stroke="#CAD9D0" stroke-width="2"/>
+  <rect x="1166" y="298" width="220" height="34" rx="17" fill="#DDEBE3"/>
+  <circle cx="1187" cy="315" r="6" fill="#28754A"/>
+  <text x="1203" y="322" fill="#235E3F" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16" font-weight="700" letter-spacing="1">HOST-CONTROLLED ZONE</text>
+  <text x="1166" y="382" fill="#17191F" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="31" font-weight="730">Governed effect</text>
+  <text x="1166" y="418" fill="#626872" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="20">Credentials resolve only at execution.</text>
+  <rect x="1166" y="462" width="322" height="112" rx="16" fill="white" stroke="#AAC6B4" stroke-width="2"/>
+  <text x="1190" y="493" fill="#235E3F" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700">Effect acknowledgement</text>
+  <text x="1190" y="526" fill="#41464E" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">operationKey: op_…</text>
+  <text x="1190" y="552" fill="#41464E" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">receipt: sha256:…</text>
+
+  <path d="M1327 628V681H800" stroke="#727780" stroke-width="3" stroke-dasharray="8 8" marker-end="url(#arrow)"/>
+  <path d="M273 628V681H747" stroke="#727780" stroke-width="3" stroke-dasharray="8 8" marker-end="url(#arrow)"/>
+  <rect x="267" y="678" width="1066" height="124" rx="20" fill="#FBFAF9" stroke="#DED9D5" stroke-width="2"/>
+  <text x="303" y="718" fill="#626872" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="700" letter-spacing="1.4">APPEND-ONLY RUN TRUTH</text>
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="19" font-weight="680">
+    <text x="303" y="765" fill="#17191F">Events</text><text x="397" y="765" fill="#A1A5AC">→</text>
+    <text x="435" y="765" fill="#17191F">Artifacts</text><text x="551" y="765" fill="#A1A5AC">→</text>
+    <text x="589" y="765" fill="#17191F">Verification</text><text x="728" y="765" fill="#A1A5AC">→</text>
+    <text x="766" y="765" fill="#D11F26">EvidenceRecord</text>
+  </g>
+  <text x="1300" y="765" text-anchor="end" fill="#626872" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17">projections are rebuildable</text>
+</svg>

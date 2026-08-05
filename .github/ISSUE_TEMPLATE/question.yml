@@ -1,0 +1,37 @@
+name: Support question
+description: Ask a focused implementation question after checking the docs.
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pactmark support is best-effort. Read SUPPORT.md first. For vulnerabilities, use the private reporting link in the issue chooser.
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to accomplish?
+      description: Describe the bounded outcome, not only the API call you tried.
+    validations:
+      required: true
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What have you tried?
+      description: Include a minimal sanitized snippet and the relevant documentation you consulted.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Versions and environment
+      placeholder: "Pactmark packages, Node.js, package manager, runtime/platform, and adapters"
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundary
+    attributes:
+      label: Support boundary
+      options:
+        - label: I read SUPPORT.md and removed secrets, customer data, and private prompts.
+          required: true

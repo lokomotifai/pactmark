@@ -33,8 +33,19 @@ here grants no rights beyond those terms.
 - NOTICE handling: no Apache NOTICE insertion is required; the attribution is
   carried with the adapted document.
 
-No third-party source fragment, fixture, image, font, or other asset is
-incorporated at this baseline.
+### Pactmark logo
+
+- Material: `assets/brand/pactmark-logo.svg` and the mechanically rendered PNG.
+- Source: project artwork supplied by the repository owner for publication on
+  2026-08-05; no external source was identified.
+- Treatment: geometry and colors preserved; accessible SVG metadata added.
+- License treatment: official project identity asset governed by
+  `TRADEMARKS.md`, not offered as a third-party asset under the repository's
+  Apache-2.0 grant.
+
+The explanatory README diagrams are original project documentation authored as
+SVG in this repository. Their PNG files are mechanical renders of those sources
+and add no separate attribution requirement.
 
 Before incorporating third-party material, a contributor must add a register
 entry containing:

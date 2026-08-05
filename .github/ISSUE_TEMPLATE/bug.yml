@@ -1,0 +1,74 @@
+name: Bug report
+description: Report reproducible incorrect behavior in Pactmark.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for making the failure reproducible. Do not include vulnerability details, credentials, customer data, or private prompts. Use Private Vulnerability Reporting for security issues.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and release notes.
+          required: true
+        - label: I reproduced this on the latest supported Pactmark patch.
+          required: true
+        - label: This report contains no secrets, customer data, or undisclosed vulnerability details.
+          required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Failure summary
+      description: What happened, and what user or system impact did it have?
+      placeholder: A concise description of the observable failure.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide the smallest repository, code, or exact commands that reproduce the problem with synthetic data.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Include sanitized errors, stable KAF codes, or event types—not credentials or private payloads.
+    validations:
+      required: true
+  - type: input
+    id: packages
+    attributes:
+      label: Pactmark package(s) and version
+      placeholder: "@pactmark/runtime@0.1.1"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node.js, package manager, operating system, host/runtime, store, and relevant adapters.
+      placeholder: |
+        Node.js:
+        Package manager:
+        OS / architecture:
+        Host or platform:
+        Store / model / tool adapters:
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Boundary context
+      description: Does this involve replay, cancellation, concurrency, tenancy, grants, approval, credentials, persistence, or an external effect?
