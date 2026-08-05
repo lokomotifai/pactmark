@@ -35,7 +35,7 @@ and WP-09 documentation. It does **not** authorize Codex to create a GitHub or n
 organization, create a remote repository, reserve a name, push, publish, deploy,
 configure external settings, or claim trademark clearance. The repository owner
 stated that they will create the GitHub organization. Every external write still
-requires the separate authorization and evidence sequence in PLAN.md.
+requires explicit authorization and an evidence-backed release sequence.
 
 No trademark registration or legal clearance search has been performed. The project
 must not describe Pactmark as registered, exclusively controlled, certified, or

@@ -6,7 +6,6 @@ coverage
 **/.next
 **/.wrangler
 pnpm-lock.yaml
-PLAN.md
 briefs
 research
 **/etc/*.api.md

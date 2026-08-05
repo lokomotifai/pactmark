@@ -11,5 +11,5 @@ trade-off. State motivation, non-goals, security and compatibility impact,
 alternatives, rollout, and evidence plan.
 
 Use an ADR when the repository accepts an architecture decision. ADRs are immutable
-records; supersede them with a new ADR instead of rewriting history. Update PLAN.md
-Decision Log when implementation evidence changes a fixed decision.
+records; supersede them with a new ADR instead of rewriting history. Update the
+applicable release-readiness record when implementation evidence changes a fixed decision.

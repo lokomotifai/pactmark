@@ -16,7 +16,7 @@ const textExtensions = new Set([
   ".yaml",
   ".yml",
 ]);
-const excluded = new Set(["PLAN.md", "tooling/audit-secrets.mts"]);
+const excluded = new Set(["tooling/audit-secrets.mts"]);
 const secretPatterns = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u,
   /\bgh[pousr]_[A-Za-z0-9]{30,}\b/u,

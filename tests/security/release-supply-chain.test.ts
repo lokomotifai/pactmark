@@ -410,6 +410,60 @@ describe("guarded release publisher adversarial matrix", () => {
     }
   });
 
+  it("refuses OIDC execution outside GitHub Actions and rejects token fallback", async () => {
+    const state = context();
+    const manifestPath = join(temporary, `manifest-${String(sequence)}.json`);
+    const sourceManifestPath = join(temporary, `source-${String(sequence)}.json`);
+    const configPath = join(temporary, `config-${String(sequence)}.json`);
+    const manifestBytes = Buffer.from(`${JSON.stringify(state.manifest)}\n`);
+    writeFileSync(manifestPath, manifestBytes);
+    writeFileSync(sourceManifestPath, "{}\n");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        execute: true,
+        mode: "public",
+        registry: "https://registry.npmjs.org/",
+        manifestPath,
+        manifestSha256: sha256Bytes(manifestBytes),
+        sourceManifestPath,
+        tarballDirectory: temporary,
+        publicAuthorization: state.authorization,
+      }),
+    );
+    const saved = {
+      ci: process.env["CI"],
+      githubActions: process.env["GITHUB_ACTIONS"],
+      nodeAuthToken: process.env["NODE_AUTH_TOKEN"],
+    };
+    const executionArguments = [
+      "--config",
+      configPath,
+      "--authorize-public-release",
+      "publish-pactmark-0.1.0",
+    ];
+    try {
+      delete process.env["CI"];
+      delete process.env["GITHUB_ACTIONS"];
+      await expect(runReleasePublisher(executionArguments)).rejects.toThrow(
+        "KAF_RELEASE_OIDC_GITHUB_HOST_REQUIRED",
+      );
+      process.env["CI"] = "true";
+      process.env["GITHUB_ACTIONS"] = "true";
+      process.env["NODE_AUTH_TOKEN"] = "forbidden-test-token";
+      await expect(runReleasePublisher(executionArguments)).rejects.toThrow(
+        "KAF_RELEASE_AUTOMATION_TOKEN_FORBIDDEN",
+      );
+    } finally {
+      if (saved.ci === undefined) delete process.env["CI"];
+      else process.env["CI"] = saved.ci;
+      if (saved.githubActions === undefined) delete process.env["GITHUB_ACTIONS"];
+      else process.env["GITHUB_ACTIONS"] = saved.githubActions;
+      if (saved.nodeAuthToken === undefined) delete process.env["NODE_AUTH_TOKEN"];
+      else process.env["NODE_AUTH_TOKEN"] = saved.nodeAuthToken;
+    }
+  });
+
   it("never retries an uncertain registry write", () => {
     const state = context();
     state.manifest.status = "draft";

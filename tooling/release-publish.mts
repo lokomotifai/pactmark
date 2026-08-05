@@ -496,6 +496,62 @@ function verifyInteractiveExecutionAuthorization(
   }
 }
 
+function verifyOidcExecutionAuthorization(
+  authorization: PublicAuthorization,
+  releaseVersion: string,
+  authorizationFlag: string,
+): void {
+  if (authorization.authMode !== "oidc") {
+    throw new Error("KAF_RELEASE_EXECUTION_MODE_UNSUPPORTED");
+  }
+  if (authorizationFlag !== `publish-pactmark-${releaseVersion}`) {
+    throw new Error("KAF_RELEASE_AUTHORIZATION_FLAG_INVALID");
+  }
+  if (
+    process.env["CI"] !== "true" ||
+    process.env["GITHUB_ACTIONS"] !== "true" ||
+    authorization.tty ||
+    process.stdin.isTTY ||
+    process.stdout.isTTY
+  ) {
+    throw new Error("KAF_RELEASE_OIDC_GITHUB_HOST_REQUIRED");
+  }
+  if (process.env["NODE_AUTH_TOKEN"] !== undefined || process.env["NPM_TOKEN"] !== undefined) {
+    throw new Error("KAF_RELEASE_AUTOMATION_TOKEN_FORBIDDEN");
+  }
+  const expectedWorkflowRef = `${authorization.repository}/${authorization.workflow}@${authorization.ref}`;
+  if (
+    process.env["GITHUB_REPOSITORY"] !== authorization.repository ||
+    process.env["GITHUB_WORKFLOW_REF"] !== expectedWorkflowRef ||
+    process.env["GITHUB_REF"] !== authorization.ref ||
+    process.env["PACTMARK_RELEASE_ENVIRONMENT"] !== authorization.environment ||
+    process.env["PACTMARK_RELEASE_RUNNER"] !== authorization.runner
+  ) {
+    throw new Error("KAF_RELEASE_OIDC_CONTEXT_INVALID");
+  }
+  if (
+    process.env["ACTIONS_ID_TOKEN_REQUEST_URL"] === undefined ||
+    process.env["ACTIONS_ID_TOKEN_REQUEST_TOKEN"] === undefined
+  ) {
+    throw new Error("KAF_RELEASE_OIDC_TOKEN_UNAVAILABLE");
+  }
+  const actualNodeVersion = process.version.replace(/^v/u, "");
+  const actualNpmVersion = commandVersion("npm");
+  if (
+    actualNodeVersion !== authorization.nodeVersion ||
+    actualNpmVersion !== authorization.npmVersion
+  ) {
+    throw new Error("KAF_RELEASE_TOOLCHAIN_CONTEXT_MISMATCH");
+  }
+  const now = Date.now();
+  for (const authority of Object.values(authorization.packageAuthorities)) {
+    const inspectedAt = new Date(authority.inspectedAt).valueOf();
+    if (!Number.isFinite(inspectedAt) || inspectedAt > now || now - inspectedAt > 15 * 60 * 1000) {
+      throw new Error("KAF_RELEASE_PACKAGE_AUTHORITY_STALE");
+    }
+  }
+}
+
 function npmCommand(
   args: readonly string[],
   stdio: "inherit" | ["ignore", "pipe", "pipe"],
@@ -505,6 +561,15 @@ function npmCommand(
     env: { ...process.env, npm_config_provenance: "false" },
     stdio,
     encoding: stdio === "inherit" ? undefined : "utf8",
+    timeout: 15 * 60 * 1000,
+  });
+}
+
+function npmOidcCommand(args: readonly string[]): ReturnType<typeof spawnSync> {
+  return spawnSync("npm", [...args], {
+    cwd: repositoryRoot,
+    env: { ...process.env, npm_config_provenance: "true" },
+    stdio: "inherit",
     timeout: 15 * 60 * 1000,
   });
 }
@@ -618,6 +683,38 @@ export async function executeInteractiveBootstrap(
     throw error instanceof Error ? error : new Error("KAF_RELEASE_PUBLICATION_FAILED");
   }
   logoutBootstrap(registry);
+}
+
+export async function executeOidcPublication(plan: PublishPlan): Promise<void> {
+  const awaitingVisibility = new Set<string>();
+  await executePublishPlanAsync(plan, {
+    inspect: async (operation) => {
+      const key = `${operation.packageName}@${operation.version}`;
+      const attempts = awaitingVisibility.has(key) ? 10 : 1;
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        const inspection = await inspectPublicRegistry(operation);
+        if (inspection.state !== "absent" || attempt === attempts - 1) return inspection;
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
+      }
+      return { state: "uncertain" };
+    },
+    publish: async (operation) => {
+      const result = npmOidcCommand(npmPublishArguments(operation));
+      if (result.status === 0) {
+        awaitingVisibility.add(`${operation.packageName}@${operation.version}`);
+        return { state: "published" };
+      }
+      const afterFailure = await inspectPublicRegistry(operation);
+      if (
+        afterFailure.state === "present" &&
+        afterFailure.public &&
+        afterFailure.tarballSha256 === sha256Bytes(readFileSync(operation.tarballPath))
+      ) {
+        return { state: "published" };
+      }
+      return { state: "uncertain" };
+    },
+  });
 }
 
 export interface PublishExecutor {
@@ -752,7 +849,11 @@ export async function runReleasePublisher(
   const releaseVersion = text(manifest.releaseVersion, "KAF_RELEASE_VERSION_INVALID");
   const authorization = parsed.publicAuthorization as PublicAuthorization | undefined;
   if (authorization === undefined) throw new Error("KAF_RELEASE_EXTERNAL_AUTHORIZATION_REQUIRED");
-  verifyInteractiveExecutionAuthorization(authorization, releaseVersion, authorizationFlag);
+  if (authorization.authMode === "oidc") {
+    verifyOidcExecutionAuthorization(authorization, releaseVersion, authorizationFlag);
+  } else {
+    verifyInteractiveExecutionAuthorization(authorization, releaseVersion, authorizationFlag);
+  }
   verifyExecutingSource(
     manifest,
     text(parsed.sourceManifestPath, "KAF_RELEASE_SOURCE_MANIFEST_REQUIRED"),
@@ -764,7 +865,8 @@ export async function runReleasePublisher(
     tarballDirectory: text(parsed.tarballDirectory, "KAF_RELEASE_TARBALL_DIRECTORY_INVALID"),
     publicAuthorization: authorization,
   });
-  await executeInteractiveBootstrap(plan, authorization);
+  if (authorization.authMode === "oidc") await executeOidcPublication(plan);
+  else await executeInteractiveBootstrap(plan, authorization);
   return {
     manifestDigest: plan.manifestDigest,
     publishedPackages: plan.operations.length,
