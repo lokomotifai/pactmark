@@ -10,6 +10,7 @@ import { sha256Bytes } from "../../tooling/lib/release-integrity.mjs";
 import {
   executePublishPlan,
   inspectPublicRegistry,
+  isSafeSourceManifestPath,
   npmPublishArguments,
   preparePublishPlan,
   runReleasePublisher,
@@ -259,6 +260,23 @@ describe("guarded release publisher adversarial matrix", () => {
       "--ignore-scripts",
       "--access=public",
     ]);
+  });
+
+  it("accepts framework catch-all names while rejecting path traversal segments", () => {
+    expect(isSafeSourceManifestPath("apps/nextjs-vercel/app/api/agent/[...kaf]/route.ts")).toBe(
+      true,
+    );
+    expect(isSafeSourceManifestPath("packages/core/src/file..name.ts")).toBe(true);
+    for (const path of [
+      "../secret",
+      "safe/../secret",
+      "safe/./secret",
+      "/absolute/path",
+      "safe\\windows",
+      "safe//empty",
+    ]) {
+      expect(isSafeSourceManifestPath(path)).toBe(false);
+    }
   });
 
   it("permits an exact-byte interactive bootstrap resume for an already-created package", () => {

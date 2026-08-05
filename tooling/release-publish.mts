@@ -394,7 +394,7 @@ function sourceFiles(sourceManifest: JsonRecord): readonly { path: string; diges
   return sourceManifest.files.map((value) => {
     const entry = record(value, "KAF_RELEASE_SOURCE_MANIFEST_ENTRY_INVALID");
     const path = text(entry.path, "KAF_RELEASE_SOURCE_MANIFEST_PATH_INVALID");
-    if (path.startsWith("/") || path.includes("..") || path.includes("\\")) {
+    if (!isSafeSourceManifestPath(path)) {
       throw new Error("KAF_RELEASE_SOURCE_MANIFEST_PATH_INVALID");
     }
     return {
@@ -402,6 +402,13 @@ function sourceFiles(sourceManifest: JsonRecord): readonly { path: string; diges
       digest: text(entry.digest, "KAF_RELEASE_SOURCE_MANIFEST_DIGEST_INVALID"),
     };
   });
+}
+
+export function isSafeSourceManifestPath(path: string): boolean {
+  if (path.startsWith("/") || path.includes("\\")) return false;
+  return path
+    .split("/")
+    .every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
 }
 
 /** Bind an executing public release to the exact clean source recorded by the candidate. */
