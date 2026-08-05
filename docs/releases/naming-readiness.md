@@ -1,12 +1,12 @@
 # Pactmark naming readiness
 
-Status: `KAF_NAMING_FREEZE_APPROVED`; GitHub and npm organization authority verified
+Status: `KAF_PUBLIC_RELEASE_VERIFIED`; GitHub Release, npm authority, package bytes, and public initializer verified
 
-Checked: 2026-08-03 public search; 2026-08-04 authenticated GitHub and npm inspection
+Checked: 2026-08-03 public search; 2026-08-04 authenticated GitHub and npm inspection; 2026-08-05 guarded npm publication, public consumer acceptance, immutable GitHub Release, and test-resource teardown
 
-Check type: public registry search plus authenticated repository/organization inspection and authorized organization creation
+Check type: public registry search, authenticated repository/organization inspection, guarded exact-candidate publication, anonymous registry-byte verification, and independent public consumer acceptance
 
-The user selected **Pactmark** as the framework name. Local implementation therefore uses these provisional technical names:
+The user selected **Pactmark** as the framework name. The verified public release uses these frozen technical names:
 
 - package scope: `@pactmark/*`;
 - initializer package: `create-pactmark`;
@@ -14,8 +14,9 @@ The user selected **Pactmark** as the framework name. Local implementation there
 - generated manifest directory: `.pactmark/generated/`.
 
 These exact strings were approved for the local naming freeze on 2026-08-04 and are
-recorded in `docs/releases/naming-decision.md`. Approval is not proof of ownership or
-authorization to publish.
+recorded in `docs/releases/naming-decision.md`. The release evidence below separately
+proves ownership, publication, and public installation; it does not establish
+trademark or legal clearance.
 
 ## npm evidence
 
@@ -57,7 +58,43 @@ Candidate scoped packages checked:
 
 No package collision was observed in the time-bound public search. On 2026-08-04, authenticated npm browser inspection verified owner `fatihguner` with Komünite-branded package metadata, publishing-capable 2FA, and one registered security key. The authorized workflow created the free public-package organization [`pactmark`](https://www.npmjs.com/org/pactmark), enabled organization-wide 2FA enforcement, and verified one owner/member with 2FA, zero members without 2FA, a default `developers` team, zero packages, and a `$0` monthly bill.
 
-The organization establishes control of the `@pactmark` scope. It does not reserve the unscoped `create-pactmark` initializer or publish any scoped package. No token, trusted publisher, package transfer, paid plan, or registry release was created.
+The organization inspection established control of the `@pactmark` scope before
+publication. At that point it did not reserve the unscoped initializer or create a
+package, token, trusted publisher, paid plan, or registry release.
+
+### Verified public release
+
+On 2026-08-05, the guarded publisher consumed the GitHub-attested candidate from
+protected run
+[`30981599698`](https://github.com/pactmark/pactmark/actions/runs/30981599698)
+for source commit
+`e19713506097803a1eaff08c7c93711a34151c9f`. The candidate release-manifest
+SHA-256 is
+`8bc1402b4e41539bdcf7cb9a6aa002b364fb83e80b0655f442706d274e9b741a`.
+Before the first write, all 19 exact names returned anonymous 404 responses. The
+human-attended npm 11.18.0 bootstrap authenticated `fatihguner` with WebAuthn,
+published the 18 scoped packages dependency-first and `create-pactmark` last,
+then logged out.
+
+An independent anonymous gate at `2026-08-05T09:34:33.267Z` fetched every
+registry-served tarball, matched all 19 SHA-256 values to the attested candidate,
+and verified `latest=0.1.0` for every package. This interactive bootstrap does
+not carry npm provenance; no provenance claim is made for `0.1.0`.
+
+All 19 packages now have the same npm trusted publisher:
+`pactmark/pactmark`, workflow filename `release.yml`, GitHub environment
+`release`, with package publication as the sole permission. Traditional publishing is
+set to `mfa=publish`, which requires 2FA and sets
+`automation_token_overrides_tfa=false`. No long-lived npm automation token was
+created or retained.
+
+Independent clean-directory acceptance ran both
+`npm create pactmark@0.1.0 -- my-agent ...` and
+`npm create pactmark@latest -- my-agent ...`. Both resolved framework version
+`0.1.0`, installed 142 dependencies with zero reported vulnerabilities,
+generated identical source digests, compiled successfully, and passed two of two
+generated tests. The library template's unconfigured production doctor failed
+closed with `KAF_CLI_HOST_NOT_CONFIGURED`, as designed.
 
 ## GitHub evidence
 
@@ -79,6 +116,16 @@ release, package publication, or deployment was created. The repository ID is
 `https://github.com/pactmark/pactmark.git`. The local checkout uses that exact URL as
 `origin`.
 
+On 2026-08-05, annotated tag `v0.1.0` was created and remotely verified to
+dereference exactly to release source commit
+`e19713506097803a1eaff08c7c93711a34151c9f`. The public latest
+[Pactmark 0.1.0 GitHub Release](https://github.com/pactmark/pactmark/releases/tag/v0.1.0)
+is immutable and contains 26 uploaded assets: all 19 exact package tarballs,
+`SHA256SUMS`, release/source manifests, the CycloneDX SBOM, attestation input,
+and provenance/SBOM attestation bundles. GitHub's asset digest for
+`release-manifest.json` is the expected
+`sha256:8bc1402b4e41539bdcf7cb9a6aa002b364fb83e80b0655f442706d274e9b741a`.
+
 ChatGPT Codex Connector installation `151134458` is limited to that single
 repository and reports admin/push access. All 19 publishable package manifests now
 carry exact release-profile metadata with
@@ -89,19 +136,25 @@ carry exact release-profile metadata with
 - Public npm package collision at check time: not observed.
 - Public GitHub exact-name collision at check time: not observed.
 - npm organization and `@pactmark` scope ownership: verified 2026-08-04.
-- npm package publication authority: not exercised; zero packages and no trusted publisher exist.
-- Unscoped `create-pactmark` ownership: unreserved and subject to a time-sensitive collision check before bootstrap.
+- npm package publication authority: exercised through the guarded interactive bootstrap; 19 exact `0.1.0` packages are public and byte-verified.
+- npm trusted publishing: verified for all 19 packages with the exact GitHub workflow/environment and publish-only permission.
+- Traditional npm token publishing: bypass tokens disallowed for all 19 packages; interactive 2FA remains required.
+- Unscoped `create-pactmark` ownership: established by the verified public `0.1.0` release.
 - Local GitHub owner/repository naming decision: approved as `pactmark/pactmark`.
 - GitHub owner/repository authority and existence: verified 2026-08-04.
 - Trademark/legal clearance: not performed.
-- External mutation performed: public repository and `main` branch created; 733
-  source files pushed; Codex App installed and restricted to that repository; npm
-  organization `pactmark` created on the free plan with enforced 2FA; no tag,
-  GitHub Release, npm package publication, trusted publisher, or deployment.
+- External mutation performed: public repository and protected `main` branch
+  created; source published; Codex App restricted to that repository; npm
+  organization `pactmark` created on the free plan with enforced 2FA; 19 public
+  packages published and byte-verified; 19 trusted publishers configured; token
+  bypass disabled; exact-candidate Vercel Preview verified; immutable `v0.1.0`
+  tag and 26-asset GitHub Release published. The test-only Vercel project was
+  subsequently removed and verified absent. The recorded Neon test-project ID was
+  already absent; a separately observed empty Pactmark Neon project was removed
+  only after exact-target approval, after which the organization reported no
+  projects.
 
-GitHub release-profile identity and npm organization ownership are now established.
-Before package publication, the authenticated npm owner must separately authorize the
-package bootstrap and trusted-publisher writes. The unscoped initializer search and
-all other public searches are time-sensitive and must be repeated immediately before
-any authorized release operation. The approved trademark posture remains the cautious
+GitHub release-profile identity and immutable Release, npm organization ownership,
+public package publication, trusted publishing, and exact/latest initializer
+behavior are now established. The approved trademark posture remains the cautious
 limitation in `TRADEMARKS.md`, not a clearance finding.
