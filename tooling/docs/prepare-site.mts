@@ -108,20 +108,21 @@ function frontmatterField(source: string, field: string): string {
   return match[1].replace(/^['"]|['"]$/gu, "").trim();
 }
 
+const publicDocsBasePath = "/pactmark";
 const llmsPages = manifest.pages.map((page) => {
   const source = readFileSync(join(repositoryRoot, page.source), "utf8");
   return {
     language: page.language,
     title: frontmatterField(source, "title"),
     description: frontmatterField(source, "description"),
-    path: `/${page.language}/${page.route.replace(/(?:index)?\.md$/u, "")}`,
+    path: `${publicDocsBasePath}/${page.language}/${page.route.replace(/(?:index)?\.md$/u, "")}`,
   };
 });
 const llms = [
   "# Pactmark documentation",
   "",
   `Compatibility: ${manifest.compatibility}`,
-  "Publication status: local implementation candidate; verify docs/releases/v0.1-readiness.md.",
+  "Publication status: Pactmark 0.1.1 is public on npm with verified registry bytes and per-package provenance.",
   "",
   ...llmsPages.map(
     ({ language, title, description, path }) =>
@@ -135,18 +136,24 @@ const packageIndexes = {
   schemaVersion: "1",
   compatibility: manifest.compatibility,
   packages: {
-    "@pactmark/agent": ["/en/getting-started/first-agent/", "/en/concepts/agent-and-work-order/"],
-    "@pactmark/core": ["/en/concepts/run-lifecycle-and-durability/", "/en/reference/api/"],
+    "@pactmark/agent": [
+      `${publicDocsBasePath}/en/getting-started/first-agent/`,
+      `${publicDocsBasePath}/en/concepts/agent-and-work-order/`,
+    ],
+    "@pactmark/core": [
+      `${publicDocsBasePath}/en/concepts/run-lifecycle-and-durability/`,
+      `${publicDocsBasePath}/en/reference/api/`,
+    ],
     "@pactmark/runtime": [
-      "/en/concepts/run-lifecycle-and-durability/",
-      "/en/guides/testing-agents/",
+      `${publicDocsBasePath}/en/concepts/run-lifecycle-and-durability/`,
+      `${publicDocsBasePath}/en/guides/testing-agents/`,
     ],
     "@pactmark/store-postgres": [
-      "/en/guides/postgres/",
-      "/en/production/reliability-and-recovery/",
+      `${publicDocsBasePath}/en/guides/postgres/`,
+      `${publicDocsBasePath}/en/production/reliability-and-recovery/`,
     ],
-    "@pactmark/vercel": ["/en/getting-started/vercel/"],
-    "@pactmark/cloudflare": ["/en/getting-started/cloudflare-preview/"],
+    "@pactmark/vercel": [`${publicDocsBasePath}/en/getting-started/vercel/`],
+    "@pactmark/cloudflare": [`${publicDocsBasePath}/en/getting-started/cloudflare-preview/`],
   },
 };
 writeFileSync(
