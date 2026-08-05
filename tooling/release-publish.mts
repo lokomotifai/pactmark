@@ -91,6 +91,9 @@ export interface PublicPublicationResult {
   readonly publication: "executed";
 }
 
+const POST_PUBLISH_VISIBILITY_ATTEMPTS = 61;
+const POST_PUBLISH_VISIBILITY_DELAY_MS = 5_000;
+
 function record(value: unknown, code: string): JsonRecord {
   if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error(code);
   return value as JsonRecord;
@@ -372,6 +375,7 @@ export async function inspectPublicRegistry(
     if (tarballUrl.protocol !== "https:" || tarballUrl.hostname !== "registry.npmjs.org") {
       return { state: "uncertain" };
     }
+    tarballUrl.searchParams.set("pactmark_check", Date.now().toString());
     const tarballResponse = await fetchImplementation(tarballUrl, {
       cache: "no-store",
       redirect: "error",
@@ -608,7 +612,6 @@ export async function executeInteractiveBootstrap(
   authorization: PublicAuthorization,
   fetchImplementation: FetchImplementation = fetch,
 ): Promise<void> {
-  const awaitingVisibility = new Set<string>();
   const initial = await Promise.all(
     plan.operations.map(async (operation) => ({
       operation,
@@ -640,22 +643,10 @@ export async function executeInteractiveBootstrap(
   loginForBootstrap(authorization, registry);
   try {
     await executePublishPlanAsync(plan, {
-      inspect: async (operation) => {
-        const key = `${operation.packageName}@${operation.version}`;
-        const attempts = awaitingVisibility.has(key) ? 10 : 1;
-        for (let attempt = 0; attempt < attempts; attempt += 1) {
-          const inspection = await inspectPublicRegistry(operation, fetchImplementation);
-          if (inspection.state !== "absent" || attempt === attempts - 1) return inspection;
-          await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
-        }
-        return { state: "uncertain" };
-      },
+      inspect: (operation) => inspectPublicRegistry(operation, fetchImplementation),
       publish: async (operation) => {
         const result = npmCommand(npmPublishArguments(operation), "inherit");
-        if (result.status === 0) {
-          awaitingVisibility.add(`${operation.packageName}@${operation.version}`);
-          return { state: "published" };
-        }
+        if (result.status === 0) return { state: "published" };
         const afterFailure = await inspectPublicRegistry(operation, fetchImplementation);
         if (
           afterFailure.state === "present" &&
@@ -686,24 +677,11 @@ export async function executeInteractiveBootstrap(
 }
 
 export async function executeOidcPublication(plan: PublishPlan): Promise<void> {
-  const awaitingVisibility = new Set<string>();
   await executePublishPlanAsync(plan, {
-    inspect: async (operation) => {
-      const key = `${operation.packageName}@${operation.version}`;
-      const attempts = awaitingVisibility.has(key) ? 10 : 1;
-      for (let attempt = 0; attempt < attempts; attempt += 1) {
-        const inspection = await inspectPublicRegistry(operation);
-        if (inspection.state !== "absent" || attempt === attempts - 1) return inspection;
-        await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
-      }
-      return { state: "uncertain" };
-    },
+    inspect: (operation) => inspectPublicRegistry(operation),
     publish: async (operation) => {
       const result = npmOidcCommand(npmPublishArguments(operation));
-      if (result.status === 0) {
-        awaitingVisibility.add(`${operation.packageName}@${operation.version}`);
-        return { state: "published" };
-      }
+      if (result.status === 0) return { state: "published" };
       const afterFailure = await inspectPublicRegistry(operation);
       if (
         afterFailure.state === "present" &&
@@ -762,6 +740,7 @@ export function executePublishPlan(plan: PublishPlan, executor: PublishExecutor)
 export async function executePublishPlanAsync(
   plan: PublishPlan,
   executor: AsyncPublishExecutor,
+  postPublishInspectionDelayMs = POST_PUBLISH_VISIBILITY_DELAY_MS,
 ): Promise<void> {
   const preflight = await Promise.all(
     plan.operations.map(async (operation) => ({
@@ -784,7 +763,15 @@ export async function executePublishPlanAsync(
     if (before.state === "present") continue;
     const result = await executor.publish(operation);
     if (result.state === "uncertain") throw new Error("KAF_RELEASE_PUBLISH_UNCERTAIN_NO_RETRY");
-    const after = await executor.inspect(operation);
+    let after = await executor.inspect(operation);
+    for (
+      let attempt = 1;
+      after.state !== "present" && attempt < POST_PUBLISH_VISIBILITY_ATTEMPTS;
+      attempt += 1
+    ) {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, postPublishInspectionDelayMs));
+      after = await executor.inspect(operation);
+    }
     if (after.state !== "present" || !after.public)
       throw new Error("KAF_RELEASE_POST_PUBLISH_UNVERIFIED");
     if (after.tarballSha256 !== sha256Bytes(readFileSync(operation.tarballPath))) {

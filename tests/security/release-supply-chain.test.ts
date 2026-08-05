@@ -9,6 +9,7 @@ import casesJson from "../../fixtures/security/release-boundary-cases.json" with
 import { sha256Bytes } from "../../tooling/lib/release-integrity.mjs";
 import {
   executePublishPlan,
+  executePublishPlanAsync,
   inspectPublicRegistry,
   isSafeSourceManifestPath,
   npmPublishArguments,
@@ -484,6 +485,44 @@ describe("guarded release publisher adversarial matrix", () => {
         },
       });
     }).toThrow("KAF_RELEASE_PUBLISH_UNCERTAIN_NO_RETRY");
+    expect(publishes).toBe(1);
+  });
+
+  it("retries only read-only visibility checks after a confirmed publish", async () => {
+    const state = context();
+    state.manifest.status = "draft";
+    state.manifest.metadataProfile = "local";
+    const plan = preparePublishPlan({
+      mode: "loopback",
+      registry: "http://127.0.0.1:4873/",
+      manifest: state.manifest,
+      tarballDirectory: temporary,
+    });
+    const operation = plan.operations[0] as PublishOperation;
+    let inspections = 0;
+    let publishes = 0;
+    await executePublishPlanAsync(
+      plan,
+      {
+        inspect: () => {
+          inspections += 1;
+          if (inspections === 1) return Promise.resolve({ state: "absent" });
+          if (inspections === 2) return Promise.resolve({ state: "uncertain" });
+          if (inspections === 3) return Promise.resolve({ state: "absent" });
+          return Promise.resolve({
+            state: "present" as const,
+            public: true,
+            tarballSha256: sha256Bytes(readFileSync(operation.tarballPath)),
+          });
+        },
+        publish: () => {
+          publishes += 1;
+          return Promise.resolve({ state: "published" });
+        },
+      },
+      0,
+    );
+    expect(inspections).toBe(4);
     expect(publishes).toBe(1);
   });
 
