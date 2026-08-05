@@ -8,4 +8,6 @@ The package is provider-neutral. Verification proves only the declared verifier/
 
 `createEvidenceExport`, `exportRedactedEvidenceJson`, and `exportRedactedEvidenceMarkdown` apply an allowlisted set of typed redactions before serialization and emit a deterministic export digest. Evidence and telemetry are separate concerns: telemetry may remain disabled while a host creates required local evidence. This package does not provide or claim durable evidence storage; the host controls evidence persistence, access, retention, and deletion through its own storage policy.
 
-Publication is pending. Use this package from the local Pactmark workspace until an authorized release is recorded.
+Version `0.1.1` is public on npm with verified registry bytes and provenance. This
+release status does not establish durable evidence storage or expand the
+verification claims above.

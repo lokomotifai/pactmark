@@ -1,0 +1,9 @@
+---
+import DefaultSiteTitle from "@astrojs/starlight/components/SiteTitle.astro";
+
+const navigationLabel = Astro.currentLocale === "tr" ? "Ana sayfa" : "Home";
+---
+
+<nav aria-label={navigationLabel}>
+  <DefaultSiteTitle />
+</nav>

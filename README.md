@@ -2,7 +2,7 @@
 
 Pactmark is an evidence-native TypeScript framework for agents that perform bounded work under explicit authority. A Pactmark run begins with a validated WorkOrder, records governed tool effects as an append-only event history, produces content-addressed artifacts, and completes only through declared verification.
 
-Version 0.1.0 is publicly available on npm and was verified from clean consumer directories. Pactmark remains an early release with the explicit limitations documented below.
+Version 0.1.1 is publicly available on npm with per-package provenance and verified registry bytes. Pactmark remains an early release with the explicit limitations documented below.
 
 ## Product boundary
 
@@ -19,7 +19,7 @@ pnpm install --frozen-lockfile
 pnpm verify
 ```
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the contributor path and [docs/releases/v0.1-readiness.md](./docs/releases/v0.1-readiness.md) for release evidence and remaining gates.
+Read the [English and Turkish documentation](https://pactmark.github.io/pactmark/), see [CONTRIBUTING.md](./CONTRIBUTING.md) for the contributor path, and consult [docs/releases/v0.1-readiness.md](./docs/releases/v0.1-readiness.md) for release evidence and remaining gates.
 
 ## Architecture
 
@@ -38,7 +38,7 @@ Run truth is append-only. Projections are rebuildable. Durable production profil
 
 ## Status and licensing
 
-- Implementation status: private local bootstrap; public release not authorized.
+- Implementation status: public early release at v0.1.1; production deployment and isolation are not claimed.
 - License: Apache-2.0.
 - Canonical public language: English, with required Turkish companion documentation.
 - Telemetry: no phone-home telemetry; configured observability is metadata-only by default.

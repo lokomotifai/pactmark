@@ -3,13 +3,13 @@ title: Build your first agent
 description: Create and run a deterministic Pactmark agent without a model key.
 ---
 
-> Compatibility: Pactmark 0.1.x. The public release is pending. Confirm publication
-> in `docs/releases/v0.1-readiness.md` before using registry commands.
+> Compatibility: Pactmark 0.1.x. Version 0.1.1 is public on npm with verified
+> registry bytes and per-package provenance.
 
 ## Published release path
 
-After publication is verified, run `npm create pactmark@latest -- my-agent`, change
-to `my-agent`, and run `npm run dev`. Pin exact versions in controlled environments.
+Run `npm create pactmark@latest -- my-agent`, change to `my-agent`, and run
+`npm run dev`. Pin exact versions in controlled environments.
 
 Expected progress is `RunAccepted`, `ToolCallCompleted`, then `RunCompleted`. The
 generated project uses a deterministic local model and needs no API key.
@@ -28,7 +28,7 @@ and leaves global npm configuration unchanged.
 
 ## Recovery
 
-If installation returns not found, the release is still pending or the registry
-name is not public. Do not switch to an unverified lookalike package. For a run
+If installation returns not found, verify the configured registry, network access,
+and requested version. Do not switch to an unverified lookalike package. For a run
 failure, inspect the stable `KAF_*` code and the run event stream; never parse the
 English error text as an API.
