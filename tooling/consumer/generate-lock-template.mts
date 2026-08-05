@@ -23,6 +23,9 @@ const pnpmStoreDirectory =
     encoding: "utf8",
   }).trim();
 const tarballRootPlaceholder = "__PACTMARK_TARBALL_ROOT__";
+const externalOverrides = {
+  jose: "6.2.7",
+} as const;
 
 rmSync(fixtureRoot, { recursive: true, force: true });
 mkdirSync(consumerRoot, { recursive: true });
@@ -58,7 +61,7 @@ writeFileSync(
 writeFileSync(
   join(consumerRoot, "pnpm-workspace.yaml"),
   `trustLockfile: true\nenableGlobalVirtualStore: false\ndedupeInjectedDeps: false\noverrides:\n${Object.entries(
-    tarballs,
+    { ...tarballs, ...externalOverrides },
   )
     .map(([packageName, tarball]) => `  ${JSON.stringify(packageName)}: ${JSON.stringify(tarball)}`)
     .join("\n")}\n`,

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: Type freeze-candidate-0.1.0 to build and attest the candidate
+        description: Type publish-pactmark-0.1.1 to build, attest, and publish the patch
         required: true
         type: string
 
@@ -14,16 +14,16 @@ permissions:
   attestations: write
 
 concurrency:
-  group: release-candidate-0.1.0
+  group: release-0.1.1
   cancel-in-progress: false
 
 jobs:
   candidate:
-    name: Build and attest v0.1.0 candidate
+    name: Build, attest, and publish v0.1.1
     if: >-
       github.repository == 'pactmark/pactmark' &&
       github.ref == 'refs/heads/main' &&
-      inputs.confirmation == 'freeze-candidate-0.1.0'
+      inputs.confirmation == 'publish-pactmark-0.1.1'
     runs-on: ubuntu-latest
     environment: release
     steps:
@@ -36,8 +36,8 @@ jobs:
         with:
           node-version: 24.18.1
           package-manager-cache: false
-      - name: Install pinned pnpm
-        run: npm install --global pnpm@11.18.0
+      - name: Install pinned release tools
+        run: npm install --global npm@11.18.0 pnpm@11.18.0
       - name: Install frozen dependency graph
         run: pnpm install --frozen-lockfile
       - name: Bootstrap digest-pinned sandbox base image
@@ -79,11 +79,24 @@ jobs:
         env:
           PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
           SBOM_BUNDLE: ${{ steps.sbom.outputs.bundle-path }}
+      - name: Prepare source-bound OIDC publication authorization
+        run: >-
+          node --import tsx tooling/prepare-oidc-publication.mts
+          .artifacts/release-dry-run
+          .artifacts/release-dry-run/oidc-publication-config.json
+      - name: Publish exact tarballs through npm trusted publishing
+        run: >-
+          node --import tsx tooling/release-publish.mts
+          --config .artifacts/release-dry-run/oidc-publication-config.json
+          --authorize-public-release publish-pactmark-0.1.1
+        env:
+          PACTMARK_RELEASE_ENVIRONMENT: release
+          PACTMARK_RELEASE_RUNNER: github-hosted
       - name: Upload frozen candidate
         # actions/upload-artifact v4
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: pactmark-v0.1.0-candidate-${{ github.sha }}
+          name: pactmark-v0.1.1-release-${{ github.sha }}
           path: .artifacts/release-dry-run
           if-no-files-found: error
           include-hidden-files: true

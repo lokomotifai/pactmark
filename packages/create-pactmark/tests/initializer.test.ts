@@ -55,7 +55,7 @@ describe("initializer planning", () => {
     expect(first).toMatchObject({
       schemaVersion: "1",
       templateFormatVersion: "1",
-      frameworkVersion: "0.1.0",
+      frameworkVersion: "0.1.1",
       projectName: "my-agent",
       template: "library",
       model: "mock-only",
@@ -137,7 +137,7 @@ describe("atomic generation", () => {
       const manifest = JSON.parse(
         await readFile(path.join(cwd, target, "package.json"), "utf8"),
       ) as { dependencies: Record<string, string> };
-      expect(manifest.dependencies["@pactmark/agent"]).toBe("0.1.0");
+      expect(manifest.dependencies["@pactmark/agent"]).toBe("0.1.1");
       expect(await readFile(path.join(cwd, target, "src/host.ts"), "utf8")).toContain(
         "createDeclaredToolExecutor",
       );

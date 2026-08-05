@@ -2,7 +2,7 @@
 
 Pactmark, açık yetki altında sınırlandırılmış işler yapan agent’lar için kanıt-yerel bir TypeScript framework’üdür. Her çalışma doğrulanmış bir WorkOrder ile başlar, kontrollü araç etkilerini append-only event geçmişi olarak kaydeder, içerik adresli artifact’ler üretir ve yalnızca tanımlı doğrulamalar tamamlandığında başarıyla sonuçlanır.
 
-Depo, 0.1.0 sürümüne doğru aktif geliştirme aşamasındadır. Henüz npm paketi yayımlandığı veya canlı deployment yapıldığı iddia edilmez. Public kurulum komutu ancak [PLAN.md](./PLAN.md) içindeki release kapıları geçtikten, yetkili yayın yapıldıktan ve registry sonucu doğrulandıktan sonra “doğrulandı” olarak işaretlenecektir.
+0.1.0 sürümü npm üzerinde public olarak yayımlanmış ve temiz consumer dizinlerinden doğrulanmıştır. Pactmark, aşağıda açıkça belgelenen sınırlamalara sahip erken aşama bir sürümdür.
 
 ## Ürün sınırı
 
@@ -19,7 +19,7 @@ pnpm install --frozen-lockfile
 pnpm verify
 ```
 
-İlk bootstrap sırasında komutlar, ilgili work package hayata geçirildikçe kullanılabilir olur. Güncel contributor akışı için [CONTRIBUTING.md](./CONTRIBUTING.md), yürütülebilir kilometre taşları ve release kapıları için [PLAN.md](./PLAN.md) kullanılmalıdır.
+Contributor akışı için [CONTRIBUTING.md](./CONTRIBUTING.md), release kanıtları ve kalan kapılar için [docs/releases/v0.1-readiness.md](./docs/releases/v0.1-readiness.md) kullanılmalıdır.
 
 ## Mimari
 

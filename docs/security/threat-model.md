@@ -67,4 +67,4 @@ incident response. They do not justify weakening a high/critical control.
 Review this model for any new public package, persistence or protocol adapter,
 credential path, effect strategy, sandbox, hosted service, release mechanism,
 supported platform, data class, or externally verified deployment. Record accepted
-changes in an ADR and PLAN.md Decision Log when architecture changes.
+architecture changes in an ADR and the applicable release-readiness record.

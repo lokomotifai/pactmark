@@ -35,6 +35,9 @@ const lockTemplatePath = join(
   "pnpm-lock.template.yaml",
 );
 const tarballRootPlaceholder = "__PACTMARK_TARBALL_ROOT__";
+const externalOverrides = {
+  jose: "6.2.7",
+} as const;
 const packedArtifactTimeout = process.platform === "win32" ? 300_000 : 120_000;
 const packedArtifactCleanupTimeout = process.platform === "win32" ? 60_000 : 30_000;
 const npmPackObservationTimeout = process.platform === "win32" ? 30_000 : 5_000;
@@ -110,7 +113,7 @@ async function makeConsumer(
   writeFileSync(
     join(directory, "pnpm-workspace.yaml"),
     `trustLockfile: true\nenableGlobalVirtualStore: false\ndedupeInjectedDeps: false\noverrides:\n${Object.entries(
-      tarballs,
+      { ...tarballs, ...externalOverrides },
     )
       .map(
         ([packageName, tarball]) => `  ${JSON.stringify(packageName)}: ${JSON.stringify(tarball)}`,
@@ -177,6 +180,18 @@ async function makeConsumer(
 }
 
 describe("packed artifact acceptance", () => {
+  it("keeps every external consumer tarball in the root installation authority", () => {
+    const rootLock = readFileSync(join(repositoryRoot, "pnpm-lock.yaml"), "utf8");
+    const fixtureLock = readFileSync(lockTemplatePath, "utf8");
+    const rootIntegrities = new Set(
+      [...rootLock.matchAll(/integrity: ([A-Za-z0-9+/=_-]+)/gu)].map((match) => match[1]),
+    );
+    const fixtureIntegrities = [...fixtureLock.matchAll(/integrity: ([A-Za-z0-9+/=_-]+)/gu)]
+      .map((match) => match[1])
+      .filter((integrity) => !integrity?.startsWith("__PACTMARK_TARBALL_INTEGRITY_"));
+    expect(fixtureIntegrities.every((integrity) => rootIntegrities.has(integrity))).toBe(true);
+  });
+
   it("validates every publishable npm pack file list and exact packed metadata", () => {
     const packages = discoverPublishablePackages();
     expect(artifacts).toHaveLength(packages.length);

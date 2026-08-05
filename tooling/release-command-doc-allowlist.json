@@ -1,7 +1,5 @@
 {
   "schemaVersion": "1",
-  "paths": ["PLAN.md"],
-  "reviewRationale": {
-    "PLAN.md": "Normative release design and negative boundaries; it is not executable and raw mutation remains forbidden outside the guarded publisher."
-  }
+  "paths": [],
+  "reviewRationale": {}
 }

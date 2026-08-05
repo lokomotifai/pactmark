@@ -18,7 +18,7 @@ import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:pa
 import { readNpmPackedManifest, sha256Bytes } from "../lib/release-integrity.mjs";
 import { readJson, repositoryRoot } from "../lib/repository.mjs";
 
-const RELEASE_VERSION = "0.1.0";
+const RELEASE_VERSION = "0.1.1";
 const PUBLIC_REGISTRY = "https://registry.npmjs.org/";
 const SAFE_TOP_LEVEL_FILES = new Set(["LICENSE", "NOTICE", "README.md", "package.json"]);
 const SAFE_DIRECTORY_PREFIXES = ["dist/", "migrations/"] as const;

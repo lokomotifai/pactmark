@@ -14,6 +14,7 @@ import { finalizeReleaseCandidate } from "../../tooling/finalize-release-candida
 import { generateReleaseArtifacts } from "../../tooling/release-artifacts.mjs";
 import verifyManifestJson from "../../tooling/verify-gates.json" with { type: "json" };
 import { parseVerifyGateManifest, verifyGateScripts } from "../../tooling/verify-gate-manifest.mjs";
+import { prepareOidcPublicationConfig } from "../../tooling/prepare-oidc-publication.mjs";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -81,6 +82,60 @@ describe("release command audit", () => {
 });
 
 describe("deterministic release artifacts", () => {
+  it("prepares a token-free OIDC config only for the exact v0.1.1 package set", () => {
+    withTemporary((directory) => {
+      const packageNames = [
+        "@pactmark/agent",
+        "@pactmark/ai-sdk",
+        "@pactmark/cli",
+        "@pactmark/cloudflare",
+        "@pactmark/core",
+        "@pactmark/driver-postgres-worker",
+        "@pactmark/evidence",
+        "@pactmark/executor-in-process",
+        "@pactmark/http",
+        "@pactmark/mcp",
+        "@pactmark/node",
+        "@pactmark/otel",
+        "@pactmark/policy",
+        "@pactmark/runtime",
+        "@pactmark/store-memory",
+        "@pactmark/store-postgres",
+        "@pactmark/testing",
+        "@pactmark/vercel",
+        "create-pactmark",
+      ];
+      writeFileSync(
+        join(directory, "release-manifest.json"),
+        `${JSON.stringify({
+          status: "attested",
+          metadataProfile: "release",
+          releaseVersion: "0.1.1",
+          packages: packageNames.map((name) => ({ name })),
+        })}\n`,
+      );
+      const config = prepareOidcPublicationConfig(directory, "2026-08-05T12:00:00.000Z");
+      expect(config).toMatchObject({
+        execute: true,
+        mode: "public",
+        registry: "https://registry.npmjs.org/",
+        publicAuthorization: {
+          authMode: "oidc",
+          repository: "pactmark/pactmark",
+          publisherWorkflow: "release.yml",
+          environment: "release",
+          tty: false,
+        },
+      });
+      expect(JSON.stringify(config)).not.toContain("TOKEN");
+      expect(
+        Object.keys(
+          (config["publicAuthorization"] as JsonRecord)["packageAuthorities"] as JsonRecord,
+        ),
+      ).toHaveLength(19);
+    });
+  });
+
   it("writes byte-stable checksums, a non-empty CycloneDX 1.7 SBOM, manifest and attestation inputs", () => {
     withTemporary((directory) => {
       const core = join(directory, "pactmark-core.tgz");
@@ -169,11 +224,11 @@ describe("deterministic release artifacts", () => {
       const tarballDirectory = join(artifactDirectory, "tarballs");
       mkdirSync(tarballDirectory, { recursive: true });
       const core = join(tarballDirectory, "pactmark-core.tgz");
-      writeFileSync(core, tarball({ name: "@pactmark/core", version: "0.1.0" }));
+      writeFileSync(core, tarball({ name: "@pactmark/core", version: "0.1.1" }));
       generateReleaseArtifacts({
         outputDirectory: artifactDirectory,
         metadataProfile: "release",
-        releaseVersion: "0.1.0",
+        releaseVersion: "0.1.1",
         source: { commit: "a".repeat(40), tree: "b".repeat(64), clean: true },
         sourceDateEpoch: 1_775_347_200,
         tarballs: [{ path: core, packageDirectory: "packages/core" }],
@@ -218,11 +273,11 @@ describe("deterministic release artifacts", () => {
       const tarballDirectory = join(directory, "tarballs");
       mkdirSync(tarballDirectory, { recursive: true });
       const core = join(tarballDirectory, "core.tgz");
-      writeFileSync(core, tarball({ name: "@pactmark/core", version: "0.1.0" }));
+      writeFileSync(core, tarball({ name: "@pactmark/core", version: "0.1.1" }));
       generateReleaseArtifacts({
         outputDirectory: directory,
         metadataProfile: "release",
-        releaseVersion: "0.1.0",
+        releaseVersion: "0.1.1",
         source: { commit: "a".repeat(40), tree: "b".repeat(64), clean: true },
         sourceDateEpoch: 1,
         tarballs: [{ path: core, packageDirectory: "packages/core" }],

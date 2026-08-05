@@ -103,7 +103,7 @@ const sourceState = gitSourceState();
 const artifacts = generateReleaseArtifacts({
   outputDirectory,
   metadataProfile: "release",
-  releaseVersion: "0.1.0",
+  releaseVersion: "0.1.1",
   source: { commit: sourceState.commit, tree: sourceDigest, clean: sourceState.clean },
   sourceDateEpoch: Number(process.env["SOURCE_DATE_EPOCH"] ?? "0"),
   tarballs,

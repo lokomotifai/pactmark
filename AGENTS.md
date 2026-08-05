@@ -1,6 +1,6 @@
 # Pactmark repository guidance
 
-This file is the durable engineering contract for Codex and contributors. For work spanning milestones, read [PLAN.md](./PLAN.md) in full and execute its work packages in dependency order.
+This file is the durable engineering contract for Codex and contributors. Release evidence and remaining gates are recorded in [docs/releases/v0.1-readiness.md](./docs/releases/v0.1-readiness.md).
 
 ## Product and language
 
@@ -13,7 +13,7 @@ This file is the durable engineering contract for Codex and contributors. For wo
 
 - `packages/core`, `packages/runtime`, `packages/policy`, and `packages/evidence` are the portable kernel.
 - Vendor, model, storage, protocol, and host behavior belongs in adapters.
-- The production package graph in PLAN.md is normative. Cycles and undeclared deep imports are forbidden.
+- Workspace manifests and executable dependency-boundary checks define the production package graph. Cycles and undeclared deep imports are forbidden.
 - Tests may consume `@pactmark/testing` only as an explicit development dependency. Test helpers must never leak into production exports.
 - `briefs/` and `research/`, when locally present, are private bootstrap inputs. Never track, package, document-build, containerize, or publish them.
 
@@ -33,7 +33,7 @@ This file is the durable engineering contract for Codex and contributors. For wo
 
 Use the pinned pnpm workspace and Node.js 24 for development. Node.js 22 and 24 are the supported release lines.
 
-Run the smallest relevant check after an edit. Before closing a milestone, run its commands and record the observable behavior in PLAN.md. Before release readiness, run:
+Run the smallest relevant check after an edit. Before closing a release gate, record the command and observable behavior in the release-readiness record. Before release readiness, run:
 
 ```sh
 pnpm verify
@@ -62,4 +62,4 @@ The canonical aggregate may not hide live provider calls, secrets, or external d
 
 ## Progress records
 
-Update PLAN.md Progress, Surprises and Discoveries, Decision Log, and Outcomes and Retrospective as work advances. Completion entries include UTC timestamp, exact command, and observable proof. Do not mark a work package complete until its exit gate passes.
+Update the applicable release-readiness record as work advances. Completion entries include a UTC timestamp, exact command, and observable proof. Do not mark a release gate complete until its exit criteria pass.

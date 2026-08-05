@@ -10,4 +10,4 @@ pattern records include explicit tenant, purpose, and data-class routing around
 their immutable result/manifest. Concrete memory and PostgreSQL behavior remains
 in the corresponding storage adapters.
 
-The package is not yet publicly released. Local development and packed-candidate behavior are governed by the repository PLAN and readiness record.
+The package is publicly released. Local development and packed-candidate behavior are governed by the repository engineering contract and readiness record.
