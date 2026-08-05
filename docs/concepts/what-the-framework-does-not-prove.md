@@ -11,5 +11,6 @@ or artifact truth. Local green tests do not constitute a live platform attestati
 
 The reference sandbox is explicitly unsafe for production arbitrary-code isolation.
 The Vercel and Cloudflare packages have local contract evidence only. The memory
-store is not production durability. Public release and registry ownership remain
-pending until the readiness record contains external evidence.
+store is not production durability. Public release and registry ownership are
+verified for v0.1.1, but they do not establish any of the production or security
+claims excluded above.

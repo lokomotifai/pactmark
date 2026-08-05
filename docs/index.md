@@ -13,8 +13,8 @@ hero:
       variant: minimal
 ---
 
-> Compatibility: Pactmark 0.1.x. Publication status is **pending**; use the local
-> candidate workflow until the public readiness record verifies registry bytes.
+> Compatibility: Pactmark 0.1.x. Version 0.1.1 is public on npm with verified
+> registry bytes and per-package provenance.
 
 Pactmark turns a validated `WorkOrder` into a bounded run, governed tool effects,
 verified artifacts, and an `EvidenceRecord`. Policy, credentials, approvals,

@@ -13,5 +13,6 @@ or provider fallback.
 Optional model-provider, Postgres, platform, MCP, and OpenTelemetry adapters are
 not re-exported or installed by this package.
 
-Publication is pending. Use this package from the local Pactmark workspace
-until an authorized release is recorded.
+Version `0.1.1` is public on npm with verified registry bytes and provenance. This
+release status does not change the explicit runtime and production limitations
+above.

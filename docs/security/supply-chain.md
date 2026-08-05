@@ -21,7 +21,9 @@ authorized GitHub release path and exact anonymous byte verification.
 The protected `release.yml` candidate job is manual, `main`-only, and bound to the
 reviewer-gated `release` environment. It reruns deterministic and live freshness
 gates, freezes exact tarball/SBOM/manifest checksum subjects, and uploads a candidate
-only after GitHub build-provenance and SBOM attestations succeed. It has no npm,
-deployment, tag, or GitHub Release write. Brand-new npm packages cannot use staged
-publishing or trusted publishing before they exist, so the first public release
-remains a later human-attended 2FA bootstrap after the exact-byte Vercel gate.
+only after GitHub build-provenance and SBOM attestations succeed. Its npm write is
+source-bound, reviewer-gated, token-free trusted publishing; the workflow cannot
+deploy, create a tag, or create a GitHub Release. The initial 0.1.0 bootstrap used a
+human-attended 2FA session. The v0.1.1 patch then verified all existing bytes before
+publishing missing exact tarballs and independently matched all 19 registry-served
+tarballs to the frozen candidate.

@@ -14,6 +14,9 @@ export default defineConfig({
         en: { label: "English", lang: "en" },
         tr: { label: "Türkçe", lang: "tr" },
       },
+      components: {
+        SiteTitle: "./src/components/SiteTitle.astro",
+      },
       customCss: ["./src/styles/docs.css"],
       lastUpdated: false,
       sidebar: [
