@@ -10,6 +10,11 @@
 /.github/ @fatihguner
 /SECURITY.md @fatihguner
 /GOVERNANCE.md @fatihguner
+/MAINTAINERS.md @fatihguner
+/CODE_OF_CONDUCT.md @fatihguner
+/SUPPORT.md @fatihguner
+/TRADEMARKS.md @fatihguner
+/assets/brand/ @fatihguner
 /packages/policy/ @fatihguner
 /packages/evidence/ @fatihguner
 /tooling/ @fatihguner

@@ -1,17 +1,45 @@
-# Trademarks
+# Pactmark name and logo policy
 
-The Apache License 2.0 grants copyright and patent permissions; it does not
-grant trademark rights except for reasonable and customary attribution.
+The Apache License 2.0 covers the repository's licensed source and expressly
+does not grant general trademark rights. “Pactmark,” the Pactmark wordmark, and
+the red-and-white Pactmark symbol identify the official project. This policy
+does not claim that any mark is registered.
 
-“Pactmark” is the project name selected for this repository. No trademark
-registration, clearance search, public namespace ownership, or external
-enforcement status has been verified. Until those checks occur, do not imply
-that the name is registered or exclusively controlled.
+## Uses that do not require permission
 
-You may make truthful nominative statements such as “compatible with
-Pactmark” or “built using Pactmark,” provided they do not suggest endorsement,
-certification, or an official project relationship. Modified distributions
-must not present themselves as an official Pactmark release.
+You may:
 
-Logos, if introduced, may carry separate usage guidance. Third-party names
-and marks belong to their respective owners.
+- truthfully state that software uses, integrates with, or is compatible with
+  Pactmark;
+- link to the project and use the unmodified logo next to that link;
+- refer to an official Pactmark package, release, event, or documentation page;
+  and
+- describe a fork as “based on Pactmark” when the fork is clearly identified as
+  unofficial and modified.
+
+These uses must not imply endorsement, certification, security approval,
+official status, or a commercial relationship.
+
+## Uses that require permission
+
+Ask the maintainers before using a Pactmark mark:
+
+- in a product, company, domain, organization, or package name;
+- as the primary branding of a fork or distribution;
+- on merchandise, paid training, events, or commercial promotion; or
+- in a modified logo that could be mistaken for an official variant.
+
+Do not register confusingly similar names or logos, remove attribution in a way
+that misleads users about origin, or present modified software as an official
+Pactmark release.
+
+## Visual assets
+
+Canonical artwork and practical usage guidance live in
+[`assets/brand/`](assets/brand/). Keep the mark's proportions and colors, use
+adequate contrast and clear space, and do not place it inside another logo.
+
+Questions and permission requests may be opened as a repository support issue
+if they contain no confidential information. A permission can be limited or
+withdrawn when a use becomes misleading. Truthful nominative use and rights
+provided by applicable law are not restricted by this policy.

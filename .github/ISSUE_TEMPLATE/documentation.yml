@@ -1,0 +1,45 @@
+name: Documentation problem
+description: Report missing, incorrect, inaccessible, or inconsistent documentation.
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Page or file
+      description: Link to the affected page, heading, source file, or code symbol.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing?
+      description: Explain what a reader is likely to misunderstand or cannot complete.
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: Suggested correction
+      description: Optional wording, example, or information architecture change.
+  - type: dropdown
+    id: surfaces
+    attributes:
+      label: Affected surface
+      multiple: true
+      options:
+        - English documentation
+        - Turkish documentation
+        - README or community files
+        - Package API reference
+        - Example or quickstart
+        - Accessibility or navigation
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: This report contains no credentials, customer data, private prompts, or vulnerability details.
+          required: true

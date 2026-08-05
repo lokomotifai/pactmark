@@ -1,73 +1,102 @@
-# Contributor Covenant Code of Conduct
+# Pactmark Code of Conduct
 
 ## Our pledge
 
 We as members, contributors, and leaders pledge to make participation in our
 community a harassment-free experience for everyone, regardless of age, body
 size, visible or invisible disability, ethnicity, sex characteristics, gender
-identity and expression, level of experience, education, socioeconomic status,
-nationality, personal appearance, race, caste, color, religion, or sexual
-identity and orientation.
+identity and expression, level of experience, education, socio-economic
+status, nationality, personal appearance, race, caste, color, religion, or
+sexual identity and orientation.
 
 We pledge to act and interact in ways that contribute to an open, welcoming,
 diverse, inclusive, and healthy community.
 
 ## Our standards
 
-Examples of behavior that contributes to a positive environment include:
+Behavior that contributes to a positive environment includes:
 
-- demonstrating empathy and kindness toward other people;
-- respecting differing opinions, viewpoints, and experiences;
-- giving and gracefully accepting constructive feedback;
-- accepting responsibility and apologizing to those affected by our mistakes;
-- focusing on what is best not just for us as individuals, but for the
-  community as a whole.
+- demonstrating empathy and kindness;
+- respecting different opinions, viewpoints, and experiences;
+- giving and accepting specific, constructive feedback;
+- taking responsibility, apologizing when we cause harm, and learning from it;
+- making room for people who communicate in a second language or are new to a
+  codebase, without lowering standards for evidence; and
+- focusing on the health of the project and community, not personal status.
 
-Examples of unacceptable behavior include:
+Unacceptable behavior includes:
 
-- sexualized language or imagery, and sexual attention or advances;
-- trolling, insulting or derogatory comments, and personal or political
-  attacks;
-- public or private harassment;
-- publishing others' private information without explicit permission;
+- sexualized language or imagery and sexual attention or advances;
+- trolling, insults, derogatory comments, or personal and political attacks;
+- public or private harassment, stalking, intimidation, or threats;
+- publishing another person's private information without explicit permission;
+- deliberate misrepresentation of another person's work, identity, or views;
+- using generated content, repetitive demands, or bad-faith review to exhaust
+  contributors or create a false impression of expertise; and
 - conduct that could reasonably be considered inappropriate in a professional
   setting.
 
-## Enforcement responsibilities
-
-Project maintainers are responsible for clarifying and enforcing these
-standards. They may remove, edit, or reject comments, commits, code, issues, and
-other contributions that are inconsistent with this Code of Conduct and will
-communicate moderation reasons when appropriate.
+Disagreement is not misconduct. Direct technical criticism is welcome when it
+addresses the work, explains its reasoning, and leaves room for correction.
 
 ## Scope
 
-This Code applies in project spaces and when an individual officially
-represents the project in public spaces.
+This Code applies in project repositories, issues, pull requests, reviews,
+official events and channels, and private interactions about project work. It
+also applies when someone officially represents Pactmark, including through an
+official account, delegated role, or event appearance.
 
-## Enforcement
+## Enforcement responsibility
 
-Report abusive, harassing, or otherwise unacceptable behavior privately to the
-maintainer route described in [MAINTAINERS.md](MAINTAINERS.md). At this private
-bootstrap stage no public remote or dedicated conduct mailbox has been
-verified. Until a private route is published, contact the repository owner
-directly through the same private channel by which you received access; do not
-open a public issue containing sensitive information.
+Project maintainers clarify and enforce these standards. They may edit, hide,
+lock, reject, or remove comments, commits, issues, pull requests, or other
+contributions that violate this Code, and may restrict participation when
+necessary. Moderation reasons will be communicated when doing so is safe and
+appropriate.
 
-All complaints will be reviewed promptly and fairly. Maintainers must respect
-the privacy and security of the reporter. Anyone handling a report must recuse
-themselves when they are implicated or have a material conflict.
+Anyone handling a report must protect the reporter's privacy, limit access to
+people needed for the response, and recuse themselves if they are implicated or
+have a material conflict. Retaliation against a reporter, witness, or responder
+is itself a violation.
 
-## Enforcement guidelines
+## Reporting
 
-Maintainers will consider context, impact, and pattern of behavior when
-determining a response. Responses may include a private correction, warning,
-temporary restriction, or permanent exclusion from project spaces. Serious or
-repeated violations may lead directly to stronger action.
+For conduct tied to a specific GitHub comment, use GitHub's private **Report
+content** action when it is available. For any other incident, email
+[fatih@komunite.com.tr](mailto:fatih@komunite.com.tr?subject=Pactmark%20conduct%20report)
+with `Pactmark conduct report` in the subject.
+
+Include only what is needed to understand the incident: where and when it
+happened, the people involved, the behavior, its impact, and any links or
+screenshots you are authorized to share. Do not investigate on the project's
+behalf or put sensitive details in a public issue.
+
+The current conduct responder is listed in [MAINTAINERS.md](MAINTAINERS.md).
+If that person is involved, state the conflict in the first line. Because the
+project presently has one maintainer, an unconflicted internal responder may not
+exist; the responder must then seek a neutral external reviewer and disclose
+that limitation to the reporter. Immediate platform-level abuse or safety risks
+may also be reported directly to GitHub.
+
+## Response framework
+
+Responses consider severity, impact, context, pattern, willingness to repair
+harm, and the safety of affected people. They may include:
+
+1. **Correction** — a private explanation and request to change behavior.
+2. **Warning** — a written warning with consequences for repetition and, when
+   appropriate, limits on contact with affected people.
+3. **Temporary restriction** — a time-bounded ban from project interaction.
+4. **Permanent restriction** — removal from project spaces and roles for severe
+   harm or a sustained pattern of violations.
+
+A serious single incident may move directly to a stronger response. Project
+roles increase accountability rather than leniency. Reports are acknowledged
+as promptly as capacity permits; no fixed response time is promised.
 
 ## Attribution
 
-This Code of Conduct adapts the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html).
-Its community impact guidelines were intentionally summarized rather than
-copied verbatim. Contributor Covenant is licensed under
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+This Code adapts the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html),
+licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Its enforcement ladder has been tailored to Pactmark's present governance and
+reporting routes.

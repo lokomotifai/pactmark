@@ -1,28 +1,44 @@
-# Support
+# Pactmark support
 
-Pactmark is community-maintained open-source software provided under the
-Apache License 2.0, without warranty or a service-level agreement.
+Pactmark is community-maintained open-source software provided under the Apache
+License 2.0, without warranty, a service-level agreement, or an entitlement to
+individual support.
 
-## Getting help
+## Choose the right route
 
-Once a public repository exists, use its issue tracker for reproducible bugs
-and focused documentation questions. Include the Pactmark version, Node.js and
-package-manager versions, runtime/platform, a minimal reproduction, observed
-and expected behavior, and sanitized logs.
+| Need                            | Route                                                                                                                  |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Reproducible bug                | [Bug report](https://github.com/pactmark/pactmark/issues/new?template=bug.yml)                                         |
+| Documentation problem           | [Documentation report](https://github.com/pactmark/pactmark/issues/new?template=documentation.yml)                     |
+| Focused implementation question | [Support question](https://github.com/pactmark/pactmark/issues/new?template=question.yml)                              |
+| Product or API proposal         | [Feature proposal](https://github.com/pactmark/pactmark/issues/new?template=feature.yml)                               |
+| Security vulnerability          | [Private Vulnerability Reporting](https://github.com/pactmark/pactmark/security/advisories/new) — never a public issue |
+| Conduct incident                | Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)                                                                        |
 
-Before that public route is verified, collaborators should use the private
-channel through which they received repository access. There is currently no
-verified public forum, chat, support mailbox, or paid support offering.
+Search existing issues and the [English and Turkish documentation](https://pactmark.github.io/pactmark/)
+before opening a new report.
 
-## Where requests belong
+## What makes a useful support request
 
-- Suspected vulnerabilities: follow [SECURITY.md](SECURITY.md); never publish
-  sensitive exploit details in a general issue.
-- Conduct reports: follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-- Product proposals: open a focused proposal after a public issue route exists.
-- General implementation questions: use a discussion route only after one is
-  explicitly enabled and documented.
+Include the exact Pactmark package and version, Node.js and package-manager
+versions, host/runtime, the smallest reproduction, expected and observed
+behavior, and sanitized logs or stable `KAF_*` error codes. Say whether the
+problem involves replay, cancellation, concurrency, tenancy, grants, approval,
+credentials, persistence, or external effects.
 
-Maintainers may close requests that lack a reproduction, concern unsupported
-behavior, duplicate an existing report, or cannot be addressed safely. Support
-responses and timelines are best-effort.
+Replace provider calls with a deterministic fixture when possible. Never post
+secrets, raw prompts containing private data, customer content, access tokens,
+connection strings, or vulnerability details.
+
+## Support boundary
+
+Maintainers can help distinguish a Pactmark defect from application wiring, but
+cannot operate or audit a user's deployment. Support does not cover custom
+agent design, provider availability, third-party SDK behavior, cloud billing,
+application credentials, production incident command, or security guarantees
+for a host that has not been evaluated.
+
+Issues may be closed when they lack enough information to reproduce, duplicate
+an existing report, concern unsupported behavior, or turn into open-ended
+consulting. A closure should state why and, when known, point to the next useful
+route. Response times are best-effort.

@@ -1,21 +1,34 @@
-# Maintainers
+# Pactmark maintainers
 
-## Current stewardship
+This is the authoritative public record of active project roles. It describes
+project authority; GitHub or npm access still depends on the corresponding
+platform setting.
 
-| Role                                      | Identity                              | Scope           | Status                                                                  |
-| ----------------------------------------- | ------------------------------------- | --------------- | ----------------------------------------------------------------------- |
-| Repository owner and bootstrap maintainer | Not verified from this local checkout | Repository-wide | Temporary role record pending validation of the public repository owner |
+## Active maintainers
 
-No individual name, account handle, public email address, or organization
-ownership can be truthfully inferred from the local Git author configuration.
-Those fields must be added only after the repository's canonical owner and
-maintainer access are inspected. This table does not grant access or release
-authority.
+| Person                                                       | Project role           | Scope           | Additional capabilities                                                                 | Active since |
+| ------------------------------------------------------------ | ---------------------- | --------------- | --------------------------------------------------------------------------------------- | ------------ |
+| [Fatih Guner (`@fatihguner`)](https://github.com/fatihguner) | Founder and maintainer | Repository-wide | GitHub administration, release approval, npm stewardship, security and conduct response | 2026-08-05   |
 
-Until a verified private contact route is published, collaborators with access
-to this private repository should contact its owner through the same private
-channel by which access was provided. Do not place vulnerability or conduct
-details in a public issue.
+Pactmark currently has one active maintainer. This means independent maintainer
+review is not yet possible; [GOVERNANCE.md](GOVERNANCE.md) defines the temporary
+self-review rule and the control that must change when a second maintainer joins.
 
-Maintainer appointments, removals, scope changes, and verified contact routes
-must be recorded here with an effective date through a reviewed change.
+## Contact routes
+
+- Security vulnerabilities: use [GitHub Private Vulnerability Reporting](https://github.com/pactmark/pactmark/security/advisories/new).
+- Conduct reports: email [fatih@komunite.com.tr](mailto:fatih@komunite.com.tr?subject=Pactmark%20conduct%20report) with `Pactmark conduct report` in the subject.
+- Bugs, proposals, documentation, and support questions: use the repository's
+  [issue forms](https://github.com/pactmark/pactmark/issues/new/choose).
+
+Do not send vulnerability details through the conduct mailbox or a public issue.
+Do not include credentials, customer data, or unnecessary personal information
+in any report.
+
+## Role history
+
+Role appointments, scope changes, and transitions are added here by reviewed
+pull request with an effective date. No emeritus maintainers are recorded.
+
+The contributor ladder, appointment process, inactivity review, conflicts, and
+removal rules are defined in [GOVERNANCE.md](GOVERNANCE.md).

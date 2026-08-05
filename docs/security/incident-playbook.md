@@ -1,6 +1,6 @@
 # Security incident playbook
 
-This playbook applies to suspected malicious tool/MCP/model/policy registrations, leaked credentials, tenant crossover, altered release bytes, and unsafe effects. It does not imply that a private vulnerability channel, branch rule, trusted publisher, or public advisory setting has been configured; those require inspection of the authorized external system.
+This playbook applies to suspected malicious tool/MCP/model/policy registrations, leaked credentials, tenant crossover, altered release bytes, and unsafe effects. GitHub Private Vulnerability Reporting, repository rules, the guarded trusted publisher, and immutable releases are verified for the public repository. Their presence supports response; it does not prove that a particular incident is contained.
 
 ## Immediate safety actions
 
@@ -14,7 +14,7 @@ This playbook applies to suspected malicious tool/MCP/model/policy registrations
 ## Containment through recovery
 
 7. Publish a bounded mitigation through an authorized channel: affected versions/digests, safe configuration, observed impact, and what remains unknown. Avoid speculative attribution.
-8. When available and authorized, prepare the fix in a private advisory fork. Otherwise minimize public disclosure until a fix exists while preserving contributor safety and coordinated-disclosure commitments.
+8. Prepare the fix in a GitHub Security Advisory private fork when the report and affected code fit that workflow. Otherwise use the smallest private working group and minimize public detail until a fix exists while preserving contributor safety and coordinated-disclosure commitments.
 9. Add an adversarial regression reproducing the exact binding/failure. It must prove zero unauthorized effect or zero secret disclosure, not merely a thrown error.
 10. Build the coordinated patch version once; regenerate checksums, CycloneDX SBOM, manifest, packed tests, and provenance inputs. Never reuse abandoned bytes/version after external exposure.
 11. Notify affected users and maintainers; request or update GHSA/CVE only through the authorized disclosure process. An initial interactive npm bootstrap without provenance must say so explicitly and rely on attested-byte comparison.

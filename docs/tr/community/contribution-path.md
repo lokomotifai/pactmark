@@ -14,7 +14,8 @@ Commit DCO sign-off taşır; packed davranış yalnız workspace link ile kabul 
 ## Güvenlik bildirimi
 
 Vulnerability için public issue açmayın. `SECURITY.md` içindeki doğrulanmış private
-kanalı kullanın; kanal henüz kurulmadıysa readiness kaydındaki sınırlamayı izleyin.
+kanalı kullanın. GitHub Private Vulnerability Reporting bu repository için açıktır;
+exploit detayını public issue veya pull request'e taşımayın.
 
 ## Komünite Agent Lab
 
