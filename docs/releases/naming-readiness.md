@@ -94,6 +94,14 @@ generated identical source digests, compiled successfully, and passed two of two
 generated tests. The library template's unconfigured production doctor failed
 closed with `KAF_CLI_HOST_NOT_CONFIGURED`, as designed.
 
+### Verified v0.1.1 trusted release
+
+Protected release run [`31017765360`](https://github.com/pactmark/pactmark/actions/runs/31017765360) completed for exact source `54fc96e870d73625c3b81e27f8aff490194c5876`. It used Node 24.18.1, npm 11.18.0, GitHub environment `release`, and the configured trusted-publisher coordinates; no long-lived npm token was created or retained.
+
+All 19 packages resolve `latest` to `0.1.1`. Independent anonymous verification fetched the registry-served bytes for every package, matched each SHA-256 to the frozen release manifest, confirmed the exact repository metadata, and found an npm SLSA provenance record. The annotated [`v0.1.1`](https://github.com/pactmark/pactmark/releases/tag/v0.1.1) tag resolves to the release source, and its immutable GitHub Release retains 26 checksum, package, manifest, SBOM, and attestation assets.
+
+The patch changes repository/release hygiene and trusted-publication execution only. It does not change the v0.1 runtime API or behavior.
+
 ## GitHub evidence
 
 Anonymous exact searches returned no public match at check time:
@@ -147,7 +155,8 @@ carry exact release-profile metadata with
   only after exact-target approval, after which the organization reported no
   projects.
 
-GitHub release-profile identity and immutable Release, npm organization ownership,
-public package publication, trusted publishing, and exact/latest initializer
-behavior are now established. The approved trademark posture remains the cautious
-limitation in `TRADEMARKS.md`, not a clearance finding.
+GitHub release-profile identity and immutable v0.1.1 Release, npm organization
+ownership, public package publication, per-package SLSA provenance, trusted
+publishing, and exact/latest initializer identity are now established. The approved
+trademark posture remains the cautious limitation in `TRADEMARKS.md`, not a
+clearance finding.
