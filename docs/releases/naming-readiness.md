@@ -65,9 +65,7 @@ package, token, trusted publisher, paid plan, or registry release.
 ### Verified public release
 
 On 2026-08-05, the guarded publisher consumed the GitHub-attested candidate from
-protected run
-[`30981599698`](https://github.com/pactmark/pactmark/actions/runs/30981599698)
-for source commit
+pre-recreation protected run `30981599698` for source commit
 `e19713506097803a1eaff08c7c93711a34151c9f`. The candidate release-manifest
 SHA-256 is
 `8bc1402b4e41539bdcf7cb9a6aa002b364fb83e80b0655f442706d274e9b741a`.
@@ -107,24 +105,18 @@ Anonymous exact searches returned no public match at check time:
 - [repository-name search](https://api.github.com/search/repositories?q=pactmark%20in%3Aname&per_page=100): zero results.
 
 On 2026-08-04, authenticated GitHub inspection established that `fatihguner` is an
-active admin of organization `pactmark`. The authorized workflow created the
-initially empty public repository [`pactmark/pactmark`](https://github.com/pactmark/pactmark).
-Separate source-publication authorization then pushed 733 reviewed files in root
-commit `3234ae5e0d5e7855d67aa3010cd2a12f88e86d3d` to the default `main` branch. No tag,
-release, package publication, or deployment was created. The repository ID is
-`1322668131`; its canonical HTTPS clone URL is
+active admin of organization `pactmark`. On 2026-08-05, the repository was deliberately
+deleted and recreated under the exact same public name
+[`pactmark/pactmark`](https://github.com/pactmark/pactmark), with a single reviewed
+public-source baseline and no retained old pull requests, Actions runs, tags, or releases.
+The recreated repository ID is `1324042084`; its canonical HTTPS clone URL is
 `https://github.com/pactmark/pactmark.git`. The local checkout uses that exact URL as
 `origin`.
 
-On 2026-08-05, annotated tag `v0.1.0` was created and remotely verified to
-dereference exactly to release source commit
-`e19713506097803a1eaff08c7c93711a34151c9f`. The public latest
-[Pactmark 0.1.0 GitHub Release](https://github.com/pactmark/pactmark/releases/tag/v0.1.0)
-is immutable and contains 26 uploaded assets: all 19 exact package tarballs,
-`SHA256SUMS`, release/source manifests, the CycloneDX SBOM, attestation input,
-and provenance/SBOM attestation bundles. GitHub's asset digest for
-`release-manifest.json` is the expected
-`sha256:8bc1402b4e41539bdcf7cb9a6aa002b364fb83e80b0655f442706d274e9b741a`.
+The old repository's annotated `v0.1.0` tag and immutable 26-asset GitHub Release
+were removed as part of that deletion and are not represented as live evidence in
+the recreated repository. The npm `0.1.0` packages and their verified registry bytes
+were unaffected by the GitHub recreation.
 
 ChatGPT Codex Connector installation `151134458` is limited to that single
 repository and reports admin/push access. All 19 publishable package manifests now
@@ -147,8 +139,9 @@ carry exact release-profile metadata with
   created; source published; Codex App restricted to that repository; npm
   organization `pactmark` created on the free plan with enforced 2FA; 19 public
   packages published and byte-verified; 19 trusted publishers configured; token
-  bypass disabled; exact-candidate Vercel Preview verified; immutable `v0.1.0`
-  tag and 26-asset GitHub Release published. The test-only Vercel project was
+  bypass disabled; exact-candidate Vercel Preview verified. The pre-recreation
+  immutable `v0.1.0` tag and 26-asset GitHub Release were removed with the old
+  repository. The test-only Vercel project was
   subsequently removed and verified absent. The recorded Neon test-project ID was
   already absent; a separately observed empty Pactmark Neon project was removed
   only after exact-target approval, after which the organization reported no
