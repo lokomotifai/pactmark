@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { delimiter, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { canonicalJson, sha256Bytes } from "./lib/release-integrity.mjs";
@@ -39,8 +39,19 @@ function text(value: unknown, code: string): string {
   return value;
 }
 
-function commandVersion(command: string): string {
-  const result = spawnSync(command, ["--version"], {
+function npmVersion(): string {
+  const invocation: readonly [string, readonly string[]] =
+    process.platform === "win32"
+      ? (() => {
+          const npmCli = (process.env["PATH"] ?? "")
+            .split(delimiter)
+            .map((directory) => join(directory, "node_modules", "npm", "bin", "npm-cli.js"))
+            .find((candidate) => existsSync(candidate));
+          if (npmCli === undefined) throw new Error("KAF_RELEASE_TOOLCHAIN_UNAVAILABLE");
+          return [process.execPath, [npmCli, "--version"]] as const;
+        })()
+      : ["npm", ["--version"]];
+  const result = spawnSync(invocation[0], invocation[1], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   });
@@ -104,7 +115,7 @@ export function prepareOidcPublicationConfig(
       runner: "github-hosted",
       tty: false,
       nodeVersion: process.version.replace(/^v/u, ""),
-      npmVersion: commandVersion("npm"),
+      npmVersion: npmVersion(),
       minimumNodeVersion: "22.14.0",
       minimumNpmVersion: "11.5.1",
       packageAuthorities: Object.fromEntries(

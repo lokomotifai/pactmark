@@ -24,6 +24,7 @@ overrides:
   "@pactmark/testing": file:__PACTMARK_TARBALL_ROOT__/pactmark-testing-0.1.1.tgz
   "@pactmark/vercel": file:__PACTMARK_TARBALL_ROOT__/pactmark-vercel-0.1.1.tgz
   create-pactmark: file:__PACTMARK_TARBALL_ROOT__/create-pactmark-0.1.1.tgz
+  jose: 6.2.7
 
 importers:
   .:
@@ -701,10 +702,10 @@ packages:
         integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==,
       }
 
-  jose@6.2.8:
+  jose@6.2.7:
     resolution:
       {
-        integrity: sha512-Bsdjwm3Qsd/P0jR+BHDe3LytDfY7WBq2HmCCLIwuVRHMuEC9ae7/R474GIUdF1NgCyZjzVo/A9DOiOBtXq8ZoQ==,
+        integrity: sha512-hq1OB1bALKfydZNoViyg6hPVGV4i93ny9Op+n4zP5RSf7SCZEXa/TsG2O3IEr7+WlHRTPnpqDmHfMH6qXAD60w==,
       }
 
   json-schema-traverse@1.0.0:
@@ -1159,7 +1160,7 @@ snapshots:
       express: 5.2.1
       express-rate-limit: 8.6.1(express@5.2.1)
       hono: 4.12.34
-      jose: 6.2.8
+      jose: 6.2.7
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
@@ -1499,7 +1500,7 @@ snapshots:
 
   isexe@2.0.0: {}
 
-  jose@6.2.8: {}
+  jose@6.2.7: {}
 
   json-schema-traverse@1.0.0: {}
 
