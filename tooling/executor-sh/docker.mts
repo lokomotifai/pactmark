@@ -4,7 +4,7 @@ import {
   EXECUTOR_SELF_HOST_IMAGE_REPOSITORY,
   executorSelfHostManifestDigest,
   type ExecutorSelfHostPlatform,
-} from "../../packages/executor-sh/src/deployment.js";
+} from "../../packages/executor-sh/src/self-host-image.js";
 
 export interface CommandResult {
   readonly stdout: string;

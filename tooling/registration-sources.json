@@ -55,7 +55,11 @@
     },
     {
       "path": "packages/executor-sh/src/deployment.ts",
-      "digest": "sha256:2fbf18e7c87942c9533f819a4bc32628553af8b9247e5f185085d12d7ec7f82f"
+      "digest": "sha256:0850f4e0e59c7820aedb6e160e4dfac3d17635b69b5a7d853860628c03f0484a"
+    },
+    {
+      "path": "packages/executor-sh/src/self-host-image.ts",
+      "digest": "sha256:2686da64bd54ad2f6801addbdcd8c76093046e96228730734e729002d767577d"
     },
     {
       "path": "packages/ai-sdk/src/index.ts",
