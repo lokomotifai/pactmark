@@ -36,7 +36,14 @@ const lockTemplatePath = join(
 );
 const tarballRootPlaceholder = "__PACTMARK_TARBALL_ROOT__";
 const externalOverrides = {
+  "@hono/node-server": "2.0.12",
+  "eventsource-parser": "3.1.0",
+  "express-rate-limit": "8.6.1",
+  hono: "4.12.34",
+  "ip-address": "10.4.0",
   jose: "6.2.7",
+  nanoid: "3.3.17",
+  "pg-protocol": "1.15.0",
 } as const;
 const packedArtifactTimeout = process.platform === "win32" ? 300_000 : 120_000;
 const packedArtifactCleanupTimeout = process.platform === "win32" ? 60_000 : 30_000;

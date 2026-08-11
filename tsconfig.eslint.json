@@ -11,6 +11,7 @@
     "tooling/**/*.mts",
     "tooling/**/*.ts",
     "tests/**/*.ts",
+    "docs/snippets/**/*.ts",
     "packages/**/*.ts",
     "examples/**/*.ts",
     "apps/**/*.ts",

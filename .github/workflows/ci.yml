@@ -36,6 +36,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Bootstrap digest-pinned sandbox base image
         run: pnpm bootstrap:sandbox-container-base
+      - name: Bootstrap digest-pinned Executor self-host image
+        run: pnpm bootstrap:executor-sh-image
       - name: Run canonical local gate
         run: pnpm verify
 

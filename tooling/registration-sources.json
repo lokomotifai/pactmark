@@ -46,6 +46,18 @@
       "digest": "sha256:00460ff84d261c0ac7adb1012709580d2eb89c9ec8ffc2cf5a531ab05388995c"
     },
     {
+      "path": "packages/executor-sh/src/contracts.ts",
+      "digest": "sha256:1160fbbd8d54f1648dc43b7a087806cb82e4d0adafb6bae82dc3eb41cf6b1738"
+    },
+    {
+      "path": "packages/executor-sh/src/adapter.ts",
+      "digest": "sha256:10983474a8b14efed6753b7e74c642d117578c2a279f985579700fec7be89cb2"
+    },
+    {
+      "path": "packages/executor-sh/src/deployment.ts",
+      "digest": "sha256:2fbf18e7c87942c9533f819a4bc32628553af8b9247e5f185085d12d7ec7f82f"
+    },
+    {
       "path": "packages/ai-sdk/src/index.ts",
       "digest": "sha256:0656e35ff4d1eaca3a700a2ebac6115b3fa3ef13d2c97ce794f98f15666464bb"
     },

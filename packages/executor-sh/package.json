@@ -1,0 +1,43 @@
+{
+  "name": "@pactmark/executor-sh",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production-guarded read-only Executor gateway adapter for Pactmark",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@pactmark/core": "workspace:*",
+    "@pactmark/mcp": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@pactmark/testing": "workspace:*",
+    "@vitest/coverage-v8": "4.1.10",
+    "@types/node": "22.20.1",
+    "tsdown": "0.22.14",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  },
+  "engines": {
+    "node": "^22.14.0 || ^24.0.0"
+  }
+}
