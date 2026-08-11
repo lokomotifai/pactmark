@@ -1,5 +1,5 @@
 import { randomBytes, webcrypto } from "node:crypto";
-import { access, chmod, cp, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { access, chmod, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -748,10 +748,60 @@ async function assertAnalyticsAndOutboundDenied(runtime: TenantRuntime): Promise
   }
 }
 
-async function backupDataDirectory(source: string, target: string): Promise<void> {
-  for (const name of await readdir(source)) {
-    await cp(join(source, name), join(target, name), { recursive: true, force: true });
-  }
+async function backupDataDirectory(input: {
+  readonly containerName: string;
+  readonly source: string;
+  readonly target: string;
+  readonly image: string;
+}): Promise<void> {
+  const copyProgram = [
+    'const fs = require("node:fs");',
+    'const path = require("node:path");',
+    'for (const name of fs.readdirSync("/source")) {',
+    '  fs.cpSync(path.join("/source", name), path.join("/target", name), {',
+    "    recursive: true,",
+    "    force: true,",
+    "  });",
+    "}",
+  ].join("\n");
+  await runDocker(
+    [
+      "run",
+      "--name",
+      input.containerName,
+      "--pull",
+      "never",
+      "--network",
+      "none",
+      "--user",
+      "65532:65532",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,noexec,size=8m,uid=65532,gid=65532,mode=0700",
+      "--mount",
+      `type=bind,source=${input.source},target=/source,readonly`,
+      "--mount",
+      `type=bind,source=${input.target},target=/target`,
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--pids-limit",
+      "32",
+      "--memory",
+      "128m",
+      "--memory-swap",
+      "128m",
+      "--cpus",
+      "0.5",
+      "--entrypoint",
+      "bun",
+      input.image,
+      "-e",
+      copyProgram,
+    ],
+    { timeoutMs: maximumWaitMs },
+  );
 }
 
 async function assertNoCanaryLeak(
@@ -819,7 +869,7 @@ export interface ExecutorContainerConformanceResult {
   }>;
   readonly receipt: ExecutorSelfHostConformanceReceipt;
   readonly cleanup: Readonly<{
-    containersRemoved: 6;
+    containersRemoved: 7;
     dataDirectoriesRemoved: 3;
     networkRemoved: true;
   }>;
@@ -842,7 +892,12 @@ export async function runExecutorContainerConformance(): Promise<ExecutorContain
     `pactmark-executor-b-${id}`,
     `pactmark-executor-restore-${id}`,
   ] as const;
-  const containers = [...tenantContainers, ...tenantContainers.map((name) => `${name}-ingress`)];
+  const backupContainer = `pactmark-executor-backup-${id}`;
+  const containers = [
+    ...tenantContainers,
+    ...tenantContainers.map((name) => `${name}-ingress`),
+    backupContainer,
+  ];
   let primaryError: unknown;
   let result: ExecutorContainerConformanceResult | undefined;
   try {
@@ -906,7 +961,12 @@ export async function runExecutorContainerConformance(): Promise<ExecutorContain
     await waitForHealth(tenantA.name);
     await signIn(tenantA);
     await runDocker(["stop", tenantA.name], { timeoutMs: maximumWaitMs });
-    await backupDataDirectory(tenantA.dataDirectory, dataDirectories.restore);
+    await backupDataDirectory({
+      containerName: backupContainer,
+      source: tenantA.dataDirectory,
+      target: dataDirectories.restore,
+      image,
+    });
     const restored = await startTenant({
       id,
       label: "restore",
@@ -987,7 +1047,7 @@ export async function runExecutorContainerConformance(): Promise<ExecutorContain
       } satisfies ExecutorContainerConformanceResult["security"],
       receipt,
       cleanup: {
-        containersRemoved: 6 as const,
+        containersRemoved: 7 as const,
         dataDirectoriesRemoved: 3 as const,
         networkRemoved: true as const,
       },
