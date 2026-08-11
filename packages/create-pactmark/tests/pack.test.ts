@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const run = promisify(execFile);
 const packageRoot = path.resolve(import.meta.dirname, "..");
+const packSetupTimeoutMs = process.platform === "win32" ? 180_000 : 60_000;
 let workRoot = "";
 let tarball = "";
 let unpacked = "";
@@ -37,7 +38,7 @@ beforeAll(async () => {
   unpacked = path.join(workRoot, "unpacked");
   await import("node:fs/promises").then(({ mkdir }) => mkdir(unpacked));
   await run("tar", ["-xzf", tarball, "-C", unpacked]);
-}, 60_000);
+}, packSetupTimeoutMs);
 
 afterAll(async () => {
   if (workRoot !== "") await rm(workRoot, { recursive: true, force: true });
