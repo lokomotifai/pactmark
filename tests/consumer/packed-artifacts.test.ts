@@ -47,6 +47,7 @@ const externalOverrides = {
 } as const;
 const packedArtifactTimeout = process.platform === "win32" ? 300_000 : 120_000;
 const packedArtifactCleanupTimeout = process.platform === "win32" ? 60_000 : 30_000;
+const packedConsumerInstallTimeout = process.platform === "win32" ? 120_000 : 30_000;
 const npmPackObservationTimeout = process.platform === "win32" ? 30_000 : 5_000;
 
 function materializeLockTemplate(template: string): string {
@@ -172,7 +173,7 @@ async function makeConsumer(
         cwd: directory,
         encoding: "utf8",
         stdio: "pipe",
-        timeout: 30_000,
+        timeout: packedConsumerInstallTimeout,
         maxBuffer: 4 * 1024 * 1024,
       },
     );

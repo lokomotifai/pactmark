@@ -12,7 +12,7 @@ Changesets to prepare release notes and coordinated package versions.
 ### Changed
 
 - Added the private, production-guarded Executor gateway integration and its digest-pinned self-host conformance evidence.
-- Hardened fresh-checkout, Linux backup/restore, and Windows packed-initializer CI behavior.
+- Hardened fresh-checkout, Linux backup/restore, and Windows packed-initializer and packed-consumer CI behavior.
 - Kept the public v0.1 runtime API and the 19-package npm surface unchanged.
 
 ## 0.1.1 - 2026-08-05
