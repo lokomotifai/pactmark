@@ -1,4 +1,4 @@
-export const FRAMEWORK_VERSION = "0.1.1" as const;
+export const FRAMEWORK_VERSION = "0.1.2" as const;
 export const TEMPLATE_FORMAT_VERSION = "1" as const;
 
 export const TEMPLATE_NAMES = [
@@ -38,7 +38,7 @@ export interface PlannedFile {
 export interface InitializerPlan {
   readonly schemaVersion: "1";
   readonly templateFormatVersion: "1";
-  readonly frameworkVersion: "0.1.1";
+  readonly frameworkVersion: "0.1.2";
   readonly targetPath: string;
   readonly projectName: string;
   readonly template: TemplateName;

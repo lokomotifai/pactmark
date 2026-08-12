@@ -18,7 +18,7 @@ import {
 } from "../release-publish.mjs";
 
 const LOOPBACK_HOST = "127.0.0.1";
-const RELEASE_VERSION = "0.1.1";
+const RELEASE_VERSION = "0.1.2";
 
 type JsonObject = Record<string, unknown>;
 

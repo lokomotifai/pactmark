@@ -69,7 +69,7 @@ describe("packed initializer", () => {
     };
     expect(manifest).toMatchObject({
       name: "create-pactmark",
-      version: "0.1.1",
+      version: "0.1.2",
       bin: { "create-pactmark": "./dist/bin.js" },
       publishConfig: { registry: "https://registry.npmjs.org/" },
     });
@@ -80,7 +80,7 @@ describe("packed initializer", () => {
     const bin = path.join(unpacked, "package", "dist", "bin.js");
     await chmod(bin, 0o755);
     const version = await run(process.execPath, [bin, "--version"]);
-    expect(version.stdout.trim()).toBe("0.1.1");
+    expect(version.stdout.trim()).toBe("0.1.2");
 
     for (const template of ["library", "node-server", "vercel-next", "cloudflare-worker"]) {
       const target = `packed-${template}`;
@@ -109,7 +109,7 @@ describe("packed initializer", () => {
       const manifest = JSON.parse(
         await readFile(path.join(workRoot, target, "package.json"), "utf8"),
       ) as { dependencies: Record<string, string> };
-      expect(manifest.dependencies["@pactmark/agent"]).toBe("0.1.1");
+      expect(manifest.dependencies["@pactmark/agent"]).toBe("0.1.2");
     }
   });
 
@@ -127,6 +127,6 @@ describe("packed initializer", () => {
       cwd: workRoot,
       env: { ...process.env, npm_config_cache: path.join(workRoot, "exec-cache") },
     });
-    expect(executed.stdout.trim()).toBe("0.1.1");
+    expect(executed.stdout.trim()).toBe("0.1.2");
   });
 });

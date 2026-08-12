@@ -21,12 +21,12 @@ describe("embedded templates", () => {
             expect(first.files.map((file) => file.path)).toEqual(
               [...first.files.map((file) => file.path)].sort(),
             );
-            expect(first.dependencies["@pactmark/agent"]).toBe("0.1.1");
+            expect(first.dependencies["@pactmark/agent"]).toBe("0.1.2");
             for (const [name, version] of Object.entries({
               ...first.dependencies,
               ...first.devDependencies,
             })) {
-              if (name.startsWith("@pactmark/")) expect(version).toBe("0.1.1");
+              if (name.startsWith("@pactmark/")) expect(version).toBe("0.1.2");
               expect(version).not.toBe("latest");
               expect(version).not.toContain("workspace:");
             }

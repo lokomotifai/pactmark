@@ -90,9 +90,9 @@ describe("candidate loopback registry acceptance", () => {
     expect(artifacts).toHaveLength(19);
     expect(published).toHaveLength(artifacts.length);
     expect(published).toEqual(
-      dependencyFirstCandidates(artifacts).map(({ name }) => ({ name, version: "0.1.1" })),
+      dependencyFirstCandidates(artifacts).map(({ name }) => ({ name, version: "0.1.2" })),
     );
-    expect(published.at(-1)).toEqual({ name: "create-pactmark", version: "0.1.1" });
+    expect(published.at(-1)).toEqual({ name: "create-pactmark", version: "0.1.2" });
     if (registry === undefined) throw new Error("KAF_TEST_LOOPBACK_REGISTRY_MISSING");
     const plan = prepareCandidatePublishPlan({ artifacts, registryUrl: registry.url });
     expect(plan.mode).toBe("loopback");
@@ -145,7 +145,7 @@ describe("candidate loopback registry acceptance", () => {
           name: "pactmark-loopback-consumer",
           version: "1.0.0",
           private: true,
-          dependencies: { "create-pactmark": "0.1.1" },
+          dependencies: { "create-pactmark": "0.1.2" },
         },
         null,
         2,
@@ -159,7 +159,7 @@ describe("candidate loopback registry acceptance", () => {
 
     const lockfile = readFileSync(join(consumer, "package-lock.json"), "utf8");
     expect(lockfile).toContain(`"resolved": "${registry.url}create-pactmark/-/`);
-    expect(lockfile).toContain('"version": "0.1.1"');
+    expect(lockfile).toContain('"version": "0.1.2"');
     expect(lockfile).not.toContain("registry.npmjs.org");
 
     const target = join(consumer, "generated-agent");
@@ -196,7 +196,7 @@ describe("candidate loopback registry acceptance", () => {
       .filter(([name]) => name.startsWith("@pactmark/"))
       .map(([, version]) => version);
     expect(frameworkVersions.length).toBeGreaterThan(0);
-    expect(new Set(frameworkVersions)).toEqual(new Set(["0.1.1"]));
+    expect(new Set(frameworkVersions)).toEqual(new Set(["0.1.2"]));
     expect(JSON.stringify(generated)).not.toMatch(/(?:workspace:|latest)/u);
   }, 60_000);
 
@@ -271,7 +271,7 @@ describe("candidate loopback registry acceptance", () => {
           stdio: "pipe",
         });
         const lockfile = readFileSync(join(consumer, "yarn.lock"), "utf8");
-        expect(lockfile).toContain("pactmark-core-0.1.1.tgz");
+        expect(lockfile).toContain("pactmark-core-0.1.2.tgz");
         expect(lockfile).not.toContain("@pactmark/core@workspace:");
       } else {
         execFileSync(
@@ -292,7 +292,7 @@ describe("candidate loopback registry acceptance", () => {
           },
         );
         const lockfile = readFileSync(join(consumer, "bun.lock"), "utf8");
-        expect(lockfile).toContain("pactmark-core-0.1.1.tgz");
+        expect(lockfile).toContain("pactmark-core-0.1.2.tgz");
         expect(lockfile).not.toContain("@pactmark/core@workspace:");
       }
       const output = execFileSync(process.execPath, [join(consumer, "smoke.mjs")], {

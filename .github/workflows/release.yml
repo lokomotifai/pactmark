@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: Type publish-pactmark-0.1.1 to build, attest, and publish the patch
+        description: Type publish-pactmark-0.1.2 to build, attest, and publish the patch
         required: true
         type: string
 
@@ -14,16 +14,16 @@ permissions:
   attestations: write
 
 concurrency:
-  group: release-0.1.1
+  group: release-0.1.2
   cancel-in-progress: false
 
 jobs:
   candidate:
-    name: Build, attest, and publish v0.1.1
+    name: Build, attest, and publish v0.1.2
     if: >-
       github.repository == 'pactmark/pactmark' &&
       github.ref == 'refs/heads/main' &&
-      inputs.confirmation == 'publish-pactmark-0.1.1'
+      inputs.confirmation == 'publish-pactmark-0.1.2'
     runs-on: ubuntu-latest
     environment: release
     steps:
@@ -90,7 +90,7 @@ jobs:
         run: >-
           node --import tsx tooling/release-publish.mts
           --config .artifacts/release-dry-run/oidc-publication-config.json
-          --authorize-public-release publish-pactmark-0.1.1
+          --authorize-public-release publish-pactmark-0.1.2
         env:
           PACTMARK_RELEASE_ENVIRONMENT: release
           PACTMARK_RELEASE_RUNNER: github-hosted
@@ -98,7 +98,7 @@ jobs:
         # actions/upload-artifact v4
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: pactmark-v0.1.1-release-${{ github.sha }}
+          name: pactmark-v0.1.2-release-${{ github.sha }}
           path: .artifacts/release-dry-run
           if-no-files-found: error
           include-hidden-files: true
