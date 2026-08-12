@@ -13,6 +13,8 @@ import {
   sha256File,
 } from "../../tooling/lib/repository.mjs";
 
+const gitSourceStateTimeout = process.platform === "win32" ? 30_000 : 5_000;
+
 describe("repository tooling", () => {
   it("returns deterministic SHA-256 identities", () => {
     const path = join(repositoryRoot, ".artifacts", "test-hash-input.txt");
@@ -26,38 +28,42 @@ describe("repository tooling", () => {
     expect(gitFiles().filter((path) => /^(?:briefs|research)\//u.test(path))).toEqual([]);
   });
 
-  it("reports a real clean commit and fails closed for dirty or uncommitted sources", () => {
-    const directory = mkdtempSync(join(tmpdir(), "pactmark-git-source-"));
-    try {
-      execFileSync("git", ["init", "--quiet"], { cwd: directory });
-      expect(gitSourceState(directory)).toEqual({
-        commit: "uncommitted-local-source",
-        clean: false,
-      });
-      writeFileSync(join(directory, "source.txt"), "one\n");
-      execFileSync("git", ["add", "source.txt"], { cwd: directory });
-      execFileSync(
-        "git",
-        [
-          "-c",
-          "user.name=Pactmark Conformance",
-          "-c",
-          "user.email=conformance@pactmark.invalid",
-          "commit",
-          "--quiet",
-          "--no-gpg-sign",
-          "-m",
-          "baseline",
-        ],
-        { cwd: directory },
-      );
-      const clean = gitSourceState(directory);
-      expect(clean.clean).toBe(true);
-      expect(clean.commit).toMatch(/^[0-9a-f]{40,64}$/u);
-      writeFileSync(join(directory, "source.txt"), "two\n");
-      expect(gitSourceState(directory)).toEqual({ commit: clean.commit, clean: false });
-    } finally {
-      rmSync(directory, { recursive: true, force: true });
-    }
-  });
+  it(
+    "reports a real clean commit and fails closed for dirty or uncommitted sources",
+    () => {
+      const directory = mkdtempSync(join(tmpdir(), "pactmark-git-source-"));
+      try {
+        execFileSync("git", ["init", "--quiet"], { cwd: directory });
+        expect(gitSourceState(directory)).toEqual({
+          commit: "uncommitted-local-source",
+          clean: false,
+        });
+        writeFileSync(join(directory, "source.txt"), "one\n");
+        execFileSync("git", ["add", "source.txt"], { cwd: directory });
+        execFileSync(
+          "git",
+          [
+            "-c",
+            "user.name=Pactmark Conformance",
+            "-c",
+            "user.email=conformance@pactmark.invalid",
+            "commit",
+            "--quiet",
+            "--no-gpg-sign",
+            "-m",
+            "baseline",
+          ],
+          { cwd: directory },
+        );
+        const clean = gitSourceState(directory);
+        expect(clean.clean).toBe(true);
+        expect(clean.commit).toMatch(/^[0-9a-f]{40,64}$/u);
+        writeFileSync(join(directory, "source.txt"), "two\n");
+        expect(gitSourceState(directory)).toEqual({ commit: clean.commit, clean: false });
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    },
+    gitSourceStateTimeout,
+  );
 });
