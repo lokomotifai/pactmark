@@ -71,6 +71,11 @@
       "route": "guides/model-adapters.md"
     },
     { "language": "en", "source": "docs/guides/mcp.md", "route": "guides/mcp.md" },
+    {
+      "language": "en",
+      "source": "docs/guides/executor-sh.md",
+      "route": "guides/executor-sh.md"
+    },
     { "language": "en", "source": "docs/guides/postgres.md", "route": "guides/postgres.md" },
     {
       "language": "en",
@@ -247,6 +252,11 @@
       "language": "tr",
       "source": "docs/tr/concepts/what-the-framework-does-not-prove.md",
       "route": "concepts/what-the-framework-does-not-prove.md"
+    },
+    {
+      "language": "tr",
+      "source": "docs/tr/guides/executor-sh.md",
+      "route": "guides/executor-sh.md"
     },
     {
       "language": "tr",

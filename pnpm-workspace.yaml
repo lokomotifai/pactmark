@@ -11,6 +11,7 @@ enableGlobalVirtualStore: false
 dedupeInjectedDeps: false
 overrides:
   "hono@<4.12.34": "4.12.34" # MCP HTTP owner: maintainers; patched CORS ReDoS within Hono 4.12.
+  "nanoid@<3.3.17": "3.3.17" # Build/docs owner: maintainers; patched predictable-output advisory within Nano ID 3.x.
   "postcss@8.4.31": "8.5.25" # Next build owner: maintainers; security backport within PostCSS 8.
   "sharp@0.34.5": "0.35.3" # Next build owner: maintainers; patched Node-API-compatible release.
   "undici@<7.29.0": "7.29.0" # Cloudflare preview owner: maintainers; patched disclosure/injection releases within Undici 7.

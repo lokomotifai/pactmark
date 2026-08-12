@@ -13,6 +13,7 @@ ADR-0007 records the repository toolchain baseline.
 | Standard Postgres driver                  | `store-postgres`                         | Durable stores over a conventional `DATABASE_URL` without binding contracts to a hosted vendor | Never imported by `core`, `runtime`, `agent`, or CLI production code                                      |
 | Vercel AI SDK                             | `ai-sdk`                                 | Normalize supported model calls while retaining Pactmark runtime ownership of policy and tools | Optional/peer integration; its types do not enter core APIs                                               |
 | Official MCP TypeScript SDK               | `mcp`                                    | Interoperate with MCP using the protocol's maintained implementation                           | Optional and guarded; server metadata/output is untrusted                                                 |
+| Production-guarded Executor gateway       | `executor-sh`                            | Map reviewed Executor catalog entries to exact read-only Pactmark tool registrations           | Private and removable; depends on `core` and `mcp`, never the reverse                                     |
 | OpenTelemetry API                         | `otel`                                   | Emit opt-in, vendor-neutral metadata telemetry                                                 | Optional/peer integration; remote telemetry stays off by default                                          |
 | Astro Starlight and documentation plugins | `apps/docs`                              | Build static English/Turkish documentation                                                     | Documentation-only; never a runtime dependency                                                            |
 
@@ -20,6 +21,11 @@ Provider clients belong to consuming applications or the relevant adapter as
 peer/optional dependencies. Core must not depend on a proprietary model gateway,
 provider HTTP client, platform SDK, deployment CLI, telemetry exporter, or
 hosted database SDK.
+
+`@pactmark/executor-sh` is a private, production-guarded workspace integration governed by ADR-0008.
+It adds no Executor SDK dependency, is excluded from the frozen public package/release set, and must
+remain absent from `core`, `runtime`, and the default `agent` facade. Its removal plan is deleting the
+leaf package, documentation, and workspace lockfile importer without changing kernel contracts.
 
 ## Development and release tooling
 

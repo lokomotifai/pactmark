@@ -63,6 +63,17 @@
       "requiredHeadings": ["Kanıtlanmayanlar", "Yerel kanıt", "Harici doğrulama"]
     },
     {
+      "english": "guides/executor-sh.md",
+      "turkish": "guides/executor-sh.md",
+      "requiredTerms": ["@pactmark/executor-sh", "authority", "sandbox: \"unsafe_local\""],
+      "requiredHeadings": [
+        "Yetki sınırı",
+        "Host bağlantısı",
+        "Runtime davranışı",
+        "Desteklenmeyen ve kanıtlanmayan"
+      ]
+    },
+    {
       "english": "security/security-model.md",
       "turkish": "security/security-model.md",
       "requiredTerms": ["default-deny", "SecretRef", "tenant"],
