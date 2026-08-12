@@ -74,7 +74,7 @@ export function prepareOidcPublicationConfig(
   if (
     manifest["status"] !== "attested" ||
     manifest["metadataProfile"] !== "release" ||
-    manifest["releaseVersion"] !== "0.1.1"
+    manifest["releaseVersion"] !== "0.1.2"
   ) {
     throw new Error("KAF_RELEASE_OIDC_MANIFEST_INVALID");
   }

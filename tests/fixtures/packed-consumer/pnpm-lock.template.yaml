@@ -5,25 +5,25 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  "@pactmark/agent": file:__PACTMARK_TARBALL_ROOT__/pactmark-agent-0.1.1.tgz
-  "@pactmark/ai-sdk": file:__PACTMARK_TARBALL_ROOT__/pactmark-ai-sdk-0.1.1.tgz
-  "@pactmark/cli": file:__PACTMARK_TARBALL_ROOT__/pactmark-cli-0.1.1.tgz
-  "@pactmark/cloudflare": file:__PACTMARK_TARBALL_ROOT__/pactmark-cloudflare-0.1.1.tgz
-  "@pactmark/core": file:__PACTMARK_TARBALL_ROOT__/pactmark-core-0.1.1.tgz
-  "@pactmark/driver-postgres-worker": file:__PACTMARK_TARBALL_ROOT__/pactmark-driver-postgres-worker-0.1.1.tgz
-  "@pactmark/evidence": file:__PACTMARK_TARBALL_ROOT__/pactmark-evidence-0.1.1.tgz
-  "@pactmark/executor-in-process": file:__PACTMARK_TARBALL_ROOT__/pactmark-executor-in-process-0.1.1.tgz
-  "@pactmark/http": file:__PACTMARK_TARBALL_ROOT__/pactmark-http-0.1.1.tgz
-  "@pactmark/mcp": file:__PACTMARK_TARBALL_ROOT__/pactmark-mcp-0.1.1.tgz
-  "@pactmark/node": file:__PACTMARK_TARBALL_ROOT__/pactmark-node-0.1.1.tgz
-  "@pactmark/otel": file:__PACTMARK_TARBALL_ROOT__/pactmark-otel-0.1.1.tgz
-  "@pactmark/policy": file:__PACTMARK_TARBALL_ROOT__/pactmark-policy-0.1.1.tgz
-  "@pactmark/runtime": file:__PACTMARK_TARBALL_ROOT__/pactmark-runtime-0.1.1.tgz
-  "@pactmark/store-memory": file:__PACTMARK_TARBALL_ROOT__/pactmark-store-memory-0.1.1.tgz
-  "@pactmark/store-postgres": file:__PACTMARK_TARBALL_ROOT__/pactmark-store-postgres-0.1.1.tgz
-  "@pactmark/testing": file:__PACTMARK_TARBALL_ROOT__/pactmark-testing-0.1.1.tgz
-  "@pactmark/vercel": file:__PACTMARK_TARBALL_ROOT__/pactmark-vercel-0.1.1.tgz
-  create-pactmark: file:__PACTMARK_TARBALL_ROOT__/create-pactmark-0.1.1.tgz
+  "@pactmark/agent": file:__PACTMARK_TARBALL_ROOT__/pactmark-agent-0.1.2.tgz
+  "@pactmark/ai-sdk": file:__PACTMARK_TARBALL_ROOT__/pactmark-ai-sdk-0.1.2.tgz
+  "@pactmark/cli": file:__PACTMARK_TARBALL_ROOT__/pactmark-cli-0.1.2.tgz
+  "@pactmark/cloudflare": file:__PACTMARK_TARBALL_ROOT__/pactmark-cloudflare-0.1.2.tgz
+  "@pactmark/core": file:__PACTMARK_TARBALL_ROOT__/pactmark-core-0.1.2.tgz
+  "@pactmark/driver-postgres-worker": file:__PACTMARK_TARBALL_ROOT__/pactmark-driver-postgres-worker-0.1.2.tgz
+  "@pactmark/evidence": file:__PACTMARK_TARBALL_ROOT__/pactmark-evidence-0.1.2.tgz
+  "@pactmark/executor-in-process": file:__PACTMARK_TARBALL_ROOT__/pactmark-executor-in-process-0.1.2.tgz
+  "@pactmark/http": file:__PACTMARK_TARBALL_ROOT__/pactmark-http-0.1.2.tgz
+  "@pactmark/mcp": file:__PACTMARK_TARBALL_ROOT__/pactmark-mcp-0.1.2.tgz
+  "@pactmark/node": file:__PACTMARK_TARBALL_ROOT__/pactmark-node-0.1.2.tgz
+  "@pactmark/otel": file:__PACTMARK_TARBALL_ROOT__/pactmark-otel-0.1.2.tgz
+  "@pactmark/policy": file:__PACTMARK_TARBALL_ROOT__/pactmark-policy-0.1.2.tgz
+  "@pactmark/runtime": file:__PACTMARK_TARBALL_ROOT__/pactmark-runtime-0.1.2.tgz
+  "@pactmark/store-memory": file:__PACTMARK_TARBALL_ROOT__/pactmark-store-memory-0.1.2.tgz
+  "@pactmark/store-postgres": file:__PACTMARK_TARBALL_ROOT__/pactmark-store-postgres-0.1.2.tgz
+  "@pactmark/testing": file:__PACTMARK_TARBALL_ROOT__/pactmark-testing-0.1.2.tgz
+  "@pactmark/vercel": file:__PACTMARK_TARBALL_ROOT__/pactmark-vercel-0.1.2.tgz
+  create-pactmark: file:__PACTMARK_TARBALL_ROOT__/create-pactmark-0.1.2.tgz
   "@hono/node-server": 2.0.12
   eventsource-parser: 3.1.0
   express-rate-limit: 8.6.1
@@ -37,59 +37,59 @@ importers:
   .:
     dependencies:
       "@pactmark/agent":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-agent-0.1.1.tgz
-        version: file:../tarballs/pactmark-agent-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-agent-0.1.2.tgz
+        version: file:../tarballs/pactmark-agent-0.1.2.tgz
       "@pactmark/ai-sdk":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-ai-sdk-0.1.1.tgz
-        version: file:../tarballs/pactmark-ai-sdk-0.1.1.tgz(ai@7.0.48(zod@4.4.3))
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-ai-sdk-0.1.2.tgz
+        version: file:../tarballs/pactmark-ai-sdk-0.1.2.tgz(ai@7.0.48(zod@4.4.3))
       "@pactmark/cli":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-cli-0.1.1.tgz
-        version: file:../tarballs/pactmark-cli-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-cli-0.1.2.tgz
+        version: file:../tarballs/pactmark-cli-0.1.2.tgz
       "@pactmark/cloudflare":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-cloudflare-0.1.1.tgz
-        version: file:../tarballs/pactmark-cloudflare-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-cloudflare-0.1.2.tgz
+        version: file:../tarballs/pactmark-cloudflare-0.1.2.tgz
       "@pactmark/core":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-core-0.1.1.tgz
-        version: file:../tarballs/pactmark-core-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-core-0.1.2.tgz
+        version: file:../tarballs/pactmark-core-0.1.2.tgz
       "@pactmark/driver-postgres-worker":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-driver-postgres-worker-0.1.1.tgz
-        version: file:../tarballs/pactmark-driver-postgres-worker-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-driver-postgres-worker-0.1.2.tgz
+        version: file:../tarballs/pactmark-driver-postgres-worker-0.1.2.tgz
       "@pactmark/evidence":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-evidence-0.1.1.tgz
-        version: file:../tarballs/pactmark-evidence-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-evidence-0.1.2.tgz
+        version: file:../tarballs/pactmark-evidence-0.1.2.tgz
       "@pactmark/executor-in-process":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-executor-in-process-0.1.1.tgz
-        version: file:../tarballs/pactmark-executor-in-process-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-executor-in-process-0.1.2.tgz
+        version: file:../tarballs/pactmark-executor-in-process-0.1.2.tgz
       "@pactmark/http":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-http-0.1.1.tgz
-        version: file:../tarballs/pactmark-http-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-http-0.1.2.tgz
+        version: file:../tarballs/pactmark-http-0.1.2.tgz
       "@pactmark/mcp":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-mcp-0.1.1.tgz
-        version: file:../tarballs/pactmark-mcp-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-mcp-0.1.2.tgz
+        version: file:../tarballs/pactmark-mcp-0.1.2.tgz
       "@pactmark/node":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-node-0.1.1.tgz
-        version: file:../tarballs/pactmark-node-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-node-0.1.2.tgz
+        version: file:../tarballs/pactmark-node-0.1.2.tgz
       "@pactmark/otel":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-otel-0.1.1.tgz
-        version: file:../tarballs/pactmark-otel-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-otel-0.1.2.tgz
+        version: file:../tarballs/pactmark-otel-0.1.2.tgz
       "@pactmark/policy":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-policy-0.1.1.tgz
-        version: file:../tarballs/pactmark-policy-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-policy-0.1.2.tgz
+        version: file:../tarballs/pactmark-policy-0.1.2.tgz
       "@pactmark/runtime":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-runtime-0.1.1.tgz
-        version: file:../tarballs/pactmark-runtime-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-runtime-0.1.2.tgz
+        version: file:../tarballs/pactmark-runtime-0.1.2.tgz
       "@pactmark/store-memory":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-store-memory-0.1.1.tgz
-        version: file:../tarballs/pactmark-store-memory-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-store-memory-0.1.2.tgz
+        version: file:../tarballs/pactmark-store-memory-0.1.2.tgz
       "@pactmark/store-postgres":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-store-postgres-0.1.1.tgz
-        version: file:../tarballs/pactmark-store-postgres-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-store-postgres-0.1.2.tgz
+        version: file:../tarballs/pactmark-store-postgres-0.1.2.tgz
       "@pactmark/testing":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-testing-0.1.1.tgz
-        version: file:../tarballs/pactmark-testing-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-testing-0.1.2.tgz
+        version: file:../tarballs/pactmark-testing-0.1.2.tgz
       "@pactmark/vercel":
-        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-vercel-0.1.1.tgz
-        version: file:../tarballs/pactmark-vercel-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/pactmark-vercel-0.1.2.tgz
+        version: file:../tarballs/pactmark-vercel-0.1.2.tgz
       "@types/json-schema":
         specifier: 7.0.15
         version: 7.0.15
@@ -103,8 +103,8 @@ importers:
         specifier: 7.0.48
         version: 7.0.48(zod@4.4.3)
       create-pactmark:
-        specifier: file:__PACTMARK_TARBALL_ROOT__/create-pactmark-0.1.1.tgz
-        version: file:../tarballs/create-pactmark-0.1.1.tgz
+        specifier: file:__PACTMARK_TARBALL_ROOT__/create-pactmark-0.1.2.tgz
+        version: file:../tarballs/create-pactmark-0.1.2.tgz
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -157,169 +157,169 @@ packages:
       "@cfworker/json-schema":
         optional: true
 
-  "@pactmark/agent@file:../tarballs/pactmark-agent-0.1.1.tgz":
+  "@pactmark/agent@file:../tarballs/pactmark-agent-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_0__,
-        tarball: file:../tarballs/pactmark-agent-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-agent-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/ai-sdk@file:../tarballs/pactmark-ai-sdk-0.1.1.tgz":
+  "@pactmark/ai-sdk@file:../tarballs/pactmark-ai-sdk-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_1__,
-        tarball: file:../tarballs/pactmark-ai-sdk-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-ai-sdk-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
     peerDependencies:
       ai: ^7.0.48
 
-  "@pactmark/cli@file:../tarballs/pactmark-cli-0.1.1.tgz":
+  "@pactmark/cli@file:../tarballs/pactmark-cli-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_2__,
-        tarball: file:../tarballs/pactmark-cli-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-cli-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
     hasBin: true
 
-  "@pactmark/cloudflare@file:../tarballs/pactmark-cloudflare-0.1.1.tgz":
+  "@pactmark/cloudflare@file:../tarballs/pactmark-cloudflare-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_3__,
-        tarball: file:../tarballs/pactmark-cloudflare-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-cloudflare-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/core@file:../tarballs/pactmark-core-0.1.1.tgz":
+  "@pactmark/core@file:../tarballs/pactmark-core-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_4__,
-        tarball: file:../tarballs/pactmark-core-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-core-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/driver-postgres-worker@file:../tarballs/pactmark-driver-postgres-worker-0.1.1.tgz":
+  "@pactmark/driver-postgres-worker@file:../tarballs/pactmark-driver-postgres-worker-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_5__,
-        tarball: file:../tarballs/pactmark-driver-postgres-worker-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-driver-postgres-worker-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/evidence@file:../tarballs/pactmark-evidence-0.1.1.tgz":
+  "@pactmark/evidence@file:../tarballs/pactmark-evidence-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_6__,
-        tarball: file:../tarballs/pactmark-evidence-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-evidence-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/executor-in-process@file:../tarballs/pactmark-executor-in-process-0.1.1.tgz":
+  "@pactmark/executor-in-process@file:../tarballs/pactmark-executor-in-process-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_7__,
-        tarball: file:../tarballs/pactmark-executor-in-process-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-executor-in-process-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/http@file:../tarballs/pactmark-http-0.1.1.tgz":
+  "@pactmark/http@file:../tarballs/pactmark-http-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_8__,
-        tarball: file:../tarballs/pactmark-http-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-http-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/mcp@file:../tarballs/pactmark-mcp-0.1.1.tgz":
+  "@pactmark/mcp@file:../tarballs/pactmark-mcp-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_9__,
-        tarball: file:../tarballs/pactmark-mcp-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-mcp-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/node@file:../tarballs/pactmark-node-0.1.1.tgz":
+  "@pactmark/node@file:../tarballs/pactmark-node-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_10__,
-        tarball: file:../tarballs/pactmark-node-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-node-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/otel@file:../tarballs/pactmark-otel-0.1.1.tgz":
+  "@pactmark/otel@file:../tarballs/pactmark-otel-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_11__,
-        tarball: file:../tarballs/pactmark-otel-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-otel-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/policy@file:../tarballs/pactmark-policy-0.1.1.tgz":
+  "@pactmark/policy@file:../tarballs/pactmark-policy-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_12__,
-        tarball: file:../tarballs/pactmark-policy-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-policy-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/runtime@file:../tarballs/pactmark-runtime-0.1.1.tgz":
+  "@pactmark/runtime@file:../tarballs/pactmark-runtime-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_13__,
-        tarball: file:../tarballs/pactmark-runtime-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-runtime-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/store-memory@file:../tarballs/pactmark-store-memory-0.1.1.tgz":
+  "@pactmark/store-memory@file:../tarballs/pactmark-store-memory-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_14__,
-        tarball: file:../tarballs/pactmark-store-memory-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-store-memory-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/store-postgres@file:../tarballs/pactmark-store-postgres-0.1.1.tgz":
+  "@pactmark/store-postgres@file:../tarballs/pactmark-store-postgres-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_15__,
-        tarball: file:../tarballs/pactmark-store-postgres-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-store-postgres-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/testing@file:../tarballs/pactmark-testing-0.1.1.tgz":
+  "@pactmark/testing@file:../tarballs/pactmark-testing-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_16__,
-        tarball: file:../tarballs/pactmark-testing-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-testing-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
-  "@pactmark/vercel@file:../tarballs/pactmark-vercel-0.1.1.tgz":
+  "@pactmark/vercel@file:../tarballs/pactmark-vercel-0.1.2.tgz":
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_17__,
-        tarball: file:../tarballs/pactmark-vercel-0.1.1.tgz,
+        tarball: file:../tarballs/pactmark-vercel-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
   "@standard-schema/spec@1.1.0":
@@ -462,13 +462,13 @@ packages:
       }
     engines: { node: ">= 0.10" }
 
-  create-pactmark@file:../tarballs/create-pactmark-0.1.1.tgz:
+  create-pactmark@file:../tarballs/create-pactmark-0.1.2.tgz:
     resolution:
       {
         integrity: __PACTMARK_TARBALL_INTEGRITY_18__,
-        tarball: file:../tarballs/create-pactmark-0.1.1.tgz,
+        tarball: file:../tarballs/create-pactmark-0.1.2.tgz,
       }
-    version: 0.1.1
+    version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
     hasBin: true
 
@@ -1176,100 +1176,100 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  "@pactmark/agent@file:../tarballs/pactmark-agent-0.1.1.tgz":
+  "@pactmark/agent@file:../tarballs/pactmark-agent-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
-      "@pactmark/evidence": file:../tarballs/pactmark-evidence-0.1.1.tgz
-      "@pactmark/executor-in-process": file:../tarballs/pactmark-executor-in-process-0.1.1.tgz
-      "@pactmark/runtime": file:../tarballs/pactmark-runtime-0.1.1.tgz
-      "@pactmark/store-memory": file:../tarballs/pactmark-store-memory-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
+      "@pactmark/evidence": file:../tarballs/pactmark-evidence-0.1.2.tgz
+      "@pactmark/executor-in-process": file:../tarballs/pactmark-executor-in-process-0.1.2.tgz
+      "@pactmark/runtime": file:../tarballs/pactmark-runtime-0.1.2.tgz
+      "@pactmark/store-memory": file:../tarballs/pactmark-store-memory-0.1.2.tgz
       zod: 4.4.3
 
-  "@pactmark/ai-sdk@file:../tarballs/pactmark-ai-sdk-0.1.1.tgz(ai@7.0.48(zod@4.4.3))":
+  "@pactmark/ai-sdk@file:../tarballs/pactmark-ai-sdk-0.1.2.tgz(ai@7.0.48(zod@4.4.3))":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
       ai: 7.0.48(zod@4.4.3)
 
-  "@pactmark/cli@file:../tarballs/pactmark-cli-0.1.1.tgz":
+  "@pactmark/cli@file:../tarballs/pactmark-cli-0.1.2.tgz":
     dependencies:
-      "@pactmark/agent": file:../tarballs/pactmark-agent-0.1.1.tgz
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
-      "@pactmark/evidence": file:../tarballs/pactmark-evidence-0.1.1.tgz
+      "@pactmark/agent": file:../tarballs/pactmark-agent-0.1.2.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
+      "@pactmark/evidence": file:../tarballs/pactmark-evidence-0.1.2.tgz
       zod: 4.4.3
 
-  "@pactmark/cloudflare@file:../tarballs/pactmark-cloudflare-0.1.1.tgz":
+  "@pactmark/cloudflare@file:../tarballs/pactmark-cloudflare-0.1.2.tgz":
     dependencies:
-      "@pactmark/http": file:../tarballs/pactmark-http-0.1.1.tgz
+      "@pactmark/http": file:../tarballs/pactmark-http-0.1.2.tgz
 
-  "@pactmark/core@file:../tarballs/pactmark-core-0.1.1.tgz":
+  "@pactmark/core@file:../tarballs/pactmark-core-0.1.2.tgz":
     dependencies:
       zod: 4.4.3
 
-  "@pactmark/driver-postgres-worker@file:../tarballs/pactmark-driver-postgres-worker-0.1.1.tgz":
+  "@pactmark/driver-postgres-worker@file:../tarballs/pactmark-driver-postgres-worker-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
       zod: 4.4.3
 
-  "@pactmark/evidence@file:../tarballs/pactmark-evidence-0.1.1.tgz":
+  "@pactmark/evidence@file:../tarballs/pactmark-evidence-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
       zod: 4.4.3
 
-  "@pactmark/executor-in-process@file:../tarballs/pactmark-executor-in-process-0.1.1.tgz":
+  "@pactmark/executor-in-process@file:../tarballs/pactmark-executor-in-process-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
 
-  "@pactmark/http@file:../tarballs/pactmark-http-0.1.1.tgz":
+  "@pactmark/http@file:../tarballs/pactmark-http-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
-      "@pactmark/evidence": file:../tarballs/pactmark-evidence-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
+      "@pactmark/evidence": file:../tarballs/pactmark-evidence-0.1.2.tgz
 
-  "@pactmark/mcp@file:../tarballs/pactmark-mcp-0.1.1.tgz":
+  "@pactmark/mcp@file:../tarballs/pactmark-mcp-0.1.2.tgz":
     dependencies:
       "@modelcontextprotocol/sdk": 1.30.0(zod@4.4.3)
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
       zod: 4.4.3
     transitivePeerDependencies:
       - "@cfworker/json-schema"
       - supports-color
 
-  "@pactmark/node@file:../tarballs/pactmark-node-0.1.1.tgz":
+  "@pactmark/node@file:../tarballs/pactmark-node-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
-      "@pactmark/http": file:../tarballs/pactmark-http-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
+      "@pactmark/http": file:../tarballs/pactmark-http-0.1.2.tgz
 
-  "@pactmark/otel@file:../tarballs/pactmark-otel-0.1.1.tgz":
+  "@pactmark/otel@file:../tarballs/pactmark-otel-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
 
-  "@pactmark/policy@file:../tarballs/pactmark-policy-0.1.1.tgz":
+  "@pactmark/policy@file:../tarballs/pactmark-policy-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
       zod: 4.4.3
 
-  "@pactmark/runtime@file:../tarballs/pactmark-runtime-0.1.1.tgz":
+  "@pactmark/runtime@file:../tarballs/pactmark-runtime-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
       zod: 4.4.3
 
-  "@pactmark/store-memory@file:../tarballs/pactmark-store-memory-0.1.1.tgz":
+  "@pactmark/store-memory@file:../tarballs/pactmark-store-memory-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
 
-  "@pactmark/store-postgres@file:../tarballs/pactmark-store-postgres-0.1.1.tgz":
+  "@pactmark/store-postgres@file:../tarballs/pactmark-store-postgres-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
       pg: 8.22.0
     transitivePeerDependencies:
       - pg-native
 
-  "@pactmark/testing@file:../tarballs/pactmark-testing-0.1.1.tgz":
+  "@pactmark/testing@file:../tarballs/pactmark-testing-0.1.2.tgz":
     dependencies:
-      "@pactmark/core": file:../tarballs/pactmark-core-0.1.1.tgz
+      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz
 
-  "@pactmark/vercel@file:../tarballs/pactmark-vercel-0.1.1.tgz":
+  "@pactmark/vercel@file:../tarballs/pactmark-vercel-0.1.2.tgz":
     dependencies:
-      "@pactmark/http": file:../tarballs/pactmark-http-0.1.1.tgz
+      "@pactmark/http": file:../tarballs/pactmark-http-0.1.2.tgz
 
   "@standard-schema/spec@1.1.0": {}
 
@@ -1353,7 +1353,7 @@ snapshots:
       object-assign: 4.1.1
       vary: 1.1.2
 
-  create-pactmark@file:../tarballs/create-pactmark-0.1.1.tgz: {}
+  create-pactmark@file:../tarballs/create-pactmark-0.1.2.tgz: {}
 
   cross-spawn@7.0.6:
     dependencies:

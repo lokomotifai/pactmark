@@ -65,16 +65,16 @@ export async function runPackedQuickstartBenchmark(
   const tarballDirectory =
     options.tarballDirectory ?? join(repositoryRoot, ".artifacts", "release-dry-run", "tarballs");
   const tarballs = {
-    "@pactmark/agent": join(tarballDirectory, "pactmark-agent-0.1.1.tgz"),
-    "@pactmark/core": join(tarballDirectory, "pactmark-core-0.1.1.tgz"),
-    "@pactmark/evidence": join(tarballDirectory, "pactmark-evidence-0.1.1.tgz"),
+    "@pactmark/agent": join(tarballDirectory, "pactmark-agent-0.1.2.tgz"),
+    "@pactmark/core": join(tarballDirectory, "pactmark-core-0.1.2.tgz"),
+    "@pactmark/evidence": join(tarballDirectory, "pactmark-evidence-0.1.2.tgz"),
     "@pactmark/executor-in-process": join(
       tarballDirectory,
-      "pactmark-executor-in-process-0.1.1.tgz",
+      "pactmark-executor-in-process-0.1.2.tgz",
     ),
-    "@pactmark/policy": join(tarballDirectory, "pactmark-policy-0.1.1.tgz"),
-    "@pactmark/runtime": join(tarballDirectory, "pactmark-runtime-0.1.1.tgz"),
-    "@pactmark/store-memory": join(tarballDirectory, "pactmark-store-memory-0.1.1.tgz"),
+    "@pactmark/policy": join(tarballDirectory, "pactmark-policy-0.1.2.tgz"),
+    "@pactmark/runtime": join(tarballDirectory, "pactmark-runtime-0.1.2.tgz"),
+    "@pactmark/store-memory": join(tarballDirectory, "pactmark-store-memory-0.1.2.tgz"),
   } as const;
   for (const path of Object.values(tarballs)) readFileSync(path);
   const root = await mkdtemp(join(tmpdir(), "pactmark-packed-quickstart-"));
