@@ -2,7 +2,7 @@
 
 Status: `KAF_PUBLIC_RELEASE_VERIFIED`; GitHub Release, npm authority, package bytes, and public initializer verified
 
-Checked: 2026-08-03 public search; 2026-08-04 authenticated GitHub and npm inspection; 2026-08-05 guarded npm publication, public consumer acceptance, immutable GitHub Release, and test-resource teardown
+Checked: 2026-08-03 public search; 2026-08-04 authenticated GitHub and npm inspection; 2026-08-05 guarded npm publication, public consumer acceptance, immutable GitHub Release, and test-resource teardown; 2026-08-14 repository transfer, trusted-publisher migration, and verified v0.1.2 release
 
 Check type: public registry search, authenticated repository/organization inspection, guarded exact-candidate publication, anonymous registry-byte verification, and independent public consumer acceptance
 
@@ -79,7 +79,7 @@ registry-served tarball, matched all 19 SHA-256 values to the attested candidate
 and verified `latest=0.1.0` for every package. This interactive bootstrap does
 not carry npm provenance; no provenance claim is made for `0.1.0`.
 
-All 19 packages now have the same npm trusted publisher:
+All 19 packages initially received the same npm trusted publisher:
 `pactmark/pactmark`, workflow filename `release.yml`, GitHub environment
 `release`, with package publication as the sole permission. Traditional publishing is
 set to `mfa=publish`, which requires 2FA and sets
@@ -101,6 +101,14 @@ Protected release run [`31017765360`](https://github.com/pactmark/pactmark/actio
 All 19 packages resolve `latest` to `0.1.1`. Independent anonymous verification fetched the registry-served bytes for every package, matched each SHA-256 to the frozen release manifest, confirmed the exact repository metadata, and found an npm SLSA provenance record. The annotated [`v0.1.1`](https://github.com/pactmark/pactmark/releases/tag/v0.1.1) tag resolves to the release source, and its immutable GitHub Release retains 26 checksum, package, manifest, SBOM, and attestation assets.
 
 The patch changes repository/release hygiene and trusted-publication execution only. It does not change the v0.1 runtime API or behavior.
+
+### Verified v0.1.2 transferred release
+
+On 2026-08-14, all 19 trusted publishers were migrated in place to repository `lokomotifai/pactmark`, workflow filename `release.yml`, GitHub environment `release`, with package publication as the sole permission. The npm organization remains `pactmark`, the scoped packages remain `@pactmark/*`, and the initializer remains unscoped `create-pactmark`; no `@lokomotifai/*` package was created. The temporary npm CLI login was closed after independent `npm trust list` verification reported 19/19 matching publishers.
+
+Protected release run [`31815956264`](https://github.com/lokomotifai/pactmark/actions/runs/31815956264) completed for exact source `87ed7e74177b2a1f43c41d1771307fe6e12398a0`. All 19 packages resolve `latest` to `0.1.2`. Independent anonymous verification fetched the registry-served bytes for every package, matched each SHA-256 to the frozen release manifest, confirmed exact `git+https://github.com/lokomotifai/pactmark.git` repository metadata and package directories, and found an npm SLSA provenance record for every package.
+
+Annotated [`v0.1.2`](https://github.com/lokomotifai/pactmark/releases/tag/v0.1.2) resolves to the release source. Its immutable GitHub Release retains 26 checksum, package, manifest, SBOM, and attestation assets. The public v0.1 runtime API and the 19-package npm surface remain unchanged.
 
 ## GitHub evidence
 
@@ -126,10 +134,14 @@ were removed as part of that deletion and are not represented as live evidence i
 the recreated repository. The npm `0.1.0` packages and their verified registry bytes
 were unaffected by the GitHub recreation.
 
-ChatGPT Codex Connector installation `151134458` is limited to that single
-repository and reports admin/push access. All 19 publishable package manifests now
-carry exact release-profile metadata with
+At that time, ChatGPT Codex Connector installation `151134458` was limited to that
+single repository and reported admin/push access. All 19 publishable package
+manifests carried exact release-profile metadata with
 `git+https://github.com/pactmark/pactmark.git` and their real package directory.
+
+### 2026-08-14 repository transfer outcome
+
+The same repository ID `1324042084` now resolves canonically as [`lokomotifai/pactmark`](https://github.com/lokomotifai/pactmark), with clone URL `https://github.com/lokomotifai/pactmark.git`; the old web and clone coordinates redirect. ChatGPT Codex Connector installation `153748209` is installed on `lokomotifai`, restricted to the single transferred repository, and reports admin, maintain, pull, push, and triage access. The 19 publishable manifests and verified `0.1.2` registry metadata use the new canonical repository URL and the unchanged package directories.
 
 ## Collision and authority assessment
 
@@ -140,8 +152,8 @@ carry exact release-profile metadata with
 - npm trusted publishing: verified for all 19 packages with the exact GitHub workflow/environment and publish-only permission.
 - Traditional npm token publishing: bypass tokens disallowed for all 19 packages; interactive 2FA remains required.
 - Unscoped `create-pactmark` ownership: established by the verified public `0.1.0` release.
-- Local GitHub owner/repository naming decision: approved as `pactmark/pactmark`.
-- GitHub owner/repository authority and existence: verified 2026-08-04.
+- Local GitHub owner/repository naming decision: amended and verified as `lokomotifai/pactmark`.
+- GitHub owner/repository authority and existence: verified after transfer on 2026-08-14.
 - Trademark/legal clearance: not performed.
 - External mutation performed: public repository and protected `main` branch
   created; source published; Codex App restricted to that repository; npm
@@ -155,7 +167,7 @@ carry exact release-profile metadata with
   only after exact-target approval, after which the organization reported no
   projects.
 
-GitHub release-profile identity and immutable v0.1.1 Release, npm organization
+GitHub release-profile identity and immutable v0.1.2 Release, npm organization
 ownership, public package publication, per-package SLSA provenance, trusted
 publishing, and exact/latest initializer identity are now established. The approved
 trademark posture remains the cautious limitation in `TRADEMARKS.md`, not a

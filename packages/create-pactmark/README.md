@@ -9,7 +9,7 @@ ownership and an authorized registry release are verified. A packed local
 artifact can be exercised with:
 
 ```sh
-npm exec --package=/absolute/path/create-pactmark-0.1.1.tgz create-pactmark -- \
+npm exec --package=/absolute/path/create-pactmark-0.1.2.tgz create-pactmark -- \
   my-agent --template library --model mock-only --store memory \
   --package-manager npm --no-install --no-git
 ```

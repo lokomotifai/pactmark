@@ -1,10 +1,22 @@
 # External repository settings status
 
-Checked: `2026-08-05T15:24:00Z`
+Checked: `2026-08-14T16:32:35Z`
 
-The public repository [`pactmark/pactmark`](https://github.com/pactmark/pactmark) exists under the owner-controlled `pactmark` organization. Authenticated inspection recorded `fatihguner` as an active organization admin, repository visibility `PUBLIC`, canonical HTTPS clone URL `https://github.com/pactmark/pactmark.git`, default branch `main`, and viewer permission `ADMIN`. The local checkout uses that exact URL as `origin`.
+## Current transferred state
 
-ChatGPT Codex Connector installation `151134458` is installed on `pactmark` and limited to the single `pactmark/pactmark` repository. Connector inspection reports admin, maintain, pull, push, and triage access for that repository. The GitHub CLI is authenticated as `fatihguner` using HTTPS with `repo`, `read:org`, and `workflow` scopes.
+The public repository is [`lokomotifai/pactmark`](https://github.com/lokomotifai/pactmark), retaining repository ID `1324042084`, public visibility, default branch `main`, and canonical clone URL `https://github.com/lokomotifai/pactmark.git`. The old `pactmark/pactmark` web and clone coordinates redirect to the transferred repository. The local checkout uses the canonical new URL as `origin`.
+
+The transferred repository retains bypass-free `main` and `v*` rulesets, immutable releases, private vulnerability reporting, secret scanning and push protection, Dependabot security updates, the reviewer-gated `release` environment, squash/rebase-only merging, and merged-branch cleanup. Wiki and GitHub Pages are disabled.
+
+All 19 npm packages remain under the unchanged `pactmark` organization and `@pactmark/*` scope; no `@lokomotifai/*` package was created. Their trusted publisher is now repository `lokomotifai/pactmark`, workflow `release.yml`, environment `release`, with publish-only permission. Protected run [`31815956264`](https://github.com/lokomotifai/pactmark/actions/runs/31815956264) published `0.1.2` from exact source `87ed7e74177b2a1f43c41d1771307fe6e12398a0`; anonymous verification matched 19/19 registry tarballs, repository metadata, `latest` tags, and SLSA provenance records. Immutable 26-asset GitHub Release [`v0.1.2`](https://github.com/lokomotifai/pactmark/releases/tag/v0.1.2) resolves to that source.
+
+ChatGPT Codex Connector installation `153748209` is installed on `lokomotifai` and restricted to the single `lokomotifai/pactmark` repository. Connector inspection reports admin, maintain, pull, push, and triage access. The GitHub CLI remains authenticated as `fatihguner`; the temporary npm CLI session used to migrate trusted publishers was logged out and no npm authentication entry remains in the user npm configuration.
+
+## Historical bootstrap state
+
+At the 2026-08-05 check, the public repository existed as [`pactmark/pactmark`](https://github.com/pactmark/pactmark) under the owner-controlled `pactmark` organization. Authenticated inspection recorded `fatihguner` as an active organization admin, repository visibility `PUBLIC`, canonical HTTPS clone URL `https://github.com/pactmark/pactmark.git`, default branch `main`, and viewer permission `ADMIN`. The local checkout used that exact URL as `origin`.
+
+ChatGPT Codex Connector installation `151134458` was installed on `pactmark` and limited to the single `pactmark/pactmark` repository. Connector inspection reported admin, maintain, pull, push, and triage access for that repository. The GitHub CLI was authenticated as `fatihguner` using HTTPS with `repo`, `read:org`, and `workflow` scopes.
 
 After explicit authorization, the old repository was deleted and recreated under the same `pactmark/pactmark` name. The recreated repository has ID `1324042084`, a single reviewed public-source baseline, and no retained old pull requests, Actions runs, tags, or releases. Release PR [#1](https://github.com/pactmark/pactmark/pull/1) squash-merged as commit `c9b5eee7f98a31c17e1031accf9ec473cb1b65e9`.
 

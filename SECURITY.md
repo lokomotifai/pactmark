@@ -12,8 +12,8 @@ latest patch before reporting an already-fixed issue.
 
 | Version           | Security fixes                                  |
 | ----------------- | ----------------------------------------------- |
-| `0.1.1`           | Supported                                       |
-| `0.1.0` and older | Not supported                                   |
+| `0.1.2`           | Supported                                       |
+| `0.1.1` and older | Not supported                                   |
 | `main`            | Receives fixes; not a released support contract |
 
 This table is a maintenance commitment, not a certification or a statement

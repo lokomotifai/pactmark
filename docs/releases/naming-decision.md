@@ -62,3 +62,11 @@ commit and `main` push. Root commit
 set to `pactmark/pactmark`. This amendment authorizes and records that source-control
 write only; it does not authorize a tag, GitHub Release, npm scope/package write,
 deployment, trademark-clearance claim, or production-readiness claim.
+
+## Repository-transfer amendment
+
+On 2026-08-14, the owner explicitly authorized transferring the public repository to `lokomotifai/pactmark` while preserving the npm organization `pactmark`, the `@pactmark/*` scope, and unscoped `create-pactmark`. Repository ID `1324042084`, the protected history, settings, and prior immutable release were retained; the old GitHub coordinates redirect to the new canonical owner.
+
+All 19 npm trusted publishers were migrated to repository `lokomotifai/pactmark`, workflow `release.yml`, environment `release`, with publish-only permission. Verified release `v0.1.2` binds the new repository metadata to all 19 package bytes without creating `@lokomotifai/*` packages or changing the public v0.1 API. ChatGPT Codex Connector installation `153748209` is restricted to the single transferred repository.
+
+This amendment changes source-control ownership only. The project display name, npm scope and package names, initializer command, CLI binary, trademark posture, and conservative production/security claims remain frozen as recorded above.
