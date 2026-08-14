@@ -3,7 +3,7 @@
   "version": "0.1.2",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pactmark/pactmark.git",
+    "url": "git+https://github.com/lokomotifai/pactmark.git",
     "directory": "packages/store-memory"
   },
   "description": "Deterministic, tenant-scoped ephemeral stores for Pactmark local development and tests",

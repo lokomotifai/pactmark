@@ -7,7 +7,7 @@ import { canonicalJson, sha256Bytes } from "./lib/release-integrity.mjs";
 type JsonRecord = Record<string, unknown>;
 
 export interface ReleaseCandidateContext {
-  readonly repository: "pactmark/pactmark";
+  readonly repository: "lokomotifai/pactmark";
   readonly workflow: ".github/workflows/release.yml";
   readonly ref: "refs/heads/main";
   readonly environment: "release";
@@ -115,9 +115,9 @@ export function finalizeReleaseCandidate(
 }
 
 function contextFromEnvironment(environment: NodeJS.ProcessEnv): ReleaseCandidateContext {
-  const expectedWorkflowRef = "pactmark/pactmark/.github/workflows/release.yml@refs/heads/main";
+  const expectedWorkflowRef = "lokomotifai/pactmark/.github/workflows/release.yml@refs/heads/main";
   if (
-    environment["GITHUB_REPOSITORY"] !== "pactmark/pactmark" ||
+    environment["GITHUB_REPOSITORY"] !== "lokomotifai/pactmark" ||
     environment["GITHUB_WORKFLOW_REF"] !== expectedWorkflowRef ||
     environment["GITHUB_REF"] !== "refs/heads/main" ||
     environment["PACTMARK_RELEASE_ENVIRONMENT"] !== "release" ||
@@ -126,7 +126,7 @@ function contextFromEnvironment(environment: NodeJS.ProcessEnv): ReleaseCandidat
     throw new Error("KAF_RELEASE_CANDIDATE_CONTEXT_INVALID");
   }
   return {
-    repository: "pactmark/pactmark",
+    repository: "lokomotifai/pactmark",
     workflow: ".github/workflows/release.yml",
     ref: "refs/heads/main",
     environment: "release",

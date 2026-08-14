@@ -83,7 +83,7 @@ const basePacked = (): JsonRecord => ({
   version: "0.1.0",
   repository: {
     type: "git",
-    url: "git+https://github.com/pactmark/pactmark.git",
+    url: "git+https://github.com/lokomotifai/pactmark.git",
     directory: "packages/core",
   },
   publishConfig: { access: "public", registry: "https://registry.npmjs.org/" },
@@ -92,7 +92,7 @@ const basePacked = (): JsonRecord => ({
 const baseAuthorization = (): PublicAuthorization => ({
   authorized: true,
   authMode: "oidc",
-  repository: "pactmark/pactmark",
+  repository: "lokomotifai/pactmark",
   workflow: ".github/workflows/release.yml",
   publisherWorkflow: "release.yml",
   ref: "refs/tags/v0.1.0",
@@ -109,7 +109,7 @@ const baseAuthorization = (): PublicAuthorization => ({
       scopeOwned: true,
       inspectedAt: "2026-08-03T00:00:00.000Z",
       trustedPublisher: {
-        repository: "pactmark/pactmark",
+        repository: "lokomotifai/pactmark",
         workflow: "release.yml",
         environment: "release",
         runner: "github-hosted",
@@ -163,7 +163,7 @@ function context(packed = basePacked()): {
       source: { commit: "a".repeat(40), tree: "b".repeat(40), clean: true },
       packages: [entry],
       attestation: {
-        repository: "pactmark/pactmark",
+        repository: "lokomotifai/pactmark",
         workflow: ".github/workflows/release.yml",
         ref: "refs/tags/v0.1.0",
         environment: "release",

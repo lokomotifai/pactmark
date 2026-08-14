@@ -21,7 +21,7 @@ that a version is free of vulnerabilities.
 
 ## Report privately
 
-Use [GitHub Private Vulnerability Reporting](https://github.com/pactmark/pactmark/security/advisories/new).
+Use [GitHub Private Vulnerability Reporting](https://github.com/lokomotifai/pactmark/security/advisories/new).
 It is enabled for this repository and lets maintainers discuss, patch, and
 coordinate disclosure without exposing the report in a public issue.
 
@@ -100,5 +100,5 @@ identity, tenancy, secrets, least privilege, network policy, retention, backup,
 provider terms, monitoring, and incident response.
 
 The detailed boundaries are documented in the
-[security model](https://pactmark.github.io/pactmark/en/security/security-model/)
+[security model](docs/security/security-model.md)
 and [threat model](docs/security/threat-model.md).

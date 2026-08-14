@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://pactmark.github.io/pactmark/en/">
+  <a href="docs/index.md">
     <img src="assets/brand/pactmark-logo.svg" width="132" height="132" alt="Pactmark">
   </a>
 </p>
@@ -14,26 +14,26 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/pactmark/pactmark/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/pactmark/pactmark/ci.yml?branch=main&amp;style=flat-square&amp;label=CI"></a>
-  <a href="https://github.com/pactmark/pactmark/actions/workflows/security.yml"><img alt="Security baseline" src="https://img.shields.io/github/actions/workflow/status/pactmark/pactmark/security.yml?branch=main&amp;style=flat-square&amp;label=security"></a>
+  <a href="https://github.com/lokomotifai/pactmark/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/ci.yml?branch=main&amp;style=flat-square&amp;label=CI"></a>
+  <a href="https://github.com/lokomotifai/pactmark/actions/workflows/security.yml"><img alt="Security baseline" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/security.yml?branch=main&amp;style=flat-square&amp;label=security"></a>
   <a href="https://www.npmjs.com/package/@pactmark/agent"><img alt="npm version" src="https://img.shields.io/npm/v/%40pactmark%2Fagent?style=flat-square&amp;label=npm&amp;color=D11F26"></a>
-  <a href="https://github.com/pactmark/pactmark/releases/tag/v0.1.1"><img alt="Release provenance" src="https://img.shields.io/badge/release-provenance-verified-D11F26?style=flat-square"></a>
+  <a href="https://github.com/lokomotifai/pactmark/releases/tag/v0.1.1"><img alt="Release provenance" src="https://img.shields.io/badge/release-provenance-verified-D11F26?style=flat-square"></a>
   <a href="LICENSE"><img alt="Apache-2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-3B3F46?style=flat-square"></a>
 </p>
 
 <p align="center">
   <a href="https://nodejs.org/"><img alt="Node.js 22 and 24" src="https://img.shields.io/badge/Node.js-22%20%7C%2024-3C873A?style=flat-square"></a>
   <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square"></a>
-  <a href="https://pactmark.github.io/pactmark/en/"><img alt="English documentation" src="https://img.shields.io/badge/docs-English-17191F?style=flat-square"></a>
-  <a href="https://pactmark.github.io/pactmark/tr/"><img alt="Türkçe dokümantasyon" src="https://img.shields.io/badge/dokümantasyon-Türkçe-D11F26?style=flat-square"></a>
-  <a href="https://github.com/pactmark/pactmark/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/pactmark/pactmark?style=flat-square"></a>
-  <a href="https://github.com/pactmark/pactmark/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/pactmark/pactmark?style=flat-square"></a>
+  <a href="docs/index.md"><img alt="English documentation" src="https://img.shields.io/badge/docs-English-17191F?style=flat-square"></a>
+  <a href="docs/tr/index.md"><img alt="Türkçe dokümantasyon" src="https://img.shields.io/badge/dokümantasyon-Türkçe-D11F26?style=flat-square"></a>
+  <a href="https://github.com/lokomotifai/pactmark/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/lokomotifai/pactmark?style=flat-square"></a>
+  <a href="https://github.com/lokomotifai/pactmark/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/lokomotifai/pactmark?style=flat-square"></a>
 </p>
 
 <p align="center">
-  <a href="https://pactmark.github.io/pactmark/en/getting-started/first-agent/"><strong>Build a first agent</strong></a>
+  <a href="docs/getting-started/first-agent.md"><strong>Build a first agent</strong></a>
   ·
-  <a href="https://pactmark.github.io/pactmark/en/"><strong>Read the docs</strong></a>
+  <a href="docs/index.md"><strong>Read the docs</strong></a>
   ·
   <a href="examples/approval-agent/"><strong>Trace an approval boundary</strong></a>
   ·
@@ -228,7 +228,7 @@ Pactmark is designed around several non-negotiable boundaries:
 Pactmark is **not** a generic chat SDK, no-code builder, swarm orchestrator,
 hosted control plane, or production arbitrary-code sandbox. Its trusted
 in-process executor is explicitly not an isolation boundary. Read the
-[security model](https://pactmark.github.io/pactmark/en/security/security-model/)
+[security model](docs/security/security-model.md)
 before evaluating a production-shaped host.
 
 ## Runtime and platform status
@@ -263,7 +263,7 @@ a long-lived npm token in the repository.
 - The public v0.1.1 tarballs were fetched anonymously and matched to the frozen
   release manifest.
 
-Inspect the immutable [v0.1.1 release](https://github.com/pactmark/pactmark/releases/tag/v0.1.1)
+Inspect the immutable [v0.1.1 release](https://github.com/lokomotifai/pactmark/releases/tag/v0.1.1)
 or read the [release evidence](docs/releases/v0.1-readiness.md). Provenance tells
 you where an artifact came from; it does not certify the artifact's behavior.
 
@@ -313,12 +313,12 @@ all meaningful.
 
 ## Documentation and examples
 
-- [Documentation home](https://pactmark.github.io/pactmark/en/)
-- [Türkçe dokümantasyon](https://pactmark.github.io/pactmark/tr/)
-- [Build your first agent](https://pactmark.github.io/pactmark/en/getting-started/first-agent/)
-- [Concepts: agent and WorkOrder](https://pactmark.github.io/pactmark/en/concepts/agent-and-work-order/)
-- [Concepts: tools, risk, and grants](https://pactmark.github.io/pactmark/en/concepts/tools-risk-and-capability-grants/)
-- [Run lifecycle and durability](https://pactmark.github.io/pactmark/en/concepts/run-lifecycle-and-durability/)
+- [Documentation home](docs/index.md)
+- [Türkçe dokümantasyon](docs/tr/index.md)
+- [Build your first agent](docs/getting-started/first-agent.md)
+- [Concepts: agent and WorkOrder](docs/concepts/agent-and-work-order.md)
+- [Concepts: tools, risk, and grants](docs/concepts/tools-risk-and-capability-grants.md)
+- [Run lifecycle and durability](docs/concepts/run-lifecycle-and-durability.md)
 - [Approval agent](examples/approval-agent/) — a simulated outbound effect with
   a real approval boundary and no live provider.
 - [Node quickstart](apps/node-quickstart/) — HTTP/SSE and lifecycle behavior.

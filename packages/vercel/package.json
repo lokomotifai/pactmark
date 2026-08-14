@@ -3,7 +3,7 @@
   "version": "0.1.2",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pactmark/pactmark.git",
+    "url": "git+https://github.com/lokomotifai/pactmark.git",
     "directory": "packages/vercel"
   },
   "description": "Thin Vercel and Next.js route adapter for Pactmark HTTP handlers",

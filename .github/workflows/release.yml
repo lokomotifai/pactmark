@@ -21,7 +21,7 @@ jobs:
   candidate:
     name: Build, attest, and publish v0.1.2
     if: >-
-      github.repository == 'pactmark/pactmark' &&
+      github.repository == 'lokomotifai/pactmark' &&
       github.ref == 'refs/heads/main' &&
       inputs.confirmation == 'publish-pactmark-0.1.2'
     runs-on: ubuntu-latest

@@ -121,7 +121,7 @@ describe("deterministic release artifacts", () => {
         registry: "https://registry.npmjs.org/",
         publicAuthorization: {
           authMode: "oidc",
-          repository: "pactmark/pactmark",
+          repository: "lokomotifai/pactmark",
           publisherWorkflow: "release.yml",
           environment: "release",
           tty: false,
@@ -238,7 +238,7 @@ describe("deterministic release artifacts", () => {
         resolvedExternalDependencies: {},
       });
       const result = finalizeReleaseCandidate(artifactDirectory, {
-        repository: "pactmark/pactmark",
+        repository: "lokomotifai/pactmark",
         workflow: ".github/workflows/release.yml",
         ref: "refs/heads/main",
         environment: "release",
@@ -252,7 +252,7 @@ describe("deterministic release artifacts", () => {
         status: "attested",
         publication: "not_authorized",
         attestation: {
-          repository: "pactmark/pactmark",
+          repository: "lokomotifai/pactmark",
           workflow: ".github/workflows/release.yml",
           ref: "refs/heads/main",
           environment: "release",
@@ -288,7 +288,7 @@ describe("deterministic release artifacts", () => {
       });
       expect(() =>
         finalizeReleaseCandidate(directory, {
-          repository: "pactmark/pactmark",
+          repository: "lokomotifai/pactmark",
           workflow: ".github/workflows/release.yml",
           ref: "refs/heads/main",
           environment: "release",

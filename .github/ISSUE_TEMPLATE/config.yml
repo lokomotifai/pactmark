@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability privately
-    url: https://github.com/pactmark/pactmark/security/advisories/new
+    url: https://github.com/lokomotifai/pactmark/security/advisories/new
     about: Never disclose vulnerability details in a public issue.
   - name: Read the documentation
-    url: https://pactmark.github.io/pactmark/
+    url: https://github.com/lokomotifai/pactmark/blob/main/docs/index.md
     about: Start with the English or Turkish guides and reference pages.
   - name: Review the support boundary
-    url: https://github.com/pactmark/pactmark/blob/main/SUPPORT.md
+    url: https://github.com/lokomotifai/pactmark/blob/main/SUPPORT.md
     about: See what maintainers can help diagnose and what belongs to a host or provider.

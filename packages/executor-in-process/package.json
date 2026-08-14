@@ -3,7 +3,7 @@
   "version": "0.1.2",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pactmark/pactmark.git",
+    "url": "git+https://github.com/lokomotifai/pactmark.git",
     "directory": "packages/executor-in-process"
   },
   "description": "Declared in-process tool execution and fail-closed egress brokers for Pactmark",

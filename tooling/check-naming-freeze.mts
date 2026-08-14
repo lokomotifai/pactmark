@@ -14,7 +14,7 @@ type PackageManifest = Readonly<{
   repository?: unknown;
 }>;
 
-const expectedRepositoryUrl = "git+https://github.com/pactmark/pactmark.git";
+const expectedRepositoryUrl = "git+https://github.com/lokomotifai/pactmark.git";
 
 const failures: string[] = [];
 const files = gitFiles();
@@ -39,7 +39,7 @@ for (const required of [
   "scope `@pactmark`",
   "`create-pactmark`",
   "`npm create pactmark@latest`",
-  "`pactmark/pactmark`",
+  "`lokomotifai/pactmark`",
   "No `@pactmark/pactmark` package",
 ] as const) {
   if (!decision.includes(required)) failures.push(`KAF_NAMING_DECISION_DRIFT:${required}`);
@@ -114,6 +114,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   process.stdout.write(
-    `KAF_NAMING_FREEZE_OK display=Pactmark scope=@pactmark initializer=create-pactmark repository=pactmark/pactmark publishable=${String(publishablePackages)} caseCollisions=0 metadataProfile=release\n`,
+    `KAF_NAMING_FREEZE_OK display=Pactmark scope=@pactmark initializer=create-pactmark repository=lokomotifai/pactmark publishable=${String(publishablePackages)} caseCollisions=0 metadataProfile=release\n`,
   );
 }
