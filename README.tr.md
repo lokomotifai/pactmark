@@ -17,7 +17,7 @@
   <a href="https://github.com/lokomotifai/pactmark/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/ci.yml?branch=main&amp;style=flat-square&amp;label=CI"></a>
   <a href="https://github.com/lokomotifai/pactmark/actions/workflows/security.yml"><img alt="Güvenlik temel hattı" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/security.yml?branch=main&amp;style=flat-square&amp;label=security"></a>
   <a href="https://www.npmjs.com/package/@pactmark/agent"><img alt="npm sürümü" src="https://img.shields.io/npm/v/%40pactmark%2Fagent?style=flat-square&amp;label=npm&amp;color=D11F26"></a>
-  <a href="https://github.com/lokomotifai/pactmark/releases/tag/v0.1.1"><img alt="Release provenance" src="https://img.shields.io/badge/release-provenance-verified-D11F26?style=flat-square"></a>
+  <a href="https://github.com/lokomotifai/pactmark/releases/tag/v0.1.2"><img alt="Release provenance" src="https://img.shields.io/badge/release-provenance-verified-D11F26?style=flat-square"></a>
   <a href="LICENSE"><img alt="Apache-2.0 lisansı" src="https://img.shields.io/badge/license-Apache--2.0-3B3F46?style=flat-square"></a>
 </p>
 
@@ -49,7 +49,7 @@ Pactmark, açık yetki altında sınırlandırılmış işler yapan agent’lar 
 kanıt-yerel bir framework’tür. “Model makul bir şey döndürdü” ifadesinin başarı
 tanımı olamayacağı sistemler için tasarlanmıştır.
 
-**0.1.1**, public bir erken sürümdür. 19 npm paketinin tamamı uzun ömürlü npm
+**0.1.2**, public bir erken sürümdür. 19 npm paketinin tamamı uzun ömürlü npm
 token’ı kullanılmadan trusted publishing ve package provenance ile yayımlandı;
 ardından anonim olarak indirilen paketler immutable release checksum’larıyla
 karşılaştırıldı. Bu, ilgili package byte’larının tedarik zinciri kanıtıdır;
@@ -225,10 +225,10 @@ bilinçli olarak bir feature checklist’inden daha muhafazakârdır.
 - Candidate tarball’lar tekrar üretilerek karşılaştırılır.
 - Release; SHA-256 checksum, source/release manifest, CycloneDX SBOM, npm
   provenance ve GitHub attestation içerir.
-- Public v0.1.1 tarball’ları anonim indirildi ve frozen release manifest ile
+- Public v0.1.2 tarball’ları anonim indirildi ve frozen release manifest ile
   eşleştirildi.
 
-Immutable [v0.1.1 release](https://github.com/lokomotifai/pactmark/releases/tag/v0.1.1)
+Immutable [v0.1.2 release](https://github.com/lokomotifai/pactmark/releases/tag/v0.1.2)
 ve [release kanıtı](docs/releases/v0.1-readiness.md) incelenebilir. Provenance bir
 artifact’in nereden geldiğini gösterir; davranışını sertifikalandırmaz.
 

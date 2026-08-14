@@ -13,7 +13,7 @@ hero:
       variant: minimal
 ---
 
-> Compatibility: Pactmark 0.1.x. Version 0.1.1 is public on npm with verified
+> Compatibility: Pactmark 0.1.x. Version 0.1.2 is public on npm with verified
 > registry bytes and per-package provenance.
 
 Pactmark turns a validated `WorkOrder` into a bounded run, governed tool effects,
