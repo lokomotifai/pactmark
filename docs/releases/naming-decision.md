@@ -14,9 +14,9 @@ Approver: repository owner, recorded through the Pactmark Codex task
 | Unscoped initializer            | `create-pactmark`                                     |
 | Initializer command             | `npm create pactmark@latest`                          |
 | CLI binary                      | `pactmark`                                            |
-| GitHub organization             | `pactmark`                                            |
+| GitHub organization             | `lokomotifai`                                         |
 | GitHub repository               | `pactmark`                                            |
-| Canonical repository coordinate | `pactmark/pactmark`                                   |
+| Canonical repository coordinate | `lokomotifai/pactmark`                                |
 | Trademark posture               | The cautious, unregistered posture in `TRADEMARKS.md` |
 
 No `@pactmark/pactmark` package is part of v0.1. The main framework facade remains

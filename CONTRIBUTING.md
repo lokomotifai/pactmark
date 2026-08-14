@@ -8,16 +8,16 @@ their size or by a contributor's prior visibility.
 ## Start with the right conversation
 
 - **Small bug or documentation fix:** a focused pull request is welcome.
-- **Unclear bug:** open a [bug report](https://github.com/pactmark/pactmark/issues/new?template=bug.yml)
+- **Unclear bug:** open a [bug report](https://github.com/lokomotifai/pactmark/issues/new?template=bug.yml)
   with a minimal reproduction.
 - **New capability or public contract change:** open a
-  [feature proposal](https://github.com/pactmark/pactmark/issues/new?template=feature.yml)
+  [feature proposal](https://github.com/lokomotifai/pactmark/issues/new?template=feature.yml)
   before implementation.
 - **Security vulnerability:** use [private reporting](SECURITY.md), never a
   public issue or pull request.
 - **Good first contribution:** look for
-  [`good first issue`](https://github.com/pactmark/pactmark/labels/good%20first%20issue)
-  or [`help wanted`](https://github.com/pactmark/pactmark/labels/help%20wanted).
+  [`good first issue`](https://github.com/lokomotifai/pactmark/labels/good%20first%20issue)
+  or [`help wanted`](https://github.com/lokomotifai/pactmark/labels/help%20wanted).
 
 Read the relevant package README, accepted ADRs in `docs/adr/`, and
 [product principles](docs/architecture/product-principles.md) before changing a
@@ -33,7 +33,7 @@ Requirements:
 - Git, and Docker only for the container/PostgreSQL conformance gates.
 
 ```sh
-git clone https://github.com/pactmark/pactmark.git
+git clone https://github.com/lokomotifai/pactmark.git
 cd pactmark
 corepack enable
 pnpm install --frozen-lockfile

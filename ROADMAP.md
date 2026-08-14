@@ -42,7 +42,7 @@ arbitrary-code sandbox. No roadmap item implies exactly-once external effects,
 universal provider support, production isolation, certification, or a release
 date.
 
-Use a [feature proposal](https://github.com/pactmark/pactmark/issues/new?template=feature.yml)
+Use a [feature proposal](https://github.com/lokomotifai/pactmark/issues/new?template=feature.yml)
 to challenge or extend this direction. A useful proposal starts with a user
 problem, states non-goals, and explains authority, portability, compatibility,
 privacy, and evidence impact.

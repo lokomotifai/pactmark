@@ -6,16 +6,16 @@ individual support.
 
 ## Choose the right route
 
-| Need                            | Route                                                                                                                  |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Reproducible bug                | [Bug report](https://github.com/pactmark/pactmark/issues/new?template=bug.yml)                                         |
-| Documentation problem           | [Documentation report](https://github.com/pactmark/pactmark/issues/new?template=documentation.yml)                     |
-| Focused implementation question | [Support question](https://github.com/pactmark/pactmark/issues/new?template=question.yml)                              |
-| Product or API proposal         | [Feature proposal](https://github.com/pactmark/pactmark/issues/new?template=feature.yml)                               |
-| Security vulnerability          | [Private Vulnerability Reporting](https://github.com/pactmark/pactmark/security/advisories/new) — never a public issue |
-| Conduct incident                | Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)                                                                        |
+| Need                            | Route                                                                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Reproducible bug                | [Bug report](https://github.com/lokomotifai/pactmark/issues/new?template=bug.yml)                                         |
+| Documentation problem           | [Documentation report](https://github.com/lokomotifai/pactmark/issues/new?template=documentation.yml)                     |
+| Focused implementation question | [Support question](https://github.com/lokomotifai/pactmark/issues/new?template=question.yml)                              |
+| Product or API proposal         | [Feature proposal](https://github.com/lokomotifai/pactmark/issues/new?template=feature.yml)                               |
+| Security vulnerability          | [Private Vulnerability Reporting](https://github.com/lokomotifai/pactmark/security/advisories/new) — never a public issue |
+| Conduct incident                | Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)                                                                           |
 
-Search existing issues and the [English and Turkish documentation](https://pactmark.github.io/pactmark/)
+Search existing issues and the [English and Turkish documentation](docs/index.md)
 before opening a new report.
 
 ## What makes a useful support request

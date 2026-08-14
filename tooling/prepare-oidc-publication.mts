@@ -91,7 +91,7 @@ export function prepareOidcPublicationConfig(
     throw new Error("KAF_RELEASE_OIDC_PACKAGE_SET_INVALID");
   }
   const trustedPublisher = {
-    repository: "pactmark/pactmark",
+    repository: "lokomotifai/pactmark",
     workflow: "release.yml",
     environment: "release",
     runner: "github-hosted" as const,
@@ -107,7 +107,7 @@ export function prepareOidcPublicationConfig(
     publicAuthorization: {
       authorized: true,
       authMode: "oidc",
-      repository: "pactmark/pactmark",
+      repository: "lokomotifai/pactmark",
       workflow: ".github/workflows/release.yml",
       publisherWorkflow: "release.yml",
       ref: "refs/heads/main",

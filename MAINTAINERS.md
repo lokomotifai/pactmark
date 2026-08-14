@@ -16,10 +16,10 @@ self-review rule and the control that must change when a second maintainer joins
 
 ## Contact routes
 
-- Security vulnerabilities: use [GitHub Private Vulnerability Reporting](https://github.com/pactmark/pactmark/security/advisories/new).
+- Security vulnerabilities: use [GitHub Private Vulnerability Reporting](https://github.com/lokomotifai/pactmark/security/advisories/new).
 - Conduct reports: email [fatih@komunite.com.tr](mailto:fatih@komunite.com.tr?subject=Pactmark%20conduct%20report) with `Pactmark conduct report` in the subject.
 - Bugs, proposals, documentation, and support questions: use the repository's
-  [issue forms](https://github.com/pactmark/pactmark/issues/new/choose).
+  [issue forms](https://github.com/lokomotifai/pactmark/issues/new/choose).
 
 Do not send vulnerability details through the conduct mailbox or a public issue.
 Do not include credentials, customer data, or unnecessary personal information
