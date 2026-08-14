@@ -107,7 +107,7 @@ The patch changes repository/release hygiene and trusted-publication execution o
 Anonymous exact searches returned no public match at check time:
 
 - [`pactmark` user](https://api.github.com/users/pactmark): 404;
-- [`pactmark` organization](https://api.github.com/orgs/pactmark): 404;
+- `pactmark` organization API lookup: 404 at the historical check time;
 - `GET https://api.github.com/repos/pactmark/pactmark`: 404;
 - [login search](https://api.github.com/search/users?q=pactmark%20in%3Alogin&per_page=100): zero results;
 - [repository-name search](https://api.github.com/search/repositories?q=pactmark%20in%3Aname&per_page=100): zero results.
