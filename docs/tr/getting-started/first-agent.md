@@ -12,8 +12,15 @@ description: Model anahtarı olmadan deterministik bir Pactmark agent'ı çalı�
 klasörüne geçin ve `npm run dev` komutunu çalıştırın. Kontrollü ortamlarda exact
 version sabitleyin.
 
-Beklenen ilerleme sırasıyla `RunAccepted`, `ToolCallCompleted` ve `RunCompleted`
-olaylarıdır. Üretilen proje deterministik yerel model kullanır ve API key gerektirmez.
+`AgentDefinition` ve doğrulanmış `WorkOrder` akışının beklenen ilerlemesi sırasıyla
+`RunAccepted`, `ToolCallCompleted` ve `RunCompleted` olaylarıdır. Üretilen proje
+deterministik yerel model kullanır ve API key gerektirmez.
+
+## Agent kaynağı
+
+Site bu kaynağı doğrudan derlenmiş örnek fixture'dan içe aktarır:
+
+<!-- pactmark:snippet source=examples/minimal-tool-agent/src/example.ts language=ts -->
 
 ## Yerel candidate doğrulaması
 
