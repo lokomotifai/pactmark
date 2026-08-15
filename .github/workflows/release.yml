@@ -64,8 +64,8 @@ jobs:
         working-directory: .artifacts/release-dry-run
         run: sha256sum --check SHA256SUMS
       - name: Upload immutable release candidate
-        # actions/upload-artifact v4
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: pactmark-v0.2.0-release-${{ github.sha }}
           path: .artifacts/release-dry-run
@@ -151,8 +151,8 @@ jobs:
           PACTMARK_RELEASE_ENVIRONMENT: release
           PACTMARK_RELEASE_RUNNER: github-hosted
       - name: Upload attestation bundles
-        # actions/upload-artifact v4
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: pactmark-v0.2.0-attestations-${{ github.sha }}
           path: .artifacts/release-dry-run/attestations
