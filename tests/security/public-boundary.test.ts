@@ -117,13 +117,18 @@ describe("public repository boundary", () => {
     expect(mutable).toEqual([]);
   });
 
-  it("pins the npm trusted-publishing toolchain", () => {
+  it("pins the trusted-publishing package-manager toolchain without registry bootstrap", () => {
     const releaseWorkflow = readFileSync(
       join(repositoryRoot, ".github", "workflows", "release.yml"),
       "utf8",
     );
-    expect(releaseWorkflow).toContain("npm install --global npm@11.18.0 pnpm@11.18.0");
+    expect(
+      releaseWorkflow.match(/pnpm\/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86/gu),
+    ).toHaveLength(2);
+    expect(releaseWorkflow.match(/version: 11\.18\.0/gu)).toHaveLength(2);
+    expect(releaseWorkflow.match(/node-version: 24\.18\.1/gu)).toHaveLength(2);
+    expect(releaseWorkflow.match(/npm --version\)" = "11\.16\.0"/gu)).toHaveLength(2);
     expect(releaseWorkflow).not.toContain("npm@latest");
-    expect(releaseWorkflow.match(/npm install --global/gu)).toHaveLength(2);
+    expect(releaseWorkflow).not.toContain("npm install --global");
   });
 });
