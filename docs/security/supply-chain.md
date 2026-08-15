@@ -28,4 +28,9 @@ human-attended 2FA session. The v0.1.1 patch then verified all existing bytes be
 publishing missing exact tarballs and independently matched all 19 registry-served
 tarballs to the frozen candidate. After the repository transfer, v0.1.2 repeated
 that exact-byte and provenance verification for all 19 packages under the new
-`lokomotifai/pactmark` source coordinate.
+`lokomotifai/pactmark` source coordinate. Protected run
+[`31886596018`](https://github.com/lokomotifai/pactmark/actions/runs/31886596018)
+published v0.2.0 from exact source `f79611a4573e405fbd7e85699a861c5a087a766d`;
+independent anonymous verification matched all 19 registry tarballs, `latest` tags,
+repository metadata, and SLSA provenance records to the frozen manifest retained by
+the immutable [v0.2.0 release](https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0).

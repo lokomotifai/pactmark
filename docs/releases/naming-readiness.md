@@ -2,7 +2,7 @@
 
 Status: `KAF_PUBLIC_RELEASE_VERIFIED`; GitHub Release, npm authority, package bytes, and public initializer verified
 
-Checked: 2026-08-03 public search; 2026-08-04 authenticated GitHub and npm inspection; 2026-08-05 guarded npm publication, public consumer acceptance, immutable GitHub Release, and test-resource teardown; 2026-08-14 repository transfer, trusted-publisher migration, and verified v0.1.2 release
+Checked: 2026-08-03 public search; 2026-08-04 authenticated GitHub and npm inspection; 2026-08-05 guarded npm publication, public consumer acceptance, immutable GitHub Release, and test-resource teardown; 2026-08-14 repository transfer, trusted-publisher migration, and verified v0.1.2 release; 2026-08-15 verified v0.2.0 release
 
 Check type: public registry search, authenticated repository/organization inspection, guarded exact-candidate publication, anonymous registry-byte verification, and independent public consumer acceptance
 
@@ -110,6 +110,21 @@ Protected release run [`31815956264`](https://github.com/lokomotifai/pactmark/ac
 
 Annotated [`v0.1.2`](https://github.com/lokomotifai/pactmark/releases/tag/v0.1.2) resolves to the release source. Its immutable GitHub Release retains 26 checksum, package, manifest, SBOM, and attestation assets. The public v0.1 runtime API and the 19-package npm surface remain unchanged.
 
+### Verified v0.2.0 release
+
+Protected release run [`31886596018`](https://github.com/lokomotifai/pactmark/actions/runs/31886596018)
+completed for exact source `f79611a4573e405fbd7e85699a861c5a087a766d`. All 19 packages
+resolve `latest` to `0.2.0`. Independent anonymous verification fetched every
+registry-served tarball, matched all SHA-256 values to the frozen release manifest,
+confirmed exact repository metadata and package directories, and found an npm SLSA
+provenance record for every package.
+
+Annotated [`v0.2.0`](https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0)
+resolves to the release source. Its immutable GitHub Release retains 26 checksum,
+package, manifest, SBOM, and attestation assets. npm ownership and package names are
+unchanged: the organization remains `pactmark`, the scoped packages remain
+`@pactmark/*`, and the initializer remains `create-pactmark`.
+
 ## GitHub evidence
 
 Anonymous exact searches returned no public match at check time:
@@ -167,7 +182,7 @@ The same repository ID `1324042084` now resolves canonically as [`lokomotifai/pa
   only after exact-target approval, after which the organization reported no
   projects.
 
-GitHub release-profile identity and immutable v0.1.2 Release, npm organization
+GitHub release-profile identity and immutable v0.2.0 Release, npm organization
 ownership, public package publication, per-package SLSA provenance, trusted
 publishing, and exact/latest initializer identity are now established. The approved
 trademark posture remains the cautious limitation in `TRADEMARKS.md`, not a
