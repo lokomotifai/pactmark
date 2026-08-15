@@ -123,7 +123,7 @@ describe("public repository boundary", () => {
       "utf8",
     );
     expect(
-      releaseWorkflow.match(/pnpm\/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86/gu),
+      releaseWorkflow.match(/pnpm\/setup@84cb39b217b10273981911c288cd62326dc7c6d2/gu),
     ).toHaveLength(2);
     expect(releaseWorkflow.match(/version: 11\.18\.0/gu)).toHaveLength(2);
     expect(releaseWorkflow.match(/node-version: 24\.18\.1/gu)).toHaveLength(2);
