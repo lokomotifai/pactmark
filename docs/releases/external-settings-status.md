@@ -1,6 +1,6 @@
 # External repository settings status
 
-Checked: `2026-08-14T16:32:35Z`
+Checked: `2026-08-15T14:47:46Z`
 
 ## Current transferred state
 
@@ -9,6 +9,15 @@ The public repository is [`lokomotifai/pactmark`](https://github.com/lokomotifai
 The transferred repository retains bypass-free `main` and `v*` rulesets, immutable releases, private vulnerability reporting, secret scanning and push protection, Dependabot security updates, the reviewer-gated `release` environment, squash/rebase-only merging, and merged-branch cleanup. Wiki and GitHub Pages are disabled.
 
 All 19 npm packages remain under the unchanged `pactmark` organization and `@pactmark/*` scope; no `@lokomotifai/*` package was created. Their trusted publisher is now repository `lokomotifai/pactmark`, workflow `release.yml`, environment `release`, with publish-only permission. Protected run [`31815956264`](https://github.com/lokomotifai/pactmark/actions/runs/31815956264) published `0.1.2` from exact source `87ed7e74177b2a1f43c41d1771307fe6e12398a0`; anonymous verification matched 19/19 registry tarballs, repository metadata, `latest` tags, and SLSA provenance records. Immutable 26-asset GitHub Release [`v0.1.2`](https://github.com/lokomotifai/pactmark/releases/tag/v0.1.2) resolves to that source.
+
+Protected run [`31886596018`](https://github.com/lokomotifai/pactmark/actions/runs/31886596018)
+subsequently published `0.2.0` from exact source
+`f79611a4573e405fbd7e85699a861c5a087a766d`. Independent anonymous verification
+matched 19/19 registry tarballs, repository metadata, `latest` tags, and SLSA
+provenance records. Immutable 26-asset GitHub Release
+[`v0.2.0`](https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0) resolves to
+that source. These release controls do not constitute a production deployment or
+security certification.
 
 ChatGPT Codex Connector installation `153748209` is installed on `lokomotifai` and restricted to the single `lokomotifai/pactmark` repository. Connector inspection reports admin, maintain, pull, push, and triage access. The GitHub CLI remains authenticated as `fatihguner`; the temporary npm CLI session used to migrate trusted publishers was logged out and no npm authentication entry remains in the user npm configuration.
 
