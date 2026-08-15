@@ -48,6 +48,8 @@ describe("real PostgreSQL worker queue", () => {
       };
     },
   };
+  const workerTenants = ["tenant-first", "tenant-accepted", "tenant-input", "tenant-decision"];
+  const queue = () => new DurablePostgresWorkerQueue(database, { allowedTenants: workerTenants });
 
   beforeAll(async () => {
     await admin.query(`CREATE SCHEMA ${schema}`);
@@ -62,8 +64,8 @@ describe("real PostgreSQL worker queue", () => {
 
   it("claims once, fences stale completion, recovers once, and resumes durable reasons in a fresh worker", async () => {
     await insertWakeup(database, "first", "run_accepted");
-    const workerOne = new DurablePostgresWorkerQueue(database);
-    const workerTwo = new DurablePostgresWorkerQueue(database);
+    const workerOne = queue();
+    const workerTwo = queue();
     const firstClaims = (
       await Promise.all([
         workerOne.claim({ holderId: "worker-1", now: NOW, limit: 1, leaseTtlMs: 30_000 }),
@@ -93,7 +95,7 @@ describe("real PostgreSQL worker queue", () => {
     const recovered = await Promise.all([workerOne.recoverStale(NOW), workerTwo.recoverStale(NOW)]);
     expect(recovered.reduce((sum, value) => sum + value, 0)).toBe(1);
 
-    const freshWorker = new DurablePostgresWorkerQueue(database);
+    const freshWorker = queue();
     const [fresh] = await freshWorker.claim({
       holderId: "worker-fresh",
       now: NOW,
@@ -117,7 +119,7 @@ describe("real PostgreSQL worker queue", () => {
       "SELECT count(*)::text AS count FROM pactmark_wakeups",
     );
     expect(beforeFreshProcess.rows[0]?.count).toBe("4");
-    const replacementProcess = new DurablePostgresWorkerQueue(database);
+    const replacementProcess = queue();
     const continuation = await replacementProcess.claim({
       holderId: "worker-replacement",
       now: NOW,

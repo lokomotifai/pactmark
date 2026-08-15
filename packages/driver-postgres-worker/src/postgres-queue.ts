@@ -39,6 +39,10 @@ export interface WorkerPostgresDatabase {
   connect(): Promise<WorkerPostgresClient>;
 }
 
+export interface DurablePostgresWorkerQueueOptions {
+  readonly allowedTenants: readonly string[];
+}
+
 type WakeupRow = {
   tenant_id: string;
   run_id: string;
@@ -89,8 +93,26 @@ const ClaimInputSchema = z
 export class DurablePostgresWorkerQueue implements PostgresWorkerQueue {
   readonly transactionDomain = "postgres";
   readonly atomicCommandAndWakeup = true;
+  readonly #allowedTenants: readonly string[];
+  readonly #allowedTenantSet: ReadonlySet<string>;
 
-  constructor(readonly database: WorkerPostgresDatabase) {}
+  constructor(
+    readonly database: WorkerPostgresDatabase,
+    options: DurablePostgresWorkerQueueOptions,
+  ) {
+    this.#allowedTenants = Object.freeze(
+      z.array(z.string().trim().min(1).max(256)).min(1).max(1_024).parse(options.allowedTenants),
+    );
+    this.#allowedTenantSet = new Set(this.#allowedTenants);
+  }
+
+  #assertTenantAllowed(tenantId: string): void {
+    if (!this.#allowedTenantSet.has(tenantId)) {
+      throw new KafError("KAF_STORAGE_SECURITY_PROFILE", {
+        details: { reason: "worker_tenant_denied" },
+      });
+    }
+  }
 
   recoverStale(now: string): Promise<number> {
     z.iso.datetime({ offset: true }).parse(now);
@@ -99,8 +121,10 @@ export class DurablePostgresWorkerQueue implements PostgresWorkerQueue {
         `SELECT tenant_id,run_id,wakeup_id,claim_lease_id,claim_fencing_token,claimed_by
          FROM pactmark_wakeups
          WHERE state='claimed' AND claimed_until <= clock_timestamp()
+           AND tenant_id = ANY($1::text[])
          ORDER BY claimed_until,tenant_id,wakeup_id
          FOR UPDATE SKIP LOCKED`,
+        [this.#allowedTenants],
       );
       for (const row of stale.rows) {
         const lease = await client.query(
@@ -156,6 +180,7 @@ export class DurablePostgresWorkerQueue implements PostgresWorkerQueue {
           AND wo.work_order_binding_digest=rb.work_order_binding_digest
           AND wo.execution_definition_digest=rb.execution_definition_digest
          WHERE w.state='pending' AND w.available_at <= clock_timestamp()
+           AND w.tenant_id = ANY($2::text[])
            AND wo.principal_type IS NOT NULL AND wo.principal_id IS NOT NULL
            AND wo.purpose_registry_version IS NOT NULL
            AND wo.resource_scope_ceiling_json IS NOT NULL
@@ -167,7 +192,7 @@ export class DurablePostgresWorkerQueue implements PostgresWorkerQueue {
            )
          ORDER BY w.available_at,w.tenant_id,w.wakeup_id
          FOR UPDATE OF w SKIP LOCKED LIMIT $1`,
-        [input.limit],
+        [input.limit, this.#allowedTenants],
       );
       const claims: WorkerWakeupClaim[] = [];
       const claimedRuns = new Set<string>();
@@ -227,6 +252,7 @@ export class DurablePostgresWorkerQueue implements PostgresWorkerQueue {
 
   renew(claimInput: WorkerWakeupClaim, now: string, leaseTtlMs: number) {
     const claim = WorkerWakeupClaimSchema.parse(claimInput);
+    this.#assertTenantAllowed(claim.request.tenantId);
     z.iso.datetime({ offset: true }).parse(now);
     z.number().int().min(1_000).max(3_600_000).parse(leaseTtlMs);
     return withWorkerTransaction(this.database, async (client) => {
@@ -258,6 +284,7 @@ export class DurablePostgresWorkerQueue implements PostgresWorkerQueue {
     result: Readonly<{ status: "completed" | "parked" | "failed"; completedAt: string }>,
   ): Promise<void> {
     const claim = WorkerWakeupClaimSchema.parse(claimInput);
+    this.#assertTenantAllowed(claim.request.tenantId);
     const parsed = z
       .object({
         status: z.enum(["completed", "parked", "failed"]),
@@ -284,6 +311,7 @@ export class DurablePostgresWorkerQueue implements PostgresWorkerQueue {
     retry: Readonly<{ retryAt: string; reasonCode: string }>,
   ): Promise<void> {
     const claim = WorkerWakeupClaimSchema.parse(claimInput);
+    this.#assertTenantAllowed(claim.request.tenantId);
     const parsed = z
       .object({
         retryAt: z.iso.datetime({ offset: true }),

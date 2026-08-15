@@ -59,6 +59,15 @@ describe("deterministic default-deny policy", () => {
         approval: { ...approval, binding: { ...approval.binding, targetDigest: digest("a") } },
       }),
     ).toMatchObject({ reasonCode: "KAF_POLICY_APPROVAL_INVALID" });
+    expect(
+      evaluatePolicy(policy.config, { ...input, approval, stepId: "different-step" }),
+    ).toMatchObject({ reasonCode: "KAF_POLICY_APPROVAL_INVALID" });
+    expect(
+      evaluatePolicy(policy.config, {
+        ...input,
+        approval: makeApproval(input, "multi_factor"),
+      }),
+    ).toMatchObject({ reasonCode: "KAF_POLICY_APPROVAL_INVALID" });
   });
 
   it("keeps R5 disabled by default and requires fresh user presence when enabled", () => {
@@ -181,10 +190,15 @@ describe("deterministic default-deny policy", () => {
 
   it("rejects write strategy and approval edge cases", () => {
     const r3 = makeInput("R3");
+    if (r3.grantResolution?.status !== "active") throw new Error("fixture must be active");
     expect(
       evaluatePolicy(policy.config, {
         ...r3,
         tool: { ...r3.tool, effectStrategyKind: "read" },
+        grantResolution: {
+          ...r3.grantResolution,
+          grant: { ...r3.grantResolution.grant, action: "read" },
+        },
       }),
     ).toMatchObject({ reasonCode: "KAF_POLICY_EFFECT_STRATEGY_REQUIRED" });
     expect(

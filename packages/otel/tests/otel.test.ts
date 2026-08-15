@@ -50,7 +50,7 @@ describe("metadata telemetry", () => {
     const records: unknown[] = [];
     const sink = createMetadataTelemetrySink({
       deploymentSalt: "deployment-specific-salt",
-      allowedIdentifierKeys: ["provider"],
+      allowedIdentifierKeys: ["provider", "principalId"],
       allowedCounterKeys: ["modelCalls"],
       export: (record) => {
         records.push(record);
@@ -60,7 +60,7 @@ describe("metadata telemetry", () => {
       operation: "model.call",
       status: "ok",
       durationMs: 0,
-      identifiers: { provider: "x".repeat(300), model: "hidden" },
+      identifiers: { provider: "x".repeat(300), model: "hidden", principalId: "secret" },
       counters: { modelCalls: 1, inputTokens: Number.NaN },
     });
     expect(records).toHaveLength(1);
@@ -68,6 +68,7 @@ describe("metadata telemetry", () => {
     expect((records[0] as { identifiers: { provider: string } }).identifiers.provider).toHaveLength(
       256,
     );
+    expect(records[0]).not.toHaveProperty("identifiers.principalId");
   });
 
   it("rejects weak salts and invalid measurements", () => {

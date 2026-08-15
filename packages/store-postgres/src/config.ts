@@ -36,6 +36,7 @@ export type PostgresConnectionConfig = Readonly<{
   ssl: Readonly<{ mode: "verify-full"; ca?: string }> | Readonly<{ mode: "disable" }>;
   maxConnections?: number;
   applicationName?: string;
+  onSecurityWarning?: (warning: Readonly<{ code: string; message: string }>) => void;
 }>;
 
 export function validatePostgresConnectionConfig(
@@ -48,6 +49,7 @@ export function validatePostgresConnectionConfig(
     "ssl",
     "maxConnections",
     "applicationName",
+    "onSecurityWarning",
   ]);
   if (input.profile !== "production" && input.profile !== "development") {
     throw invalidConfig("profile");
@@ -69,11 +71,14 @@ export function validatePostgresConnectionConfig(
   if (input.applicationName !== undefined && typeof input.applicationName !== "string") {
     throw invalidConfig("application_name");
   }
+  if (input.onSecurityWarning !== undefined && typeof input.onSecurityWarning !== "function") {
+    throw invalidConfig("security_warning_hook");
+  }
   let url: URL;
   try {
     url = new URL(input.connectionString);
-  } catch (internalCause) {
-    throw invalidConfig("connection_string", internalCause);
+  } catch {
+    throw invalidConfig("connection_string");
   }
   if (!["postgres:", "postgresql:"].includes(url.protocol) || url.hostname.length === 0) {
     throw invalidConfig("connection_string");
@@ -101,6 +106,13 @@ export function validatePostgresConnectionConfig(
 
 export function toPgPoolConfig(input: PostgresConnectionConfig): PoolConfig {
   validatePostgresConnectionConfig(input);
+  if (input.ssl.mode === "disable") {
+    (input.onSecurityWarning ?? console.warn)({
+      code: "KAF_POSTGRES_PLAINTEXT_DEVELOPMENT",
+      message:
+        "Pactmark PostgreSQL transport encryption is disabled for a loopback development connection.",
+    });
+  }
   return {
     connectionString: input.connectionString,
     ssl:

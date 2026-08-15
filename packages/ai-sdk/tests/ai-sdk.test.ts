@@ -166,6 +166,13 @@ describe("AI SDK preview adapter", () => {
       }),
     ).toThrow("The model adapter does not match");
     expect(() =>
+      fromAISDK(new MockLanguageModelV3({ provider: "not-fixture", modelId: "fixture-model" }), {
+        securityProfile,
+        resourceProfile: resources(),
+        credentialMode: "ambient_preview",
+      }),
+    ).toThrow("The model adapter does not match");
+    expect(() =>
       fromAISDK(new MockLanguageModelV3({ provider: "fixture", modelId: "other-model" }), {
         securityProfile,
         resourceProfile: resources(),

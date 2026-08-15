@@ -628,6 +628,33 @@ CREATE UNIQUE INDEX pactmark_acknowledged_effect_results_protected_ref_unique
   );
 `;
 
+export const POSTGRES_TENANT_ROW_LEVEL_SECURITY_SCHEMA_SQL = `
+DO $migration$
+DECLARE tenant_table record;
+BEGIN
+  FOR tenant_table IN
+    SELECT DISTINCT table_schema, table_name
+    FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND column_name = 'tenant_id'
+      AND table_name LIKE 'pactmark_%'
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY',
+      tenant_table.table_schema,
+      tenant_table.table_name
+    );
+    EXECUTE format(
+      'CREATE POLICY pactmark_tenant_isolation ON %I.%I
+       USING (tenant_id = NULLIF(current_setting(''pactmark.tenant_id'', true), ''''))
+       WITH CHECK (tenant_id = NULLIF(current_setting(''pactmark.tenant_id'', true), ''''))',
+      tenant_table.table_schema,
+      tenant_table.table_name
+    );
+  END LOOP;
+END $migration$;
+`;
+
 export const POSTGRES_MIGRATIONS: readonly PostgresMigration[] = Object.freeze([
   Object.freeze({
     version: "001",
@@ -749,6 +776,36 @@ export const POSTGRES_MIGRATIONS: readonly PostgresMigration[] = Object.freeze([
     reversibleSafe: false,
     up: [POSTGRES_PROTECTED_REFERENCE_DIGESTS_SCHEMA_SQL],
     down: [],
+  }),
+  Object.freeze({
+    version: "011",
+    description: "tenant row-level security policies for non-owner runtime roles",
+    reversibleSafe: true,
+    up: [POSTGRES_TENANT_ROW_LEVEL_SECURITY_SCHEMA_SQL],
+    down: [
+      `DO $migration$
+       DECLARE tenant_table record;
+       BEGIN
+         FOR tenant_table IN
+           SELECT DISTINCT table_schema, table_name
+           FROM information_schema.columns
+           WHERE table_schema = current_schema()
+             AND column_name = 'tenant_id'
+             AND table_name LIKE 'pactmark_%'
+         LOOP
+           EXECUTE format(
+             'DROP POLICY IF EXISTS pactmark_tenant_isolation ON %I.%I',
+             tenant_table.table_schema,
+             tenant_table.table_name
+           );
+           EXECUTE format(
+             'ALTER TABLE %I.%I DISABLE ROW LEVEL SECURITY',
+             tenant_table.table_schema,
+             tenant_table.table_name
+           );
+         END LOOP;
+       END $migration$;`,
+    ],
   }),
 ]);
 

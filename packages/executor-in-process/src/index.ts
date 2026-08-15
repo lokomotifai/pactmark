@@ -19,7 +19,10 @@ export interface DeclaredAllowlistEgressOptions {
   readonly allowedMethods?: readonly string[];
   readonly fetch: typeof globalThis.fetch;
   readonly allowLoopbackHttpForDevelopment?: boolean;
+  readonly authorizeBinding?: (binding: Parameters<EgressBroker["bind"]>[0]) => boolean;
 }
+
+type EgressBinding = Parameters<EgressBroker["bind"]>[0];
 
 const baseCapabilities: RuntimeCapabilities = Object.freeze({
   schemaVersion: "1",
@@ -53,10 +56,7 @@ export function createDeclaredToolExecutor(tools: readonly DeclaredTool[]): Tool
   for (const tool of tools) {
     const registration = ToolRegistrationContractSchema.parse(tool.registration);
     const current = registrations.get(registration.id);
-    if (
-      current !== undefined &&
-      current.registration.toolRegistrationDigest !== registration.toolRegistrationDigest
-    ) {
+    if (current !== undefined) {
       throw new TypeError("KAF_REGISTRATION_SAME_VERSION_DRIFT");
     }
     registrations.set(registration.id, Object.freeze({ ...tool, registration }));
@@ -137,8 +137,11 @@ export function createDeclaredAllowlistEgressBroker(
       return options.fetch(request, { redirect: "manual", signal: request.signal });
     },
   });
+  const deniedClient = Object.freeze(new DeniedEgressClient());
   return Object.freeze({
     capabilities: capabilities("declared"),
-    bind: () => client,
+    bind: (binding: EgressBinding) => {
+      return options.authorizeBinding?.(binding) === true ? client : deniedClient;
+    },
   });
 }

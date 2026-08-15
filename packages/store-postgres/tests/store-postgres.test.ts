@@ -23,6 +23,7 @@ import {
   POSTGRES_INITIAL_SCHEMA_SQL,
   POSTGRES_MIGRATIONS,
   POSTGRES_PROTECTED_REFERENCE_DIGESTS_SCHEMA_SQL,
+  POSTGRES_TENANT_ROW_LEVEL_SECURITY_SCHEMA_SQL,
   POSTGRES_RESOURCE_RESERVATIONS_SCHEMA_SQL,
   POSTGRES_WORKER_QUEUE_METADATA_SCHEMA_SQL,
 } from "../src/migrations.js";
@@ -237,7 +238,7 @@ describe("migration constraints", () => {
         readFileSync(new URL("../migrations/008_evidence_records.sql", import.meta.url), "utf8"),
       ).trim(),
     ).toBe(POSTGRES_EVIDENCE_RECORDS_SCHEMA_SQL.trim());
-    expect(POSTGRES_MIGRATIONS.at(-3)).toMatchObject({ version: "008", reversibleSafe: false });
+    expect(POSTGRES_MIGRATIONS.at(-4)).toMatchObject({ version: "008", reversibleSafe: false });
   });
 
   it("adds protected immutable acknowledged effect results in migration 009", () => {
@@ -271,7 +272,7 @@ describe("migration constraints", () => {
         ),
       ).trim(),
     ).toBe(POSTGRES_ACKNOWLEDGED_EFFECT_RESULTS_SCHEMA_SQL.trim());
-    expect(POSTGRES_MIGRATIONS.at(-2)).toMatchObject({ version: "009", reversibleSafe: false });
+    expect(POSTGRES_MIGRATIONS.at(-3)).toMatchObject({ version: "009", reversibleSafe: false });
   });
 
   it("replaces unbounded protected refs with tenant-scoped ciphertext digest indexes", () => {
@@ -299,7 +300,24 @@ describe("migration constraints", () => {
         ),
       ).trim(),
     ).toBe(POSTGRES_PROTECTED_REFERENCE_DIGESTS_SCHEMA_SQL.trim());
-    expect(POSTGRES_MIGRATIONS.at(-1)).toMatchObject({ version: "010", reversibleSafe: false });
+    expect(POSTGRES_MIGRATIONS.at(-2)).toMatchObject({ version: "010", reversibleSafe: false });
+  });
+
+  it("enables fail-closed tenant RLS policies for non-owner runtime roles", () => {
+    expect(POSTGRES_TENANT_ROW_LEVEL_SECURITY_SCHEMA_SQL).toContain("ENABLE ROW LEVEL SECURITY");
+    expect(POSTGRES_TENANT_ROW_LEVEL_SECURITY_SCHEMA_SQL).toContain(
+      "current_setting(''pactmark.tenant_id'', true)",
+    );
+    expect(POSTGRES_TENANT_ROW_LEVEL_SECURITY_SCHEMA_SQL).toContain("WITH CHECK");
+    expect(
+      normalizeLineEndings(
+        readFileSync(
+          new URL("../migrations/011_tenant_row_level_security.sql", import.meta.url),
+          "utf8",
+        ),
+      ).trim(),
+    ).toBe(POSTGRES_TENANT_ROW_LEVEL_SECURITY_SCHEMA_SQL.trim());
+    expect(POSTGRES_MIGRATIONS.at(-1)).toMatchObject({ version: "011", reversibleSafe: true });
   });
 });
 

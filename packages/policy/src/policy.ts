@@ -129,6 +129,9 @@ export type PolicyEvaluationInput = Readonly<{
   schemaValidated: boolean;
   grantResolution?: CapabilityGrantResolution;
   approval?: Approval;
+  runId: string;
+  stepId: string;
+  decisionId: string;
   previewDigest?: Digest;
   networkPolicy: "none" | "declared" | "enforced";
   callsAlreadyUsed: number;
@@ -169,6 +172,7 @@ function grantMatches(
     grant.toolId === input.tool.id &&
     grant.toolRegistrationDigest === input.tool.toolRegistrationDigest &&
     grant.policyRegistrationDigest === input.policyRegistrationDigest &&
+    grant.action === (input.tool.effectStrategyKind === "read" ? "read" : "write") &&
     grant.purpose.code === input.workOrder.purpose.code &&
     grant.purpose.registryVersion === input.workOrder.purpose.registryVersion &&
     input.tool.security.requiredScopes.includes(grant.capability) &&
@@ -190,6 +194,9 @@ function approvalMatches(approvalInput: Approval, input: PolicyEvaluationInput):
     binding.tenant.id === input.workOrder.tenant.id &&
     binding.principal.type === input.workOrder.principal.type &&
     binding.principal.id === input.workOrder.principal.id &&
+    binding.runId === input.runId &&
+    binding.stepId === input.stepId &&
+    binding.decisionId === input.decisionId &&
     binding.workOrderBindingDigest === input.workOrder.workOrderBindingDigest &&
     binding.executionDefinitionDigest === input.workOrder.executionDefinitionDigest &&
     binding.toolId === input.tool.id &&
@@ -380,6 +387,15 @@ export function evaluatePolicy(
   if (risk === "R5" && !config.enableR5) return deny("KAF_POLICY_R5_DISABLED");
   if (input.approval === undefined) return requireApproval();
   if (!approvalMatches(input.approval, input)) return deny("KAF_POLICY_APPROVAL_INVALID");
+  const approvalStrength = {
+    single_factor: 0,
+    multi_factor: 1,
+    phishing_resistant: 2,
+    user_presence: 3,
+  } as const;
+  if (risk === "R4" && approvalStrength[input.approval.authenticationStrength] < 2) {
+    return deny("KAF_POLICY_APPROVAL_INVALID");
+  }
   if (
     risk === "R5" &&
     (input.approval.authenticationStrength !== "user_presence" ||

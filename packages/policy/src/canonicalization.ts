@@ -210,6 +210,7 @@ export function canonicalizeHost(value: string): string {
     .toLowerCase();
   if (
     host.startsWith(".") ||
+    host.endsWith(".") ||
     host.includes("..") ||
     (!host.includes(":") && !/^[a-z0-9.-]+$/u.test(host))
   ) {
@@ -259,6 +260,7 @@ export function canonicalizeUrl(value: string): string {
     throw new PolicyNormalizationError("URL path traversal is not permitted");
   }
   url.hostname = hostname.includes(":") ? `[${hostname}]` : hostname;
+  url.pathname = pathname;
   url.searchParams.sort();
   return url.toString();
 }

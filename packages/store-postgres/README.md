@@ -58,9 +58,26 @@ fails closed. Primary, digest, and protected-reference identities all include
 outside SQL and revalidate the complete AAD, canonical JSON, byte size, schema,
 and digest before returning a result.
 
+Migration `011` enables a fail-closed `pactmark_tenant_isolation` row-level
+security policy on every Pactmark table with a `tenant_id` column. The policy
+applies to non-owner runtime roles and compares every row with the
+transaction-local `pactmark.tenant_id` setting. A tenant-scoped host must run
+`SELECT set_config('pactmark.tenant_id', $1, true)` inside the same transaction;
+an unset setting matches no tenant. PostgreSQL table owners normally bypass
+RLS, so migrations use an operator-owned role while production requests and
+workers use non-owner roles. The package continues to advertise
+`database_constraint` until the host separately attests that role and
+transaction setup.
+
 ## Security defaults
 
 Production connections accept only `ssl.mode: "verify-full"`. The adapter enables certificate-chain and hostname verification and rejects URL-level SSL overrides before constructing a pool. An explicit `ssl.mode: "disable"` is limited to loopback hosts in the `development` profile; it can never represent production readiness. CA bundles are host configuration and must not be placed in events, artifacts, evidence, or logs.
+
+Event, work-order routing metadata, and ordinary JSONB columns are not
+application-encrypted. Production operators must provide encrypted PostgreSQL
+storage and encrypted backups in addition to Pactmark's field protection for
+confidential/restricted bodies. Volume or managed-database encryption is a host
+control and is not claimed by this package.
 
 All accepted WorkOrder bodies and confidential/restricted artifact bodies require an injected core `DataProtector`. Durable input and context adapters also refuse writes when no protector is configured. Input submissions and context snapshots contain protected references, not submitted plaintext. Every read and write path includes `tenantId`; persisted JSON is schema-validated and its canonical digest is checked when read.
 
