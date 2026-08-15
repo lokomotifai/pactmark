@@ -3,6 +3,7 @@ import { access, chmod, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import process from "node:process";
 
 import {
   defineExecutorSelfHostConformanceReceipt,
@@ -23,6 +24,72 @@ const imageMemoryBytes = 512 * 1024 * 1024;
 const imageNanoCpus = 1_000_000_000;
 const imagePidsLimit = 128;
 const maximumWaitMs = 60_000;
+
+function recursiveChownProgram(uid: number, gid: number): string {
+  return [
+    'const fs = require("node:fs");',
+    'const path = require("node:path");',
+    `const uid = ${String(uid)};`,
+    `const gid = ${String(gid)};`,
+    "const visit = (directory) => {",
+    "  for (const name of fs.readdirSync(directory)) {",
+    "    const target = path.join(directory, name);",
+    "    const stat = fs.lstatSync(target);",
+    "    if (stat.isDirectory()) visit(target);",
+    "    fs.lchownSync(target, uid, gid);",
+    "  }",
+    "};",
+    'visit("/data");',
+  ].join("\n");
+}
+
+async function chownLinuxBindMountContents(input: {
+  readonly dataRoot: string;
+  readonly image: string;
+  readonly uid: number;
+  readonly gid: number;
+}): Promise<void> {
+  if (process.platform !== "linux") return;
+  await runDocker(
+    [
+      "run",
+      "--rm",
+      "--pull",
+      "never",
+      "--network",
+      "none",
+      "--user",
+      "0:0",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,noexec,size=8m,mode=0700",
+      "--mount",
+      `type=bind,source=${input.dataRoot},target=/data`,
+      "--cap-drop",
+      "ALL",
+      "--cap-add",
+      "CHOWN",
+      "--cap-add",
+      "DAC_OVERRIDE",
+      "--security-opt",
+      "no-new-privileges",
+      "--pids-limit",
+      "16",
+      "--memory",
+      "64m",
+      "--memory-swap",
+      "64m",
+      "--cpus",
+      "0.25",
+      "--entrypoint",
+      "bun",
+      input.image,
+      "-e",
+      recursiveChownProgram(input.uid, input.gid),
+    ],
+    { timeoutMs: maximumWaitMs },
+  );
+}
 
 export type JsonObject = Readonly<Record<string, JsonValue>>;
 
@@ -829,9 +896,16 @@ async function assertCleanup(
   containers: readonly string[],
   network: string,
   dataRoot: string,
+  image: string,
+  restoreLinuxOwnership: boolean,
 ): Promise<void> {
   for (const name of containers) await removeIfPresent("container", name);
   await removeIfPresent("network", network);
+  const hostUid = process.getuid?.();
+  const hostGid = process.getgid?.();
+  if (restoreLinuxOwnership && hostUid !== undefined && hostGid !== undefined) {
+    await chownLinuxBindMountContents({ dataRoot, image, uid: hostUid, gid: hostGid });
+  }
   await rm(dataRoot, { recursive: true, force: true });
   const [containerList, networkList] = await Promise.all([
     runDocker(["ps", "--all", "--format", "{{.Names}}"]),
@@ -900,6 +974,7 @@ export async function runExecutorContainerConformance(): Promise<ExecutorContain
   ];
   let primaryError: unknown;
   let result: ExecutorContainerConformanceResult | undefined;
+  let linuxOwnershipPrepared = false;
   try {
     await assertPinnedImage(platform);
     const runtimeVersion = (
@@ -910,6 +985,8 @@ export async function runExecutorContainerConformance(): Promise<ExecutorContain
       await mkdir(dataDirectory);
       await chmod(dataDirectory, 0o770);
     }
+    await chownLinuxBindMountContents({ dataRoot, image, uid: 65_532, gid: 65_532 });
+    linuxOwnershipPrepared = process.platform === "linux";
     const tenantA = await startTenant({
       id,
       label: "a",
@@ -1056,7 +1133,7 @@ export async function runExecutorContainerConformance(): Promise<ExecutorContain
     primaryError = error;
   } finally {
     try {
-      await assertCleanup(containers, network, dataRoot);
+      await assertCleanup(containers, network, dataRoot, image, linuxOwnershipPrepared);
     } catch (cleanupError) {
       if (primaryError === undefined) primaryError = cleanupError;
     }
