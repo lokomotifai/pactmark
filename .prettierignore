@@ -8,6 +8,8 @@ coverage
 pnpm-lock.yaml
 briefs
 research
+SECURITY-REVIEW.md
+roast.md
 **/etc/*.api.md
 **/temp/*.api.md
 apps/cloudflare-worker/worker-configuration.d.ts

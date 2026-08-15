@@ -19,7 +19,6 @@ allowBuilds:
   bun: true # Compatibility-matrix owner: maintainers; reviewed installer selects the exact platform binary package.
   "esbuild@0.27.0": true # Next.js tooling owner: maintainers; reviewed installer validates the exact platform binary.
   "esbuild@0.28.1": true # Build tooling owner: maintainers; required by tsx, reviewed in lockfile.
-  sharp: set this to true or false
   "sharp@0.35.3": true # Next.js image tooling owner: maintainers; reviewed install check uses the pinned optional platform binary.
   "workerd@1.20260730.1": true # Cloudflare preview owner: maintainers; reviewed installer validates the pinned optional platform binary.
 

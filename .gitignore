@@ -4,6 +4,7 @@ node_modules/
 dist/
 coverage/
 .artifacts/
+crash-*
 apps/docs/.astro/
 apps/docs/src/content/docs/
 apps/docs/public/llms.txt
@@ -16,3 +17,5 @@ apps/docs/public/package-docs-index.json
 .DS_Store
 /briefs/
 /research/
+/SECURITY-REVIEW.md
+/roast.md
