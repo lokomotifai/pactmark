@@ -148,24 +148,36 @@ export function createCommandId(): ReturnType<typeof createCoreCommandId> {
 
 class FacadeAgentRegistry implements AgentRegistry {
   readonly #definitions = new Map<string, AgentDefinition>();
+  readonly #definitionsByDigest = new Map<string, AgentDefinition>();
 
   constructor(definitions: readonly AgentDefinition[]) {
     for (const definition of definitions) {
       const key = `${definition.id}\u0000${definition.version}`;
       const existing = this.#definitions.get(key);
+      const existingByDigest = this.#definitionsByDigest.get(definition.agentDefinitionDigest);
       if (
-        existing !== undefined &&
-        existing.agentDefinitionDigest !== definition.agentDefinitionDigest
+        (existing !== undefined && existing !== definition) ||
+        (existingByDigest !== undefined && existingByDigest !== definition)
       ) {
         throw new TypeError("KAF_REGISTRATION_SAME_VERSION_DRIFT");
       }
       this.#definitions.set(key, definition);
+      this.#definitionsByDigest.set(definition.agentDefinitionDigest, definition);
     }
   }
 
   register(definition: AgentDefinition): Promise<void> {
     const key = `${definition.id}\u0000${definition.version}`;
+    const existing = this.#definitions.get(key);
+    const existingByDigest = this.#definitionsByDigest.get(definition.agentDefinitionDigest);
+    if (
+      (existing !== undefined && existing !== definition) ||
+      (existingByDigest !== undefined && existingByDigest !== definition)
+    ) {
+      return Promise.reject(new TypeError("KAF_REGISTRATION_SAME_VERSION_DRIFT"));
+    }
     this.#definitions.set(key, definition);
+    this.#definitionsByDigest.set(definition.agentDefinitionDigest, definition);
     return Promise.resolve();
   }
 
@@ -454,12 +466,12 @@ function createFacadeWriteStrategy(
           tenantId: context.tenantId,
           runId: context.runId,
           stepId: context.stepId,
-          purposeCode: "service_delivery",
-          dataClass: "public",
+          purposeCode: context.purposeCode,
+          dataClass: context.dataClass,
         },
         egress: broker.bind({
-          tenantId: "local",
-          runId: "local-in-process",
+          tenantId: context.tenantId,
+          runId: context.runId,
           toolRegistrationDigest: registration.toolRegistrationDigest,
         }),
         artifacts: {
@@ -577,7 +589,7 @@ function createToolComposition(agents: readonly DefinedAgent[], now: () => strin
   for (const agent of agents) {
     for (const tool of getAgentRuntimeMetadata(agent).tools) {
       const current = tools.get(tool.registration.toolRegistrationDigest);
-      if (current !== undefined && current.registration.id !== tool.registration.id) {
+      if (current !== undefined && current !== tool) {
         throw new TypeError("KAF_REGISTRATION_SAME_VERSION_DRIFT");
       }
       tools.set(tool.registration.toolRegistrationDigest, tool);
@@ -601,10 +613,7 @@ function createToolComposition(agents: readonly DefinedAgent[], now: () => strin
             if (tool.security.egress.mode !== "allowlist") return [];
             return tool.security.egress.methods;
           }),
-          authorizeBinding: (binding) =>
-            binding.tenantId === "local" &&
-            binding.runId === "local-in-process" &&
-            egressToolDigests.has(binding.toolRegistrationDigest),
+          authorizeBinding: (binding) => egressToolDigests.has(binding.toolRegistrationDigest),
           fetch: globalThis.fetch.bind(globalThis),
         });
   const strategies = new Map<string, RuntimeExecutableEffectStrategy>();

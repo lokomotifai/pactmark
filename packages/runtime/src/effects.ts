@@ -56,6 +56,8 @@ export type RuntimeEffectDispatchContext = Readonly<{
   effectId: string;
   effectKey: string;
   normalizedTargetDigest: Digest;
+  purposeCode: string;
+  dataClass: AcceptedWorkOrder["dataClass"];
   signal: AbortSignal;
 }>;
 
