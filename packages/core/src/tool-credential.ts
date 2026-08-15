@@ -91,6 +91,14 @@ export class ResolvedToolCredential {
   toJSON(): never {
     throw new TypeError("KAF_CREDENTIAL_SERIALIZATION_FORBIDDEN");
   }
+
+  toString(): never {
+    throw new TypeError("KAF_CREDENTIAL_STRINGIFICATION_FORBIDDEN");
+  }
+
+  [Symbol.toPrimitive](): never {
+    throw new TypeError("KAF_CREDENTIAL_STRINGIFICATION_FORBIDDEN");
+  }
 }
 
 export interface ToolCredentialIssuer {

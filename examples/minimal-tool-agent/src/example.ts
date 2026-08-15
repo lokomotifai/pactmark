@@ -112,6 +112,13 @@ export const lookupCatalog = defineTool({
     maxCallsPerRun: 1,
     timeoutMs: 1_000,
   },
+  resources: (_input, context) => [
+    {
+      kind: "tenant",
+      value: context.tenantId,
+      normalizationVersion: "pactmark.policy-normalization@1",
+    },
+  ],
   operation: {
     kind: "read",
     execute: ({ sku }) => Promise.resolve({ ...fixture, available: fixture.sku === sku }),
@@ -188,6 +195,9 @@ export async function runMinimalToolExample() {
     dataClass: "public",
     retention: { mode: "session" },
     requestedCapabilities: ["catalog:read"],
+    resourceScopeCeiling: [
+      { kind: "tenant", value: "local", normalizationVersion: "pactmark.policy-normalization@1" },
+    ],
     budget: { maxTurns: 4, maxModelCalls: 4, maxToolCalls: 1, maxActiveExecutionMs: 10_000 },
   });
   const command = createCommandContext({

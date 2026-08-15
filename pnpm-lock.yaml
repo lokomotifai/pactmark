@@ -492,6 +492,9 @@ importers:
       '@pactmark/executor-in-process':
         specifier: workspace:*
         version: link:../executor-in-process
+      '@pactmark/policy':
+        specifier: workspace:*
+        version: link:../policy
       '@pactmark/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -772,6 +775,9 @@ importers:
       '@pactmark/core':
         specifier: workspace:*
         version: link:../core
+      '@pactmark/policy':
+        specifier: workspace:*
+        version: link:../policy
       zod:
         specifier: 4.4.3
         version: 4.4.3

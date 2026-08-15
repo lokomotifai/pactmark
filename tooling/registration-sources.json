@@ -11,7 +11,7 @@
     },
     {
       "path": "packages/policy/src/policy.ts",
-      "digest": "sha256:123b6840b120194d38aabb1d042229a5f1523cf4f970a687abebd8a418533033"
+      "digest": "sha256:5a7dee6103d028e0bf10b5403ed552f96e788868e5bad4bbf572c6dabf170fce"
     },
     {
       "path": "packages/policy/src/grants.ts",
@@ -55,7 +55,7 @@
     },
     {
       "path": "packages/executor-sh/src/deployment.ts",
-      "digest": "sha256:0850f4e0e59c7820aedb6e160e4dfac3d17635b69b5a7d853860628c03f0484a"
+      "digest": "sha256:a9c70e2475a57853920670099485d1ffa57786e50bbbdc1c7a0d36ec73dbf291"
     },
     {
       "path": "packages/executor-sh/src/self-host-image.ts",
@@ -67,7 +67,7 @@
     },
     {
       "path": "packages/agent/src/definitions.ts",
-      "digest": "sha256:7fd176d6d328aa64bb634ecdd1fccc39bb96c08930eb2bf0cc9aa134ac8ebdea"
+      "digest": "sha256:43a82727333b6dd33b33f5335831c216b975700e99a42eaf6415ec965b321e92"
     },
     {
       "path": "packages/agent/src/readiness.ts",
@@ -75,7 +75,7 @@
     },
     {
       "path": "packages/runtime/src/runtime.ts",
-      "digest": "sha256:1f47d7c5b5e46e005dd5029d159f0fa418e22a3542677162a7287fc7984ae914"
+      "digest": "sha256:c12df05784e505654e5931dc15319d4a4e465f556e059011935e4ad60b5373b8"
     },
     {
       "path": "packages/mcp/src/contracts.ts",

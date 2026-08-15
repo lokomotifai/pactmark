@@ -22,6 +22,7 @@ export const nodeQuickstartRuntime = createLocalRuntime({
 
 export const nodeQuickstartHandler = createAgentFetchHandler({
   runtime: nodeQuickstartRuntime,
+  policyEnforcement: "complete",
   allowAnonymousDevelopment: true,
   anonymousAuthentication: {
     authority: nodeQuickstartAuthority,

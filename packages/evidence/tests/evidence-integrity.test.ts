@@ -1,3 +1,4 @@
+import { generateKeyPairSync, sign, verify } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -22,6 +23,7 @@ import {
   createArtifact,
   createArtifactIntegrityVerifier,
   createEvidenceExport,
+  createEvidenceAttestation,
   createHumanReviewVerifier,
   createVerificationException,
   exportRedactedEvidenceJson,
@@ -31,6 +33,7 @@ import {
   verificationExceptionReference,
   verificationResultIdentity,
   verifyEvidenceDigest,
+  verifyEvidenceAttestation,
   verifyEvidenceExportDigest,
   verifyVerificationExceptionDigest,
   type EvidenceMaterial,
@@ -44,6 +47,41 @@ const executionDefinition = Object.freeze({
   id: "evidence-integrity-agent",
   version: "1.0.0",
   agentDefinitionDigest: d("agent-definition"),
+});
+
+describe("portable evidence attestations", () => {
+  it("authenticates an exact evidence digest through a host-owned signing boundary", async () => {
+    const record = deterministicEvidence();
+    const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+    const attestation = await createEvidenceAttestation(
+      record,
+      {
+        keyId: "kms://tenant-1/evidence/1",
+        algorithm: "Ed25519",
+        sign: (payload) => Promise.resolve(new Uint8Array(sign(null, payload, privateKey))),
+      },
+      instant,
+    );
+    const verifier = {
+      verify: (input: { payload: Uint8Array; signature: Uint8Array }) =>
+        Promise.resolve(verify(null, input.payload, publicKey, input.signature)),
+    };
+    await expect(verifyEvidenceAttestation(record, attestation, verifier)).resolves.toBe(true);
+    await expect(
+      verifyEvidenceAttestation(
+        { ...record, evidenceDigest: d("tampered") },
+        attestation,
+        verifier,
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      verifyEvidenceAttestation(
+        { ...record, claim: { ...record.claim, statement: "tampered material" } },
+        attestation,
+        verifier,
+      ),
+    ).resolves.toBe(false);
+  });
 });
 const executionDefinitionDigest = d(executionDefinition);
 const workOrderBindingDigest = d("work-order-binding");

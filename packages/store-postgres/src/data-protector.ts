@@ -31,7 +31,12 @@ export interface DataProtectionKeyProvider {
   resolve(keyId: string): Promise<DataProtectionKey | undefined>;
 }
 
-export type ProtectionNonceReservation = "reserved" | "collision" | "ceiling_reached";
+export type ProtectionNonceReservation =
+  | "reserved"
+  | "collision"
+  | "ceiling_reached"
+  | "key_binding_mismatch"
+  | "ceiling_configuration_mismatch";
 
 /** Coordinates nonce uniqueness and the conservative per-key invocation ceiling. */
 export interface ProtectionNonceRegistry {
@@ -114,6 +119,10 @@ export class Aes256GcmDataProtector implements DataProtector {
       });
       if (reservation === "collision") continue;
       if (reservation === "ceiling_reached") rejectProtection("key_invocation_ceiling_reached");
+      if (reservation === "key_binding_mismatch") rejectProtection("key_namespace_mismatch");
+      if (reservation === "ceiling_configuration_mismatch") {
+        rejectProtection("key_invocation_ceiling_configuration_mismatch");
+      }
 
       const cipher = createCipheriv("aes-256-gcm", key, nonce, { authTagLength: TAG_BYTES });
       cipher.setAAD(aad);
@@ -217,7 +226,25 @@ export class PostgresProtectionNonceRegistry implements ProtectionNonceRegistry 
            RETURNING invocation_count`,
           [namespace, keyId, invocationCeiling],
         );
-        if (increment.rowCount !== 1) return "ceiling_reached";
+        if (increment.rowCount !== 1) {
+          const existing = await client.query(
+            `SELECT namespace_id,invocation_count,invocation_ceiling
+             FROM pactmark_protection_key_counters WHERE key_id=$1`,
+            [keyId],
+          );
+          const row = existing.rows[0] as
+            | Readonly<{
+                namespace_id: string;
+                invocation_count: string | number;
+                invocation_ceiling: string | number;
+              }>
+            | undefined;
+          if (row === undefined || row.namespace_id !== namespace) return "key_binding_mismatch";
+          if (Number(row.invocation_ceiling) !== invocationCeiling) {
+            return "ceiling_configuration_mismatch";
+          }
+          return "ceiling_reached";
+        }
         await client.query(
           `INSERT INTO pactmark_protection_nonces (namespace_id,key_id,nonce)
            VALUES ($1,$2,$3)`,
@@ -236,6 +263,10 @@ export class PostgresProtectionNonceRegistry implements ProtectionNonceRegistry 
 export class MemoryProtectionNonceRegistry implements ProtectionNonceRegistry {
   readonly #seen = new Set<string>();
   readonly #counts = new Map<string, number>();
+  readonly #bindings = new Map<
+    string,
+    Readonly<{ namespace: string; invocationCeiling: number }>
+  >();
 
   async reserve(
     input: Readonly<{
@@ -246,6 +277,17 @@ export class MemoryProtectionNonceRegistry implements ProtectionNonceRegistry {
     }>,
   ): Promise<ProtectionNonceReservation> {
     await Promise.resolve();
+    const binding = this.#bindings.get(input.keyId);
+    if (binding !== undefined && binding.namespace !== input.namespace) {
+      return "key_binding_mismatch";
+    }
+    if (binding !== undefined && binding.invocationCeiling !== input.invocationCeiling) {
+      return "ceiling_configuration_mismatch";
+    }
+    this.#bindings.set(input.keyId, {
+      namespace: input.namespace,
+      invocationCeiling: input.invocationCeiling,
+    });
     const nonce = validateNonce(input.nonce);
     const counterKey = input.keyId;
     const nonceKey = `${input.keyId}\u0000${toBase64Url(nonce)}`;

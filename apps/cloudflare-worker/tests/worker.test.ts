@@ -28,7 +28,13 @@ function workOrder() {
     dataClass: "public",
     retention: { mode: "session" },
     requestedCapabilities: ["fixture:read"],
-    resourceScopeCeiling: [],
+    resourceScopeCeiling: [
+      {
+        kind: "tenant",
+        value: "cloudflare-preview",
+        normalizationVersion: "pactmark.policy-normalization@1",
+      },
+    ],
     budget: { maxTurns: 4, maxModelCalls: 4, maxToolCalls: 1, maxActiveExecutionMs: 10_000 },
   };
 }

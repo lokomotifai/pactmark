@@ -26,6 +26,7 @@ import {
   type RuntimeCapabilities,
   type RuntimeReadinessProfile,
   type RuntimeReadinessReport,
+  type ToolCallResolver,
   type ToolExecutionContext,
   type VerificationResult,
   type VerifierRegistry as CoreVerifierRegistry,
@@ -38,6 +39,11 @@ import {
   createDenyAllEgressBroker,
   type DeclaredTool,
 } from "@pactmark/executor-in-process";
+import {
+  evaluatePolicyPreflight,
+  type DeterministicPolicyConfig,
+  type KillSwitchRegistry,
+} from "@pactmark/policy";
 import { createRuntime as createKernelRuntime, type RuntimeKernelConfig } from "@pactmark/runtime";
 import { createMemoryStoreSuite } from "@pactmark/store-memory";
 
@@ -155,7 +161,10 @@ class FacadeAgentRegistry implements AgentRegistry {
   }
 }
 
-function createPolicyEngine(agents: readonly DefinedAgent[]): PolicyEngine {
+function createPolicyEngine(
+  agents: readonly DefinedAgent[],
+  killSwitches?: KillSwitchRegistry,
+): PolicyEngine {
   const policiesByDigest = new Map(
     agents.map((agent) => {
       const metadata = getAgentRuntimeMetadata(agent);
@@ -177,35 +186,56 @@ function createPolicyEngine(agents: readonly DefinedAgent[]): PolicyEngine {
       const rule = policy?.rules.find(
         (candidate) => candidate.riskClass === input.tool.security.riskClass,
       );
-      if (
-        rule === undefined ||
-        !input.tool.security.dataClasses.includes(input.workOrder.dataClass) ||
-        !input.tool.security.requiredScopes.every((scope) =>
-          input.workOrder.requestedCapabilities.includes(scope),
-        )
-      ) {
+      if (policy === undefined || rule === undefined || rule.decision === "deny") {
         return Promise.resolve({
           decision: "deny" as const,
           reasonCode: "KAF_POLICY_DEFAULT_DENY",
         });
       }
-      if (
-        input.tool.security.networkEnforcement === "required" &&
-        LOCAL_CAPABILITIES.networkPolicy !== "enforced"
-      ) {
+      const r5Enabled = policy.rules.some(
+        (candidate) => candidate.riskClass === "R5" && candidate.decision !== "deny",
+      );
+      const config: DeterministicPolicyConfig = {
+        schemaVersion: "1",
+        id: policy.id,
+        implementationVersion: policy.implementationVersion,
+        allowedPurposes: [{ code: "service_delivery", registryVersion: "general@1" }],
+        allowedToolRisksByWorkRisk: {
+          low: ["R0", "R1", "R2"],
+          medium: ["R0", "R1", "R2", "R3"],
+          high: ["R0", "R1", "R2", "R3", "R4"],
+          critical: r5Enabled
+            ? ["R0", "R1", "R2", "R3", "R4", "R5"]
+            : ["R0", "R1", "R2", "R3", "R4"],
+        },
+        enabledDataClasses: [
+          "public",
+          "internal",
+          "confidential",
+          "restricted",
+          "highly_restricted",
+        ],
+        enableR5: r5Enabled,
+        r5ApprovalMaxAgeMs: 5 * 60 * 1000,
+      };
+      const preflight = evaluatePolicyPreflight(
+        config,
+        { ...input, policyRegistrationDigest: policy.policyRegistrationDigest },
+        killSwitches,
+      );
+      if (preflight.decision === "deny") return Promise.resolve(preflight);
+      const requiresApproval = rule.decision === "require_approval" || preflight.approvalRequired;
+      if (requiresApproval) {
         return Promise.resolve({
           decision: "deny" as const,
-          reasonCode: "KAF_POLICY_NETWORK_ENFORCEMENT_REQUIRED",
+          reasonCode: "KAF_POLICY_PREVIEW_REQUIRED" as const,
         });
       }
       return Promise.resolve({
-        decision: rule.decision,
-        reasonCode:
-          rule.decision === "require_approval"
-            ? "KAF_POLICY_APPROVAL_REQUIRED"
-            : rule.decision === "deny"
-              ? "KAF_POLICY_DEFAULT_DENY"
-              : "KAF_POLICY_ALLOWED",
+        decision: "allow_with_grant" as const,
+        reasonCode: "KAF_POLICY_ALLOWED" as const,
+        normalizedResources: preflight.normalizedResources,
+        normalizedTargetDigest: preflight.normalizedTargetDigest,
       });
     },
   });
@@ -421,11 +451,30 @@ function createToolComposition(agents: readonly DefinedAgent[]) {
       return runtimeDefinition.execute(input, context);
     },
   }));
+  const resolver: ToolCallResolver = Object.freeze({
+    resolve({
+      workOrder,
+      registration,
+      proposedInput,
+    }: Parameters<ToolCallResolver["resolve"]>[0]) {
+      const tool = tools.get(registration.toolRegistrationDigest);
+      if (tool === undefined || tool.registration.id !== registration.id) {
+        return Promise.reject(new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH"));
+      }
+      const resolved = getToolRuntimeDefinition(tool).resolve(proposedInput, {
+        tenantId: workOrder.tenant.id,
+        purposeCode: workOrder.purpose.code,
+        dataClass: workOrder.dataClass,
+      });
+      return Promise.resolve(resolved);
+    },
+  });
   return {
     registry: {
       resolve: (digest: string) => tools.get(digest)?.registration,
     },
     executor: createDeclaredToolExecutor(declared),
+    resolver,
     broker,
   };
 }
@@ -538,6 +587,7 @@ export interface LocalRuntimeFacade extends RuntimeFacade {
 export interface CreateLocalRuntimeInput {
   readonly agents: readonly DefinedAgent[];
   readonly authorityIssuer: AuthorityIssuer;
+  readonly killSwitches?: KillSwitchRegistry;
 }
 
 export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntimeFacade {
@@ -557,24 +607,6 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
       has: (code) => code === "service_delivery",
     },
     acceptedWorkOrderStore: stores.acceptedWorkOrderStore,
-    decisionStore: stores.decisionStore,
-    decisionPreviewer: {
-      preview: (previewInput) =>
-        Promise.resolve({
-          schemaVersion: "1",
-          previewDigest: digestCanonicalJson({
-            format: "pactmark.local-decision-preview@1",
-            tenantId: previewInput.tenantId,
-            runId: previewInput.runId,
-            stepId: previewInput.stepId,
-            decisionId: previewInput.decisionId,
-            toolRegistrationDigest: previewInput.toolRegistrationDigest,
-            argumentsDigest: previewInput.argumentsDigest,
-            targetDigest: previewInput.targetDigest,
-            value: previewInput.value,
-          }),
-        }),
-    },
     eventStore: stores.eventStore,
     artifactStore: stores.artifactStore,
     contextStore: stores.contextStore,
@@ -584,7 +616,8 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
     runCommandUnitOfWork: stores.runCommandUnitOfWork,
     modelDriver: dispatchingModel(input.agents),
     toolRegistry: toolComposition.registry,
-    policyEngine: createPolicyEngine(input.agents),
+    toolCallResolver: toolComposition.resolver,
+    policyEngine: createPolicyEngine(input.agents, input.killSwitches),
     toolExecutor: toolComposition.executor,
     verifierRegistry: createVerifierRegistry(input.agents, localClock.now, ids),
     evidenceBuilder: createEvidenceBuilder(stores, localClock.now, ids, records),
@@ -695,7 +728,10 @@ function productionCapabilities(input: CreateRuntimeInput): RuntimeCapabilities 
     networkPolicy: input.toolExecutor.networkPolicy,
     backgroundWakeup: input.wakeupScheduler?.capabilities.backgroundWakeup ?? false,
     atomicCommandAndWakeup: input.runCommandUnitOfWork.atomicCommandAndWakeup,
-    humanDecisions: false,
+    humanDecisions:
+      input.decisionStore !== undefined &&
+      input.decisionChallengeIssuer !== undefined &&
+      input.decisionPreviewer !== undefined,
     typedInput: input.inputSubmissionStore.capabilities.typedInput,
     effectReconciliation: input.effectServices !== undefined,
     compensation:

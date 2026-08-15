@@ -90,6 +90,7 @@ import {
   type RunCommandTransaction,
   type RunCommandUnitOfWork,
   type ToolExecutor,
+  type ToolCallResolver,
   type ToolRegistrationContract,
   type TypedInputRegistry,
   type VerificationResult,
@@ -107,6 +108,7 @@ import {
   type RuntimeProductionModelServices,
   type RuntimeSealedModelAdapter,
 } from "./models.js";
+import { evaluateHostToolCall, resolveHostToolCall } from "./tool-authority.js";
 import {
   assertEffectRecordBinding,
   createEffectKey,
@@ -197,6 +199,7 @@ export interface RuntimeKernelConfig {
   readonly productionModelServices?: RuntimeProductionModelServices;
   readonly requireProductionModelBoundary?: boolean;
   readonly toolRegistry: RuntimeToolRegistry;
+  readonly toolCallResolver: ToolCallResolver;
   readonly policyEngine: PolicyEngine;
   readonly toolExecutor: ToolExecutor;
   readonly verifierRegistry: VerifierRegistry;
@@ -1995,6 +1998,27 @@ export class AgentRuntime {
             );
           }
           ToolRegistrationContractSchema.parse(registration);
+          const callsAlreadyUsed =
+            toolCallsByRegistration.get(registration.toolRegistrationDigest) ?? 0;
+          let resolvedCall: Awaited<ReturnType<typeof resolveHostToolCall>>;
+          try {
+            resolvedCall = await resolveHostToolCall({
+              resolver: this.#config.toolCallResolver,
+              workOrder,
+              registration,
+              proposedInput: next.value.input,
+            });
+          } catch {
+            return await this.#fail(
+              workOrder,
+              projection,
+              leaseSession,
+              stepId,
+              "KAF_POLICY_DENIED",
+              { reason: "tool_input_or_resource_resolution_failed" },
+            );
+          }
+          const argumentsDigest = resolvedCall.argumentsDigest;
           const toolCallId = checkpoint?.toolCallId ?? `tool-call-${stepId}`;
           if (!resumedTool) {
             if (!resumedToolRequest) {
@@ -2007,10 +2031,7 @@ export class AgentRuntime {
                   persistedActiveExecutionMs +
                   Math.max(0, this.#config.clock.monotonicMilliseconds() - invocationStartedAt),
               });
-              if (
-                (toolCallsByRegistration.get(registration.toolRegistrationDigest) ?? 0) >=
-                registration.security.maxCallsPerRun
-              ) {
+              if (callsAlreadyUsed >= registration.security.maxCallsPerRun) {
                 return await this.#fail(
                   workOrder,
                   projection,
@@ -2048,7 +2069,7 @@ export class AgentRuntime {
                 stepId,
                 toolCallId,
                 toolRegistrationDigest: registration.toolRegistrationDigest,
-                argumentsDigest: digestCanonicalJson(next.value.input),
+                argumentsDigest,
               },
               undefined,
               undefined,
@@ -2069,11 +2090,13 @@ export class AgentRuntime {
               (toolCallsByRegistration.get(registration.toolRegistrationDigest) ?? 0) + 1,
             );
           }
-          const policy = await this.#config.policyEngine.evaluate({
+          const policy = await evaluateHostToolCall({
+            policyEngine: this.#config.policyEngine,
             workOrder,
-            tool: registration,
-            argumentsDigest: digestCanonicalJson(next.value.input),
-            targetDigest: next.value.targetDigest,
+            registration,
+            resolvedCall,
+            networkPolicy: this.#config.toolExecutor.networkPolicy,
+            callsAlreadyUsed,
           });
           if (policy.decision === "deny")
             return await this.#fail(
@@ -2107,7 +2130,6 @@ export class AgentRuntime {
               );
             }
             const decisionId = this.#config.idGenerator.generate("decision");
-            const argumentsDigest = digestCanonicalJson(next.value.input);
             const preview = DecisionPreviewReferenceSchema.parse(
               await previewer.preview({
                 tenantId: workOrder.tenant.id,
@@ -2116,8 +2138,8 @@ export class AgentRuntime {
                 decisionId,
                 toolRegistrationDigest: registration.toolRegistrationDigest,
                 argumentsDigest,
-                targetDigest: next.value.targetDigest,
-                value: next.value.input,
+                targetDigest: policy.normalizedTargetDigest,
+                value: resolvedCall.validatedInput,
               }),
             );
             const binding = {
@@ -2134,7 +2156,7 @@ export class AgentRuntime {
               toolVersion: registration.implementationVersion,
               toolRegistrationDigest: registration.toolRegistrationDigest,
               argumentsDigest,
-              targetDigest: next.value.targetDigest,
+              targetDigest: policy.normalizedTargetDigest,
               ...(preview.contentDigest === undefined
                 ? {}
                 : { contentDigest: preview.contentDigest }),
@@ -2220,7 +2242,7 @@ export class AgentRuntime {
                 callback: (boundarySignal) =>
                   this.#config.toolExecutor.execute({
                     registration,
-                    input: next.value.input,
+                    input: resolvedCall.validatedInput,
                     signal: boundarySignal,
                   }),
               });
@@ -2261,8 +2283,8 @@ export class AgentRuntime {
               registration,
               stepId,
               toolCallId,
-              value: next.value.input,
-              normalizedTargetDigest: next.value.targetDigest,
+              value: resolvedCall.validatedInput,
+              normalizedTargetDigest: policy.normalizedTargetDigest,
               signal: controller.signal,
               checkpoint: {
                 schemaVersion: "1",
@@ -2480,17 +2502,33 @@ export class AgentRuntime {
           compensationRunId: projection.runId,
         },
       );
+      let resolvedCall: Awaited<ReturnType<typeof resolveHostToolCall>>;
+      try {
+        resolvedCall = await resolveHostToolCall({
+          resolver: this.#config.toolCallResolver,
+          workOrder,
+          registration,
+          proposedInput: workOrder.input,
+        });
+      } catch {
+        return await this.#fail(workOrder, projection, leaseSession, stepId, "KAF_POLICY_DENIED", {
+          reason: "compensation_input_or_resource_resolution_failed",
+        });
+      }
+      const argumentsDigest = resolvedCall.argumentsDigest;
       projection = await this.#append(workOrder, projection, leaseSession, "ToolCallRequested", {
         stepId,
         toolCallId,
         toolRegistrationDigest: registration.toolRegistrationDigest,
-        argumentsDigest: digestCanonicalJson(workOrder.input),
+        argumentsDigest,
       });
-      const policy = await this.#config.policyEngine.evaluate({
+      const policy = await evaluateHostToolCall({
+        policyEngine: this.#config.policyEngine,
         workOrder,
-        tool: registration,
-        argumentsDigest: digestCanonicalJson(workOrder.input),
-        targetDigest: digestCanonicalJson(`effect:${workOrder.originalEffectDigest}`),
+        registration,
+        resolvedCall,
+        networkPolicy: this.#config.toolExecutor.networkPolicy,
+        callsAlreadyUsed: 0,
       });
       if (policy.decision !== "allow_with_grant") {
         return await this.#fail(
@@ -2510,8 +2548,8 @@ export class AgentRuntime {
         registration,
         stepId,
         toolCallId,
-        value: workOrder.input,
-        normalizedTargetDigest: digestCanonicalJson(`effect:${workOrder.originalEffectDigest}`),
+        value: resolvedCall.validatedInput,
+        normalizedTargetDigest: policy.normalizedTargetDigest,
         signal: controller.signal,
       });
       projection = outcome.projection;

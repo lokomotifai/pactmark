@@ -675,8 +675,27 @@ const kernel = createRuntime({
   toolRegistry: {
     resolve: (digest) => (digest === writeTool.toolRegistrationDigest ? writeTool : undefined),
   },
+  toolCallResolver: {
+    resolve: ({ proposedInput }) =>
+      Promise.resolve({
+        validatedInput: proposedInput,
+        resources: [
+          {
+            kind: "urn" as const,
+            value: effectTarget,
+            normalizationVersion: "pactmark.policy-normalization@1",
+          },
+        ],
+      }),
+  },
   policyEngine: {
-    evaluate: () => Promise.resolve({ decision: "allow_with_grant", reasonCode: "fixture_allow" }),
+    evaluate: (input) =>
+      Promise.resolve({
+        decision: "allow_with_grant" as const,
+        reasonCode: "fixture_allow",
+        normalizedResources: input.resources,
+        normalizedTargetDigest: effectTargetDigest,
+      }),
   },
   toolExecutor: {
     capabilities,
@@ -819,6 +838,7 @@ const httpRuntime: HttpRuntimeSurface = {
 
 const handler = createAgentFetchHandler({
   runtime: httpRuntime,
+  policyEnforcement: "complete",
   authenticate: (request) => {
     const bearer = request.headers.get("authorization");
     const tokenTenant =

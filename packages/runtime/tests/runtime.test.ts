@@ -569,6 +569,7 @@ const request = {
 interface FixtureOptions {
   readonly policyDecision?: "deny" | "allow_with_grant" | "require_approval";
   readonly policyDecisionSequence?: readonly ("deny" | "allow_with_grant" | "require_approval")[];
+  readonly policyTargetDigest?: string;
   readonly modelEmission?: (invocation: number, signal: AbortSignal, input?: JsonValue) => unknown;
   readonly toolRegistration?: ToolRegistrationContract | null;
   readonly toolResult?: JsonValue;
@@ -991,8 +992,21 @@ function fixture(options: FixtureOptions = {}) {
         );
       },
     },
+    toolCallResolver: {
+      resolve: ({ workOrder, proposedInput }) =>
+        Promise.resolve({
+          validatedInput: proposedInput,
+          resources: [
+            {
+              kind: "tenant",
+              value: workOrder.tenant.id,
+              normalizationVersion: "pactmark.policy-normalization@1",
+            },
+          ],
+        }),
+    },
     policyEngine: {
-      async evaluate() {
+      async evaluate(input) {
         await Promise.resolve();
         const sequence = options.policyDecisionSequence;
         const sequencedDecision =
@@ -1000,9 +1014,19 @@ function fixture(options: FixtureOptions = {}) {
             ? undefined
             : sequence[Math.min(policyEvaluation, sequence.length - 1)];
         policyEvaluation += 1;
+        const decision = sequencedDecision ?? options.policyDecision ?? "allow_with_grant";
+        if (decision === "deny") return { decision, reasonCode: "fixture_policy" };
         return {
-          decision: sequencedDecision ?? options.policyDecision ?? "allow_with_grant",
+          decision,
           reasonCode: "fixture_policy",
+          normalizedResources: input.resources,
+          normalizedTargetDigest:
+            options.policyTargetDigest ??
+            (input.workOrder.kind === "compensation"
+              ? digestCanonicalJson(`effect:${input.workOrder.originalEffectDigest}`)
+              : input.tool.effectStrategyKind === "read"
+                ? d("2")
+                : effectTargetDigest),
         };
       },
     },
@@ -1065,6 +1089,7 @@ function fixture(options: FixtureOptions = {}) {
     effectUnitOfWork,
     effectServices,
     agentRegistry,
+    getIssuedChallenge: (proof: string) => issuedChallenges.get(proof),
     getModelInvocationCount: () => modelInvocation,
     getEvidenceDigest: (runId: string) => evidenceDigests.get(runId),
   };
@@ -3999,6 +4024,44 @@ describe("AgentRuntime", () => {
     });
     expect(executeTool).not.toHaveBeenCalled();
     expect((await runtime.getRun(authority, started.runId)).status).toBe("waiting_for_approval");
+  });
+
+  it("binds approval to the host policy target instead of the model-proposed digest", async () => {
+    const modelTarget = d("9");
+    const policyTarget = d("2");
+    const value = fixture({
+      policyDecision: "require_approval",
+      policyTargetDigest: policyTarget,
+      modelEmission: () => ({
+        type: "tool_call",
+        value: {
+          toolRegistrationDigest: tool.toolRegistrationDigest,
+          input: { query: "Pactmark" },
+          targetDigest: modelTarget,
+        },
+      }),
+    });
+    const started = await value.runtime.start(value.authority, definition, request, value.command);
+    await expect(value.runtime.execute(value.authority, started.runId)).resolves.toMatchObject({
+      status: "parked",
+    });
+    const decisionId = (await value.runtime.getRun(value.authority, started.runId))
+      .waitingDecisionId;
+    if (decisionId === null) throw new Error("approval decision is unavailable");
+    const issued = await value.runtime.issueDecisionChallenge(
+      value.authority,
+      started.runId,
+      decisionId,
+      scopedCommand(
+        "run.issue_decision_challenge",
+        {},
+        [started.runId, decisionId],
+        "31313131313131313131313131313131",
+      ),
+    );
+    const challenge = value.getIssuedChallenge(issued.challengeProof);
+    expect(challenge?.binding.targetDigest).toBe(policyTarget);
+    expect(challenge?.binding.targetDigest).not.toBe(modelTarget);
   });
 
   it("resumes an approved effect from a fresh runtime through the exact approval suffix", async () => {

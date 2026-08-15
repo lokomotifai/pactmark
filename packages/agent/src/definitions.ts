@@ -2,6 +2,7 @@ import {
   AgentDefinitionSchema,
   DigestSchema,
   JsonValueSchema,
+  ResourceScopeSchema,
   ToolRegistrationContractSchema,
   ToolSecuritySchema,
   definePolicyRegistration,
@@ -12,13 +13,14 @@ import {
   type Digest,
   type InstructionBundle,
   type JsonValue,
+  type ResourceScope,
   type ModelDriver,
   type ToolExecutionContext,
   type ToolRegistrationContract,
   type ToolSecurity,
 } from "@pactmark/core";
 import type { DefinedSchema } from "@pactmark/core";
-import type { z } from "zod";
+import { z } from "zod";
 
 function deepFreeze<T>(value: T): T {
   if (typeof value !== "object" || value === null || Object.isFrozen(value)) return value;
@@ -63,6 +65,17 @@ export interface DefineToolInput<I extends z.ZodType, O extends z.ZodType> {
   readonly input: DefinedSchema<I>;
   readonly output: DefinedSchema<O>;
   readonly security: Omit<ToolSecurity, "schemaVersion">;
+  /** Host-owned extraction of every resource the validated call can touch. */
+  readonly resources: (
+    input: z.output<I>,
+    context: Readonly<{
+      tenantId: string;
+      purposeCode: string;
+      dataClass: ToolSecurity["dataClasses"][number];
+    }>,
+  ) => readonly ResourceScope[];
+  /** Optional deterministic cost used by policy cost ceilings. */
+  readonly cost?: (input: z.output<I>) => number;
   readonly operation: Readonly<{
     kind: "read";
     execute(input: z.output<I>, context: ToolExecutionContext): Promise<z.input<O>>;
@@ -78,6 +91,18 @@ export interface DefinedTool<I extends z.ZodType = z.ZodType, O extends z.ZodTyp
 }
 
 type ToolRuntimeDefinition = Readonly<{
+  resolve(
+    input: JsonValue,
+    context: Readonly<{
+      tenantId: string;
+      purposeCode: string;
+      dataClass: ToolSecurity["dataClasses"][number];
+    }>,
+  ): Readonly<{
+    validatedInput: JsonValue;
+    resources: readonly ResourceScope[];
+    requestedCost?: number;
+  }>;
   execute(input: JsonValue, context: ToolExecutionContext): Promise<JsonValue>;
 }>;
 
@@ -130,6 +155,23 @@ export function defineTool<const I extends z.ZodType, const O extends z.ZodType>
     security,
   });
   toolRuntimeDefinitions.set(result, {
+    resolve(value, context) {
+      const parsedInput = input.input.parse(value);
+      const resources = z
+        .array(ResourceScopeSchema)
+        .min(1)
+        .max(256)
+        .parse(input.resources(parsedInput, context));
+      const requestedCost = input.cost?.(parsedInput);
+      if (requestedCost !== undefined && (!Number.isFinite(requestedCost) || requestedCost < 0)) {
+        throw new TypeError("KAF_POLICY_BUDGET_INVALID");
+      }
+      return Object.freeze({
+        validatedInput: JsonValueSchema.parse(parsedInput),
+        resources: Object.freeze(resources),
+        ...(requestedCost === undefined ? {} : { requestedCost }),
+      });
+    },
     async execute(value, context) {
       const parsedInput = input.input.parse(value);
       const output = await input.operation.execute(parsedInput, context);

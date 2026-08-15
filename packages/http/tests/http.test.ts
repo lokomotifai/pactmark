@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createAuthorityIssuer,
@@ -365,6 +365,7 @@ function config(runtime = new FixtureRuntime()): AgentFetchHandlerConfig {
     authorize: () => Promise.resolve(true),
     resolveAgent: () => Promise.resolve(agent),
     allowedOrigins: ["https://app.example.com"],
+    policyEnforcement: "complete",
   };
 }
 
@@ -377,6 +378,46 @@ function mutation(path: string, body: JsonValue = {}): Request {
 }
 
 describe("Pactmark HTTP handler", () => {
+  it("confines anonymous development access to ephemeral runtimes and marks every response", async () => {
+    const durable = new FixtureRuntime();
+    durable.capabilities = { ...capabilities, executionProfile: "durable", durableStorage: true };
+    const anonymousConfig = (runtime: FixtureRuntime): AgentFetchHandlerConfig => ({
+      runtime,
+      authorize: () => Promise.resolve(true),
+      resolveAgent: () => Promise.resolve(agent),
+      allowAnonymousDevelopment: true,
+      anonymousAuthentication: authentication,
+      exposeDetailedReadiness: true,
+    });
+    expect(() =>
+      createAgentFetchHandler({
+        ...anonymousConfig(durable),
+      }),
+    ).toThrow("KAF_HTTP_ANONYMOUS_PROFILE_INVALID");
+
+    const warning = vi.fn();
+    const runtime = new FixtureRuntime();
+    const handler = createAgentFetchHandler({
+      ...anonymousConfig(runtime),
+      onSecurityWarning: warning,
+    });
+    const health = await handler(new Request("https://api.example.com/healthz"), context);
+    expect(warning).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "KAF_HTTP_ANONYMOUS_DEVELOPMENT" }),
+    );
+    expect(health.headers.get("x-pactmark-development-mode")).toBe("anonymous");
+    const ready = await handler(new Request("https://api.example.com/readyz"), context);
+    expect(ready.status).toBe(503);
+    expect(await ready.json()).toMatchObject({
+      ready: false,
+      checks: [
+        expect.anything(),
+        expect.objectContaining({ id: "production-http-authentication", status: "fail" }),
+        expect.objectContaining({ id: "production-policy-engine-complete", status: "fail" }),
+      ],
+    });
+  });
+
   it("exposes no-store health/readiness and cacheable OpenAPI with ETag", async () => {
     const runtime = new FixtureRuntime();
     const handler = createAgentFetchHandler(config(runtime));
@@ -408,6 +449,18 @@ describe("Pactmark HTTP handler", () => {
       "/v1/runs/{runId}/artifacts/{artifactId}/verification",
     ]);
     expect(document).toHaveProperty(["paths", "/v1/runs/{runId}/evidence"]);
+  });
+
+  it("fails production readiness closed without an explicit complete policy boundary", async () => {
+    const runtime = new FixtureRuntime();
+    runtime.ready = true;
+    const handler = createAgentFetchHandler({ ...config(runtime), policyEnforcement: undefined });
+    const response = await handler(new Request("https://api.example.com/readyz"), context);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      code: "KAF_RUNTIME_NOT_READY",
+      ready: false,
+    });
   });
 
   it("streams a start and reuses the exact command id", async () => {
@@ -687,6 +740,11 @@ describe("Pactmark HTTP handler", () => {
     );
     expect(unauthorized.status).toBe(401);
     expect(unauthorized.headers.get("www-authenticate")).toContain("Bearer");
+    const unauthorizedReadiness = await unauthenticated(
+      new Request("https://api.example.com/readyz"),
+      context,
+    );
+    expect(unauthorizedReadiness.status).toBe(401);
     const forbidden = createAgentFetchHandler({
       ...config(runtime),
       authorize: () => Promise.resolve(false),

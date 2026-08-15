@@ -22,16 +22,19 @@ The public slice includes:
   boundary for local tests; and
 - a versioned registration kill-switch registry.
 
-`createPolicyEngine` is a preliminary implementation of the core port. Its
-`allow_with_grant` result is never executable authority. The runtime must still
-resolve the fully bound grant and atomically reserve its use. Use
+`createPolicyEngine` applies the portable preflight boundary used by the agent
+facade: kill switches, purpose, data classes, risk, schema status, capabilities,
+canonical resources, scope ceilings, call/cost ceilings, and network policy.
+It returns policy-normalized resources and a target digest; caller- or
+model-supplied target digests are never authority. Its `allow_with_grant` result
+is still not executable effect authority. The runtime must resolve the fully
+bound grant and atomically reserve its use before an external write. Use
 `evaluatePolicy` at that full-authorization boundary.
 
 Path canonicalization is portable and rejects traversal, encoded traversal,
 absolute paths, and backslash ambiguity. Symlink resolution remains a host
-filesystem responsibility; after resolving without following an unsafe path,
-the host can pass its logical root and resolved relative path to
-`assertNoSymlinkEscape`.
+filesystem responsibility; after resolving both paths physically, the host can
+pass the absolute root and candidate path to `assertResolvedPathWithinRoot`.
 
 URL checks reject identifiable private, reserved, loopback, link-local, and
 metadata literals. This is policy validation, not DNS pinning or network

@@ -145,6 +145,14 @@ describe("authority and WorkOrder boundary", () => {
         budget: { ...requestInput.budget, maxTurns: Infinity },
       }).success,
     ).toBe(false);
+    expect(
+      WorkOrderRequestSchema.safeParse({
+        ...requestInput,
+        resourceScopeCeiling: [
+          { kind: "banana", value: "*", normalizationVersion: "unregistered" },
+        ],
+      }).success,
+    ).toBe(false);
   });
 
   it("round-trips distinct accepted agent and compensation variants", () => {

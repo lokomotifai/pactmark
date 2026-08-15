@@ -55,6 +55,13 @@ export function redactTypedFields(input: JsonValue, rules: readonly RedactionRul
 /** Secondary safety net only; callers must use typed redaction for known sensitive fields. */
 export function redactCommonSensitiveText(value: string): string {
   return value
+    .replaceAll(/\bBasic\s+[A-Za-z0-9+/=]+/giu, "Basic [REDACTED]")
     .replaceAll(/\bBearer\s+[A-Za-z0-9._~+/=-]+/giu, "Bearer [REDACTED]")
+    .replaceAll(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/gu, "[REDACTED_JWT]")
+    .replaceAll(
+      /\b(api[_-]?key|access[_-]?token|client[_-]?secret|password)\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,]+)/giu,
+      "$1=[REDACTED]",
+    )
+    .replaceAll(/\b(https?:\/\/)[^\s/@:]+:[^\s/@]+@/giu, "$1[REDACTED]@[REDACTED_HOST]/")
     .replaceAll(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/giu, "[REDACTED_EMAIL]");
 }

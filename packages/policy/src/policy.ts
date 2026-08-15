@@ -4,6 +4,7 @@ import {
   CapabilityGrantSchema,
   ToolRegistrationContractSchema,
   definePolicyRegistration,
+  digestCanonicalJson,
   type AcceptedWorkOrder,
   type Approval,
   type CapabilityGrant,
@@ -13,13 +14,18 @@ import {
   type PolicyRegistration,
   type ResourceScope,
   type ToolRegistrationContract,
-  type ToolRiskClass,
 } from "@pactmark/core";
 import { z } from "zod";
 
 import { canonicalizeResourceScope, isResourceWithinScope } from "./canonicalization.js";
 import type { KillSwitchRegistry } from "./kill-switch.js";
-import { allow, deny, requireApproval, type PolicyDecision } from "./reason-codes.js";
+import {
+  allow,
+  deny,
+  requireApproval,
+  type PolicyDecision,
+  type PolicyReasonCode,
+} from "./reason-codes.js";
 
 const RiskListSchema = z.array(z.enum(["R0", "R1", "R2", "R3", "R4", "R5"])).min(1);
 
@@ -201,6 +207,117 @@ function hasWriteStrategy(tool: ToolRegistrationContract): boolean {
   return tool.effectStrategyKind !== "read";
 }
 
+export type PolicyPreflightInput = Readonly<{
+  workOrder: AcceptedWorkOrder;
+  tool: ToolRegistrationContract;
+  policyRegistrationDigest: Digest;
+  argumentsDigest: Digest;
+  resources: readonly ResourceScope[];
+  schemaValidated: boolean;
+  networkPolicy: "none" | "declared" | "enforced";
+  callsAlreadyUsed: number;
+  requestedCost?: number;
+}>;
+
+export type PolicyPreflightResult =
+  | Readonly<{
+      decision: "deny";
+      reasonCode: Exclude<PolicyReasonCode, "KAF_POLICY_ALLOWED">;
+    }>
+  | Readonly<{
+      decision: "pass";
+      reasonCode: "KAF_POLICY_ALLOWED";
+      normalizedResources: readonly ResourceScope[];
+      normalizedTargetDigest: Digest;
+      approvalRequired: boolean;
+    }>;
+
+function preflightDeny(
+  reasonCode: Exclude<PolicyReasonCode, "KAF_POLICY_ALLOWED">,
+): PolicyPreflightResult {
+  return Object.freeze({ decision: "deny", reasonCode });
+}
+
+/** Shared fail-closed boundary used by both the portable evaluator and runtime adapters. */
+export function evaluatePolicyPreflight(
+  configInput: DeterministicPolicyConfig,
+  inputRaw: PolicyPreflightInput,
+  killSwitches?: KillSwitchRegistry,
+): PolicyPreflightResult {
+  let config: DeterministicPolicyConfig;
+  let workOrder: AcceptedWorkOrder;
+  let tool: ToolRegistrationContract;
+  try {
+    config = DeterministicPolicyConfigSchema.parse(configInput);
+    workOrder = AcceptedWorkOrderSchema.parse(inputRaw.workOrder);
+    tool = ToolRegistrationContractSchema.parse(inputRaw.tool);
+  } catch {
+    return preflightDeny("KAF_POLICY_INVALID_INPUT");
+  }
+  if (
+    killSwitches?.isKilled("tool_registration", tool.toolRegistrationDigest) === true ||
+    killSwitches?.isKilled("policy_registration", inputRaw.policyRegistrationDigest) === true
+  ) {
+    return preflightDeny("KAF_POLICY_REGISTRATION_KILLED");
+  }
+  if (!purposeAllowed(config, workOrder)) return preflightDeny("KAF_POLICY_UNKNOWN_PURPOSE");
+  if (
+    !config.enabledDataClasses.includes(workOrder.dataClass) ||
+    !tool.security.dataClasses.includes(workOrder.dataClass)
+  ) {
+    return preflightDeny("KAF_POLICY_DATA_CLASS_DENIED");
+  }
+  if (
+    !config.allowedToolRisksByWorkRisk[workOrder.context.riskClass].includes(
+      tool.security.riskClass,
+    )
+  ) {
+    return preflightDeny("KAF_POLICY_DEFAULT_DENY");
+  }
+  if (!inputRaw.schemaValidated) return preflightDeny("KAF_POLICY_SCHEMA_REQUIRED");
+  if (
+    tool.security.requiredScopes.length === 0 ||
+    !tool.security.requiredScopes.every((scope) => workOrder.requestedCapabilities.includes(scope))
+  ) {
+    return preflightDeny("KAF_POLICY_CAPABILITY_DENIED");
+  }
+  let normalizedResources: readonly ResourceScope[];
+  try {
+    normalizedResources = inputRaw.resources.map(canonicalizeResourceScope);
+  } catch {
+    return preflightDeny("KAF_POLICY_SCOPE_DENIED");
+  }
+  if (
+    normalizedResources.length === 0 ||
+    !scopesAllowed(normalizedResources, workOrder.resourceScopeCeiling)
+  ) {
+    return preflightDeny("KAF_POLICY_SCOPE_DENIED");
+  }
+  if (inputRaw.callsAlreadyUsed >= tool.security.maxCallsPerRun) {
+    return preflightDeny("KAF_POLICY_BUDGET_EXCEEDED");
+  }
+  if (
+    inputRaw.requestedCost !== undefined &&
+    (tool.security.costCeiling === undefined || inputRaw.requestedCost > tool.security.costCeiling)
+  ) {
+    return preflightDeny("KAF_POLICY_BUDGET_EXCEEDED");
+  }
+  if (tool.security.networkEnforcement === "required" && inputRaw.networkPolicy !== "enforced") {
+    return preflightDeny("KAF_POLICY_NETWORK_ENFORCEMENT_REQUIRED");
+  }
+  const normalizedTargetDigest = digestCanonicalJson({
+    schemaVersion: "1",
+    resources: normalizedResources,
+  });
+  return Object.freeze({
+    decision: "pass",
+    reasonCode: "KAF_POLICY_ALLOWED",
+    normalizedResources: Object.freeze([...normalizedResources]),
+    normalizedTargetDigest,
+    approvalRequired: tool.security.riskClass === "R4" || tool.security.riskClass === "R5",
+  });
+}
+
 export function evaluatePolicy(
   configInput: DeterministicPolicyConfig,
   inputRaw: PolicyEvaluationInput,
@@ -217,55 +334,23 @@ export function evaluatePolicy(
     return deny("KAF_POLICY_INVALID_INPUT");
   }
   const input: PolicyEvaluationInput = { ...inputRaw, workOrder, tool };
-
-  if (
-    killSwitches?.isKilled("tool_registration", tool.toolRegistrationDigest) === true ||
-    killSwitches?.isKilled("policy_registration", input.policyRegistrationDigest) === true
-  ) {
-    return deny("KAF_POLICY_REGISTRATION_KILLED");
-  }
-  if (!purposeAllowed(config, workOrder)) return deny("KAF_POLICY_UNKNOWN_PURPOSE");
-  if (
-    !config.enabledDataClasses.includes(workOrder.dataClass) ||
-    !tool.security.dataClasses.includes(workOrder.dataClass)
-  ) {
-    return deny("KAF_POLICY_DATA_CLASS_DENIED");
-  }
-  if (
-    !config.allowedToolRisksByWorkRisk[workOrder.context.riskClass].includes(
-      tool.security.riskClass,
-    )
-  ) {
-    return deny("KAF_POLICY_DEFAULT_DENY");
-  }
-  if (!input.schemaValidated) return deny("KAF_POLICY_SCHEMA_REQUIRED");
-  if (
-    tool.security.requiredScopes.length === 0 ||
-    !tool.security.requiredScopes.every((scope) => workOrder.requestedCapabilities.includes(scope))
-  ) {
-    return deny("KAF_POLICY_CAPABILITY_DENIED");
-  }
-  let resources: readonly ResourceScope[];
-  try {
-    resources = input.normalizedResources.map(canonicalizeResourceScope);
-  } catch {
-    return deny("KAF_POLICY_SCOPE_DENIED");
-  }
-  if (!scopesAllowed(resources, workOrder.resourceScopeCeiling)) {
-    return deny("KAF_POLICY_SCOPE_DENIED");
-  }
-  if (input.callsAlreadyUsed >= tool.security.maxCallsPerRun) {
-    return deny("KAF_POLICY_BUDGET_EXCEEDED");
-  }
-  if (
-    input.requestedCost !== undefined &&
-    (tool.security.costCeiling === undefined || input.requestedCost > tool.security.costCeiling)
-  ) {
-    return deny("KAF_POLICY_BUDGET_EXCEEDED");
-  }
-  if (tool.security.networkEnforcement === "required" && input.networkPolicy !== "enforced") {
-    return deny("KAF_POLICY_NETWORK_ENFORCEMENT_REQUIRED");
-  }
+  const preflight = evaluatePolicyPreflight(
+    config,
+    {
+      workOrder,
+      tool,
+      policyRegistrationDigest: input.policyRegistrationDigest,
+      argumentsDigest: input.argumentsDigest,
+      resources: input.normalizedResources,
+      schemaValidated: input.schemaValidated,
+      networkPolicy: input.networkPolicy,
+      callsAlreadyUsed: input.callsAlreadyUsed,
+      ...(input.requestedCost === undefined ? {} : { requestedCost: input.requestedCost }),
+    },
+    killSwitches,
+  );
+  if (preflight.decision === "deny") return deny(preflight.reasonCode);
+  const resources = preflight.normalizedResources;
   if (input.grantResolution === undefined) return deny("KAF_POLICY_GRANT_REQUIRED");
   if (input.grantResolution.status !== "active") {
     return deny(
@@ -315,35 +400,23 @@ export function createPolicyEngine(
   killSwitches?: KillSwitchRegistry,
 ): PolicyEngine {
   const engine: PolicyEngine = {
-    evaluate({ workOrder, tool }: Parameters<PolicyEngine["evaluate"]>[0]) {
-      if (
-        killSwitches?.isKilled("tool_registration", tool.toolRegistrationDigest) === true ||
-        killSwitches?.isKilled(
-          "policy_registration",
-          policy.registration.policyRegistrationDigest,
-        ) === true
-      ) {
-        return Promise.resolve({
-          decision: "deny" as const,
-          reasonCode: "KAF_POLICY_REGISTRATION_KILLED",
-        });
-      }
-      if (!purposeAllowed(policy.config, workOrder)) {
-        return Promise.resolve({
-          decision: "deny" as const,
-          reasonCode: "KAF_POLICY_UNKNOWN_PURPOSE",
-        });
-      }
-      const risk: ToolRiskClass = tool.security.riskClass;
-      if (risk === "R4" || risk === "R5") {
-        return Promise.resolve({
-          decision: "require_approval" as const,
-          reasonCode: "KAF_POLICY_APPROVAL_REQUIRED",
-        });
-      }
+    evaluate(input: Parameters<PolicyEngine["evaluate"]>[0]) {
+      const result = evaluatePolicyPreflight(
+        policy.config,
+        {
+          ...input,
+          policyRegistrationDigest: policy.registration.policyRegistrationDigest,
+        },
+        killSwitches,
+      );
+      if (result.decision === "deny") return Promise.resolve(result);
       return Promise.resolve({
-        decision: "allow_with_grant" as const,
-        reasonCode: "KAF_POLICY_ALLOWED",
+        decision: result.approvalRequired
+          ? ("require_approval" as const)
+          : ("allow_with_grant" as const),
+        reasonCode: result.approvalRequired ? "KAF_POLICY_APPROVAL_REQUIRED" : "KAF_POLICY_ALLOWED",
+        normalizedResources: result.normalizedResources,
+        normalizedTargetDigest: result.normalizedTargetDigest,
       });
     },
   };

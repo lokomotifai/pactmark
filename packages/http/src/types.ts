@@ -127,9 +127,17 @@ export interface AgentFetchHandlerConfig {
   ) => Promise<AgentDefinition | undefined>;
   readonly allowAnonymousDevelopment?: boolean;
   readonly anonymousAuthentication?: AuthenticatedRequest;
+  readonly onSecurityWarning?: (warning: Readonly<{ code: string; message: string }>) => void;
   readonly allowedOrigins?: readonly string[];
   readonly maximumBodyBytes?: number;
   readonly maximumArtifactResponseBytes?: number;
   readonly maximumEvidenceResponseBytes?: number;
+  /** Detailed capability checks can expose deployment internals; disabled by default. */
+  readonly exposeDetailedReadiness?: boolean;
+  /**
+   * Host attestation that every tool call uses Pactmark's complete policy preflight contract.
+   * Omission fails the production readiness check closed.
+   */
+  readonly policyEnforcement?: "complete";
   readonly documentationBaseUrl?: string;
 }

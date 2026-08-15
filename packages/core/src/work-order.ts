@@ -88,9 +88,28 @@ export const RetentionPolicySchema = z.discriminatedUnion("mode", [
 ]);
 export type RetentionPolicy = z.infer<typeof RetentionPolicySchema>;
 
+/**
+ * Closed vocabulary understood by shipped Pactmark contracts. Hosts that need a new resource
+ * family must add and version its canonicalization before accepting it at this boundary.
+ */
+export const ResourceScopeKindSchema = z.enum([
+  "path",
+  "url",
+  "host",
+  "identifier",
+  "tenant",
+  "urn",
+  "dataset",
+  "run",
+  "record",
+  "artifact",
+  "opaque",
+]);
+export type ResourceScopeKind = z.infer<typeof ResourceScopeKindSchema>;
+
 export const ResourceScopeSchema = z
   .object({
-    kind: z.string().trim().min(1).max(128),
+    kind: ResourceScopeKindSchema,
     value: z.string().trim().min(1).max(2048),
     normalizationVersion: z.string().trim().min(1).max(64),
   })

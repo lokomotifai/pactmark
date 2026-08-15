@@ -496,6 +496,11 @@ describe("evidence, redaction and pattern maturity", () => {
     expect(redactCommonSensitiveText("user@example.com Bearer abc.def")).toBe(
       "[REDACTED_EMAIL] Bearer [REDACTED]",
     );
+    expect(
+      redactCommonSensitiveText(
+        "Basic dXNlcjpwYXNz password=hunter2 api_key='sk_test_value' eyJabc.def.ghi",
+      ),
+    ).toBe("Basic [REDACTED] password=[REDACTED] api_key=[REDACTED] [REDACTED_JWT]");
     expect(() => redactTypedFields({ safe: true }, [{ path: ["missing"] }])).toThrow(
       "KAF_REDACTION_PATH_MISSING",
     );

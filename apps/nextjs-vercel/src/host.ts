@@ -72,6 +72,7 @@ export function createNextVercelHandler(
   return createVercelRouteHandler({
     basePath: "/api/agent",
     runtime: nextRuntime,
+    policyEnforcement: "complete",
     readEnvironment,
     ...(preview
       ? {

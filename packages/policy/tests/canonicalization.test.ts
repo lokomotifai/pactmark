@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   POLICY_NORMALIZATION_VERSION,
   PolicyNormalizationError,
-  assertNoSymlinkEscape,
+  assertResolvedPathWithinRoot,
   canonicalizeHost,
   canonicalizeIdentifier,
   canonicalizeResourcePath,
@@ -39,11 +39,14 @@ describe("policy canonicalization", () => {
 
   it("checks physical paths supplied by a host without claiming filesystem resolution", () => {
     expect(() => {
-      assertNoSymlinkEscape("workspace/docs", "workspace/private/key");
+      assertResolvedPathWithinRoot("/workspace/docs", "/workspace/private/key");
     }).toThrow(/escapes/u);
     expect(() => {
-      assertNoSymlinkEscape("workspace/docs", "workspace/docs/result.md");
+      assertResolvedPathWithinRoot("/workspace/docs", "/workspace/docs/result.md");
     }).not.toThrow();
+    expect(() => {
+      assertResolvedPathWithinRoot("workspace/docs", "workspace/docs/result.md");
+    }).toThrow(/absolute/u);
   });
 
   it.each([
@@ -57,6 +60,9 @@ describe("policy canonicalization", () => {
     "100.64.0.1",
     "224.0.0.1",
     "metadata.google.internal",
+    "metadata.azure.internal",
+    "printer.local",
+    "198.18.0.1",
     "[::1]",
     "[fe80::1]",
     "[::ffff:7f00:1]",
@@ -134,12 +140,17 @@ describe("policy canonicalization", () => {
       ),
     ).toBe(false);
     expect(() =>
-      canonicalizeResourceScope({ kind: "unknown", value: "x", normalizationVersion: version }),
+      canonicalizeResourceScope({
+        kind: "unknown",
+        value: "x",
+        normalizationVersion: version,
+      } as never),
     ).toThrow(/Unknown/u);
     for (const scope of [
       { kind: "host", value: "example.com", normalizationVersion: version },
       { kind: "identifier", value: "object-1", normalizationVersion: version },
       { kind: "tenant", value: "tenant-1", normalizationVersion: version },
+      { kind: "urn", value: "URN:Pactmark:resource-1", normalizationVersion: version },
     ]) {
       expect(canonicalizeResourceScope(scope)).toMatchObject({ normalizationVersion: version });
     }

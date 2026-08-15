@@ -60,6 +60,7 @@ const ExecutorSelfHostConformanceReceiptMaterialSchema = z
   .object({
     schemaVersion: z.literal("1"),
     receiptFormat: z.literal("pactmark.executor-sh-selfhost-conformance@1"),
+    attestationKind: z.literal("self_attested"),
     executorVersion: z.literal(EXECUTOR_SELF_HOST_VERSION),
     sourceRevision: z.literal(EXECUTOR_SELF_HOST_SOURCE_REVISION),
     imageIndexDigest: z.literal(EXECUTOR_SELF_HOST_IMAGE_INDEX_DIGEST),
@@ -114,6 +115,7 @@ export function defineExecutorSelfHostConformanceReceipt(
   const material = ExecutorSelfHostConformanceReceiptMaterialSchema.parse({
     schemaVersion: "1",
     receiptFormat: "pactmark.executor-sh-selfhost-conformance@1",
+    attestationKind: "self_attested",
     executorVersion: EXECUTOR_SELF_HOST_VERSION,
     sourceRevision: EXECUTOR_SELF_HOST_SOURCE_REVISION,
     imageIndexDigest: EXECUTOR_SELF_HOST_IMAGE_INDEX_DIGEST,

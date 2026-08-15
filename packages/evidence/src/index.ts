@@ -1,4 +1,5 @@
 export * from "./artifacts.js";
+export * from "./attestations.js";
 export * from "./exceptions.js";
 export * from "./exports.js";
 export * from "./patterns.js";
