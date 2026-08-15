@@ -3,7 +3,17 @@ import { extname } from "node:path";
 
 import { gitFiles, repositoryRoot } from "./lib/repository.mjs";
 
-const scannedExtensions = new Set([".cjs", ".js", ".json", ".mjs", ".mts", ".ts", ".tsx"]);
+const scannedExtensions = new Set([
+  ".cjs",
+  ".js",
+  ".json",
+  ".mjs",
+  ".mts",
+  ".ts",
+  ".tsx",
+  ".yaml",
+  ".yml",
+]);
 const excluded = new Set(["tooling/check-placeholders.mts", ".changeset/initial-release.md"]);
 const prosePrefixes = ["docs/", ".github/"];
 const findings: string[] = [];

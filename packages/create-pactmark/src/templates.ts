@@ -513,7 +513,7 @@ function platformFiles(template: TemplateName): readonly TemplateFile[] {
         {
           path: "src/server.ts",
           content: `import { createLocalAuthorityIssuer, createLocalRuntime } from "@pactmark/agent";
-import { createAgentFetchHandler } from "@pactmark/http";
+import { constantTimeTextEqual, createAgentFetchHandler } from "@pactmark/http";
 import { createPactmarkNodeServer, installGracefulShutdown } from "@pactmark/node";
 import { agent } from "./agent.js";
 
@@ -528,9 +528,13 @@ const handler = createAgentFetchHandler({
   policyEnforcement: "complete",
   authenticate: (request, context) => Promise.resolve(
     context.env["PACTMARK_BEARER_TOKEN"] !== undefined &&
-    request.headers.get("authorization") === "Bearer " + context.env["PACTMARK_BEARER_TOKEN"]
+    constantTimeTextEqual(
+      request.headers.get("authorization"),
+      "Bearer " + context.env["PACTMARK_BEARER_TOKEN"],
+    )
       ? { authority, principal, tenant, credentialMode: "bearer" as const }
       : undefined,
+  ),
   authorize: (authentication) => Promise.resolve(authentication.tenant.id === tenant.id),
   resolveAgent: (reference) => Promise.resolve(
     reference.id === agent.id && reference.version === agent.version ? agent : undefined,
@@ -542,20 +546,26 @@ const parsedPort = Number(process.env["PORT"] ?? "3000");
 if (!Number.isSafeInteger(parsedPort) || parsedPort < 1 || parsedPort > 65_535) {
   throw new TypeError("KAF_NODE_PORT_INVALID");
 }
+const bindHost = process.env["PACTMARK_BIND_HOST"] ?? "127.0.0.1";
+if (bindHost !== "127.0.0.1" && bindHost !== "0.0.0.0") {
+  throw new TypeError("KAF_NODE_BIND_HOST_INVALID");
+}
 const server = createPactmarkNodeServer(handler, {
   capabilities: runtime.getCapabilities(),
   readEnvironment: () => ({ PACTMARK_BEARER_TOKEN: process.env["PACTMARK_BEARER_TOKEN"] }),
 });
 installGracefulShutdown(server);
-server.listen(parsedPort, "0.0.0.0", () => {
-  process.stdout.write(JSON.stringify({ code: "KAF_NODE_LISTENING", port: parsedPort }) + "\\n");
+server.listen(parsedPort, bindHost, () => {
+  process.stdout.write(
+    JSON.stringify({ code: "KAF_NODE_LISTENING", host: bindHost, port: parsedPort }) + "\\n",
+  );
 });
 `,
         },
         {
           path: "Dockerfile",
           content:
-            'FROM node:24.18.1-slim\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install --ignore-scripts\nCOPY . .\nRUN npm run build\nCMD ["npm", "start"]\n',
+            'FROM node:24.18.1-slim\nENV PACTMARK_BIND_HOST=0.0.0.0\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install --ignore-scripts\nCOPY . .\nRUN npm run build\nCMD ["npm", "start"]\n',
         },
         { path: ".dockerignore", content: ".env\n.git\nnode_modules\ncoverage\n" },
       ];
@@ -571,6 +581,7 @@ server.listen(parsedPort, "0.0.0.0", () => {
         {
           path: "app/api/agent/[...kaf]/route.ts",
           content: `import { createLocalAuthorityIssuer, createLocalRuntime } from "@pactmark/agent";
+import { constantTimeTextEqual } from "@pactmark/http";
 import { createVercelRouteHandler } from "@pactmark/vercel";
 import { agent } from "../../../../src/agent.js";
 
@@ -590,9 +601,13 @@ const handler = createVercelRouteHandler({
   policyEnforcement: "complete",
   authenticate: (request, context) => Promise.resolve(
     context.env["PACTMARK_BEARER_TOKEN"] !== undefined &&
-    request.headers.get("authorization") === "Bearer " + context.env["PACTMARK_BEARER_TOKEN"]
+    constantTimeTextEqual(
+      request.headers.get("authorization"),
+      "Bearer " + context.env["PACTMARK_BEARER_TOKEN"],
+    )
       ? { authority, principal, tenant, credentialMode: "bearer" as const }
       : undefined,
+  ),
   authorize: (authentication) => Promise.resolve(authentication.tenant.id === tenant.id),
   resolveAgent: (reference) => Promise.resolve(
     reference.id === agent.id && reference.version === agent.version ? agent : undefined,
@@ -624,6 +639,7 @@ export const OPTIONS = handler;
           path: "src/worker.ts",
           content: `import { createLocalAuthorityIssuer, createLocalRuntime } from "@pactmark/agent";
 import { createCloudflareWorker } from "@pactmark/cloudflare";
+import { constantTimeTextEqual } from "@pactmark/http";
 import { agent } from "./agent.js";
 
 const principal = { type: "service" as const, id: "pactmark-cloudflare-preview" };
@@ -638,9 +654,13 @@ export default createCloudflareWorker({
   policyEnforcement: "complete",
   authenticate: (request, context) => Promise.resolve(
     context.env["PACTMARK_BEARER_TOKEN"] !== undefined &&
-    request.headers.get("authorization") === "Bearer " + context.env["PACTMARK_BEARER_TOKEN"]
+    constantTimeTextEqual(
+      request.headers.get("authorization"),
+      "Bearer " + context.env["PACTMARK_BEARER_TOKEN"],
+    )
       ? { authority, principal, tenant, credentialMode: "bearer" as const }
       : undefined,
+  ),
   authorize: (authentication) => Promise.resolve(authentication.tenant.id === tenant.id),
   resolveAgent: (reference) => Promise.resolve(
     reference.id === agent.id && reference.version === agent.version ? agent : undefined,

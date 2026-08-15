@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import ts from "typescript";
 
 import {
   MODEL_NAMES,
@@ -9,6 +10,35 @@ import {
 } from "../src/index.js";
 
 describe("embedded templates", () => {
+  it("syntax-checks every generated TypeScript source", () => {
+    for (const template of TEMPLATE_NAMES) {
+      const result = materializeTemplate({
+        projectName: "fixture-agent",
+        template,
+        model: "ai-sdk",
+        store: "postgres",
+        packageManager: "pnpm",
+      });
+      for (const file of result.files.filter(
+        ({ path }) => path.endsWith(".ts") || path.endsWith(".tsx"),
+      )) {
+        const output = ts.transpileModule(file.content, {
+          fileName: file.path,
+          reportDiagnostics: true,
+          compilerOptions: {
+            jsx: ts.JsxEmit.ReactJSX,
+            module: ts.ModuleKind.NodeNext,
+            target: ts.ScriptTarget.ES2022,
+          },
+        });
+        const errors = (output.diagnostics ?? []).filter(
+          ({ category }) => category === ts.DiagnosticCategory.Error,
+        );
+        expect(errors, `${template}:${file.path}`).toEqual([]);
+      }
+    }
+  });
+
   it("materializes every versioned combination deterministically", () => {
     for (const template of TEMPLATE_NAMES) {
       for (const model of MODEL_NAMES) {

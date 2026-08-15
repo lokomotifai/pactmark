@@ -358,7 +358,23 @@ export async function createProject(
     if (options.git) await runner.run("git", ["init", "--quiet"], temp, options.signal);
     abortIfNeeded(options.signal);
     await validateMaterializedTemplate(temp, plan.files, options.signal);
-    if (initialState === "empty") await rmdir(plan.targetPath);
+    await assertSafeParent(cwd, parent);
+    const finalState = await targetState(plan.targetPath);
+    if (finalState !== initialState) {
+      throw new InitializerError(
+        "KAF_INIT_TARGET_EXISTS",
+        "The target changed while the project was being prepared.",
+      );
+    }
+    if (initialState === "empty") {
+      await rmdir(plan.targetPath);
+      if ((await targetState(plan.targetPath)) !== "missing") {
+        throw new InitializerError(
+          "KAF_INIT_TARGET_EXISTS",
+          "The target changed while the project was being prepared.",
+        );
+      }
+    }
     await rename(temp, plan.targetPath);
     return Object.freeze({ ...plan, created: true });
   } catch (error) {
