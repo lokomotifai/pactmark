@@ -75,7 +75,7 @@
     },
     {
       "path": "packages/runtime/src/runtime.ts",
-      "digest": "sha256:c12df05784e505654e5931dc15319d4a4e465f556e059011935e4ad60b5373b8"
+      "digest": "sha256:161c30db26f00bf868e32e3c67f7e19b7d2786d210b8af0160e3e7ccb1ea1c92"
     },
     {
       "path": "packages/mcp/src/contracts.ts",

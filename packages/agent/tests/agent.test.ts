@@ -22,6 +22,7 @@ import {
   digestCanonicalJson,
   type JsonValue,
   type RunCommandTransaction,
+  type ToolExecutionContext,
 } from "@pactmark/core";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -319,6 +320,84 @@ describe("public definitions", () => {
         verifiers: ["schema@1", "schema@1"],
       }),
     ).toThrow("verifiers must be unique");
+  });
+
+  it("fails closed when one digest aliases distinct executable definitions", () => {
+    const policy = definePolicy({
+      id: "alias.policy",
+      implementationVersion: "1.0.0",
+      default: "deny",
+      rules: [{ riskClass: "R1", decision: "allow_with_grant" }],
+    });
+    const firstModel = modelDefinition(() => ({
+      type: "final",
+      value: { title: "first", body: "first" },
+    }));
+    const secondModel = modelDefinition(() => ({
+      type: "final",
+      value: { title: "second", body: "second" },
+    }));
+    const firstAgent = defineAgent({
+      id: "aliased-agent",
+      version: "0.1.0",
+      input: inputSchema,
+      instructions: "Run.",
+      model: firstModel,
+      policy,
+      output: outputSchema,
+    });
+    const secondAgent = defineAgent({
+      id: "aliased-agent",
+      version: "0.1.0",
+      input: inputSchema,
+      instructions: "Run.",
+      model: secondModel,
+      policy,
+      output: outputSchema,
+    });
+    expect(firstAgent.agentDefinitionDigest).toBe(secondAgent.agentDefinitionDigest);
+    expect(() => createLocalRuntime({ agents: [firstAgent, secondAgent] })).toThrow(
+      "KAF_REGISTRATION_SAME_VERSION_DRIFT",
+    );
+
+    const defineAliasedTool = (result: string) =>
+      defineTool({
+        id: "aliased.tool@1",
+        implementationVersion: "1.0.0",
+        description: "Digest-alias fixture.",
+        input: toolInput,
+        output: toolOutput,
+        security: { requiredScopes: ["alias:read"] },
+        operation: {
+          kind: "read",
+          execute: () => Promise.resolve({ result }),
+        },
+      });
+    const firstTool = defineAliasedTool("first");
+    const secondTool = defineAliasedTool("second");
+    expect(firstTool.registration.toolRegistrationDigest).toBe(
+      secondTool.registration.toolRegistrationDigest,
+    );
+    const model = modelDefinition(() => ({ type: "final", value: { title: "t", body: "b" } }));
+    const toolAgent = (id: string, tool: ReturnType<typeof defineAliasedTool>) =>
+      defineAgent({
+        id,
+        version: "0.1.0",
+        input: inputSchema,
+        instructions: "Run.",
+        model,
+        tools: { tool },
+        policy,
+        output: outputSchema,
+      });
+    expect(() =>
+      createLocalRuntime({
+        agents: [
+          toolAgent("first-tool-agent", firstTool),
+          toolAgent("second-tool-agent", secondTool),
+        ],
+      }),
+    ).toThrow("KAF_REGISTRATION_SAME_VERSION_DRIFT");
   });
 });
 
@@ -1281,27 +1360,54 @@ describe("facade write tools", () => {
   const writeInput = z.object({ key: z.string().min(1), value: z.string().min(1) }).strict();
   const writeOutput = z.object({ key: z.string(), stored: z.boolean() }).strict();
 
-  function writeTool(store: Map<string, string>) {
+  function writeTool(
+    store: Map<string, string>,
+    observedRuns?: Array<ToolExecutionContext["run"]>,
+    egressOrigin?: string,
+  ) {
     return defineTool({
       id: "records.update@1",
       description: "Persist one bounded record.",
       input: writeInput,
       output: writeOutput,
-      security: { requiredScopes: ["records:write"], riskClass: "R2" },
+      security: {
+        requiredScopes: ["records:write"],
+        riskClass: "R2",
+        ...(egressOrigin === undefined
+          ? {}
+          : {
+              egress: {
+                mode: "allowlist" as const,
+                destinations: [egressOrigin],
+                methods: ["POST"],
+                credentialSlots: [],
+              },
+              networkEnforcement: "declared_ok" as const,
+            }),
+      },
       operation: {
         kind: "write",
         reversibility: "irreversible",
         materialConsequence: "Writes one record into the in-memory fixture store.",
-        execute: ({ key, value }) => {
+        async execute({ key, value }, context) {
+          if (egressOrigin !== undefined) {
+            await context.egress.fetch(`${egressOrigin}/records`, { method: "POST" });
+          }
+          observedRuns?.push(context.run);
           store.set(key, value);
-          return Promise.resolve({ key, stored: true });
+          return { key, stored: true };
         },
       },
     });
   }
 
-  function writeAgent(store: Map<string, string>, id: string) {
-    const update = writeTool(store);
+  function writeAgent(
+    store: Map<string, string>,
+    id: string,
+    observedRuns?: Array<ToolExecutionContext["run"]>,
+    egressOrigin?: string,
+  ) {
+    const update = writeTool(store, observedRuns, egressOrigin);
     return defineAgent({
       id,
       version: "0.1.0",
@@ -1373,14 +1479,29 @@ describe("facade write tools", () => {
   });
 
   it("dispatches an R2 write through the governed effect path", async () => {
+    const fetch = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    vi.stubGlobal("fetch", fetch);
     const store = new Map<string, string>();
-    const agent = writeAgent(store, "write-agent");
+    const observedRuns: Array<ToolExecutionContext["run"]> = [];
+    const agent = writeAgent(store, "write-agent", observedRuns, "https://fixture.invalid");
     const runtime = createLocalRuntime({ agents: [agent] });
     expect(runtime.getCapabilities().effectReconciliation).toBe(true);
-    const result = await runtime.run(agent, { input: { key: "alpha" } });
+    const result = await runtime.run(agent, {
+      input: { key: "alpha" },
+      tenantId: "tenant-write-test",
+    });
     expect(result.status).toBe("completed");
     expect(result.output).toEqual({ title: "Stored", body: "alpha" });
     expect(store.get("alpha")).toBe("one");
+    expect(observedRuns).toEqual([
+      expect.objectContaining({
+        tenantId: "tenant-write-test",
+        runId: result.runId,
+        purposeCode: "service_delivery",
+        dataClass: "public",
+      }),
+    ]);
+    expect(fetch).toHaveBeenCalledOnce();
     const eventTypes = result.events.map((event) => event.eventType);
     expect(eventTypes).toEqual(
       expect.arrayContaining([
@@ -1392,6 +1513,7 @@ describe("facade write tools", () => {
       ]),
     );
     expect(result.evidence).toBeDefined();
+    vi.unstubAllGlobals();
   });
 
   it("keeps effect reconciliation off when no write tool is composed", () => {
@@ -1438,7 +1560,7 @@ describe("facade write tools", () => {
     expect(store.size).toBe(0);
   });
 
-  it("serves an already acknowledged effect result without re-dispatching", async () => {
+  it("treats a repeated model proposal as a distinct governed effect", async () => {
     const store = new Map<string, string>();
     let writes = 0;
     const update = defineTool({
@@ -1457,8 +1579,10 @@ describe("facade write tools", () => {
         },
       },
     });
-    // The model proposes the same write twice; the kernel's effect key
-    // dedupes the second dispatch and serves the acknowledged result.
+    // The model proposes the same arguments twice, but each proposal has a new
+    // tool-call/step identity and is therefore a distinct governed effect.
+    // Replay protection applies when the exact same effect resumes after a
+    // crash, not when the model requests a second write intentionally.
     const agent = defineAgent({
       id: "write-replay-agent",
       version: "0.1.0",

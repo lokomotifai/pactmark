@@ -1013,6 +1013,8 @@ export class AgentRuntime {
         effectId,
         effectKey: recordBefore.effectKey,
         normalizedTargetDigest: recordBefore.normalizedTargetDigest,
+        purposeCode: workOrder.purpose.code,
+        dataClass: workOrder.dataClass,
         signal: new AbortController().signal,
       });
       if (lookup.status !== "applied") {
@@ -3337,6 +3339,8 @@ export class AgentRuntime {
       effectId,
       effectKey,
       normalizedTargetDigest: input.normalizedTargetDigest,
+      purposeCode: input.workOrder.purpose.code,
+      dataClass: input.workOrder.dataClass,
       signal: input.signal,
     };
     await validateEffectPreview({

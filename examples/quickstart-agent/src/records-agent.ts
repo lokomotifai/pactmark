@@ -11,7 +11,9 @@ import { z } from "zod";
  * A governed R2 write: the proposal crosses schema validation, an explicit
  * policy rule, a deterministic effect preview, a one-use capability grant,
  * and the effect ledger before the record is written — and the acknowledged
- * result is served from the ledger if the same effect is ever proposed again.
+ * result is served from the ledger when that exact effect resumes after a
+ * crash. A later model proposal is a new governed effect, even with the same
+ * arguments.
  */
 export const recordStore = new Map<string, string>();
 
