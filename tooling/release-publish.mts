@@ -325,7 +325,7 @@ type FetchImplementation = typeof fetch;
 
 function packageVersionUrl(operation: PublishOperation): URL {
   const base = new URL(operation.registry);
-  const encodedName = encodeURIComponent(operation.packageName).replace("%40", "@");
+  const encodedName = encodeURIComponent(operation.packageName).replaceAll("%40", "@");
   return new URL(`${encodedName}/${encodeURIComponent(operation.version)}`, base);
 }
 
@@ -335,7 +335,7 @@ async function inspectPackagePresence(
 ): Promise<boolean | undefined> {
   try {
     const base = new URL(operation.registry);
-    const encodedName = encodeURIComponent(operation.packageName).replace("%40", "@");
+    const encodedName = encodeURIComponent(operation.packageName).replaceAll("%40", "@");
     const packageUrl = new URL(encodedName, base);
     packageUrl.searchParams.set("pactmark_authority_check", Date.now().toString());
     const response = await fetchImplementation(packageUrl, {

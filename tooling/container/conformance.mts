@@ -12,7 +12,7 @@ export const CONTAINER_IMAGE_PREFIX = "pactmark-node-quickstart:conformance";
 export const CONTAINER_PORT = 3000;
 const pnpmCliPath = join(repositoryRoot, "node_modules", "pnpm", "bin", "pnpm.mjs");
 
-const runtimeStage = `FROM node:24.18.1-alpine AS runtime
+const runtimeStage = `FROM node:24.18.1-alpine@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3 AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV PACTMARK_BIND_HOST=0.0.0.0
@@ -24,7 +24,10 @@ CMD ["node", "dist/server.js"]
 `;
 
 const runtimeOnlyDockerfile = runtimeStage
-  .replace("FROM node:24.18.1-alpine AS runtime", "FROM node:24.18.1-alpine")
+  .replace(
+    "FROM node:24.18.1-alpine@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3 AS runtime",
+    "FROM node:24.18.1-alpine@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3",
+  )
   .replace("COPY --from=build --chown=node:node /product ./", "COPY --chown=node:node product ./");
 
 export interface CommandRequest {

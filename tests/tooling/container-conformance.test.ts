@@ -122,6 +122,14 @@ describe("OCI conformance runner", () => {
         dockerfile.replace("PACTMARK_BIND_HOST=0.0.0.0", "PACTMARK_BIND_HOST=127.0.0.1"),
       ),
     ).toBe(false);
+    expect(
+      containerConformanceInternals.hasCanonicalRuntimeStage(
+        dockerfile.replace(
+          "node:24.18.1-alpine@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3",
+          "node:24.18.1-alpine",
+        ),
+      ),
+    ).toBe(false);
   });
 
   it("redacts bounded command diagnostics without changing stable failure codes", () => {
