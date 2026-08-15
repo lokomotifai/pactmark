@@ -861,7 +861,12 @@ describe("Pactmark HTTP handler", () => {
     valid.headers.set("origin", "https://app.example.com");
     valid.headers.set("sec-fetch-site", "same-origin");
     valid.headers.set("x-csrf-token", "csrf-token");
-    expect((await handler(valid, context)).status).toBe(200);
+    const validResponse = await handler(valid, context);
+    expect(validResponse.status).toBe(200);
+    expect(validResponse.headers.get("access-control-allow-origin")).toBe(
+      "https://app.example.com",
+    );
+    expect(validResponse.headers.get("x-content-type-options")).toBe("nosniff");
 
     const deniedPreflight = new Request("https://api.example.com/v1/runs", {
       method: "OPTIONS",
@@ -900,6 +905,13 @@ describe("Pactmark HTTP handler", () => {
     expect(() => createAgentFetchHandler({ ...config(), basePath: "relative" })).toThrow(
       "KAF_HTTP_BASE_PATH_INVALID",
     );
+    expect(() =>
+      createAgentFetchHandler({
+        ...config(),
+        allowAnonymousDevelopment: true,
+        anonymousAuthentication: authentication,
+      }),
+    ).toThrow("KAF_HTTP_AUTHENTICATION_MODE_CONFLICT");
     const anonymous = createAgentFetchHandler({
       ...config(),
       authenticate: undefined,
@@ -913,5 +925,24 @@ describe("Pactmark HTTP handler", () => {
     expect(
       (await anonymous(new Request("https://api.example.com/v1/runs/run-1"), context)).status,
     ).toBe(404);
+  });
+
+  it("authorizes readiness and exposes a host-owned rate-limit seam", async () => {
+    const forbiddenReadiness = createAgentFetchHandler({
+      ...config(),
+      authorize: (_authentication, request) =>
+        Promise.resolve(request.operation !== "runtime.readiness"),
+    });
+    expect(
+      (await forbiddenReadiness(new Request("https://api.example.com/readyz"), context)).status,
+    ).toBe(403);
+
+    const limited = createAgentFetchHandler({
+      ...config(),
+      checkRateLimit: () => Promise.resolve({ allowed: false, retryAfterSeconds: 30 }),
+    });
+    const response = await limited(new Request("https://api.example.com/healthz"), context);
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("30");
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createNextVercelHandler } from "../src/host";
+import { createNextVercelHandler, selectHostProfile } from "../src/host";
 
 function id(seed: string): string {
   return `kafcmd_${String(Date.now()).padStart(13, "0")}_${seed.padEnd(32, "0").slice(0, 32)}`;
@@ -32,6 +32,13 @@ function requestBody() {
 }
 
 describe("Next Vercel catch-all route", () => {
+  it("enables anonymous preview mode only when it is explicitly selected", () => {
+    expect(selectHostProfile("preview")).toBe("preview");
+    expect(selectHostProfile("production")).toBe("production");
+    expect(selectHostProfile(undefined)).toBe("production");
+    expect(selectHostProfile("prod")).toBe("production");
+  });
+
   it("mounts health, readiness, OpenAPI, CORS, streaming, reconnect, inspection, and cancel", async () => {
     const handler = createNextVercelHandler({ profile: "preview" });
     const health = await handler(new Request("https://fixture.test/api/agent/healthz"));

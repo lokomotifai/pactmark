@@ -11,6 +11,7 @@ RUN pnpm --filter pactmark-node-quickstart deploy --prod --offline --trust-lockf
 FROM node:24.18.1-alpine AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV PACTMARK_BIND_HOST=0.0.0.0
 WORKDIR /app
 COPY --from=build --chown=node:node /product ./
 USER node

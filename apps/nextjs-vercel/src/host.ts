@@ -16,6 +16,10 @@ import { createProductionAuthHook } from "./auth";
 export type HostProfile = "preview" | "production";
 type EnvironmentReader = () => Readonly<Record<string, string | undefined>>;
 
+export function selectHostProfile(value: string | undefined): HostProfile {
+  return value === "preview" ? "preview" : "production";
+}
+
 const localAuthority = createLocalAuthorityIssuer();
 const previewPrincipal = { type: "service" as const, id: "nextjs-vercel-preview" };
 const previewTenant = { id: "nextjs-vercel-preview" };
@@ -111,5 +115,5 @@ export function createNextVercelHandler(
 }
 
 export const nextVercelHandler = createNextVercelHandler({
-  profile: process.env["PACTMARK_PROFILE"] === "production" ? "production" : "preview",
+  profile: selectHostProfile(process.env["PACTMARK_PROFILE"]),
 });

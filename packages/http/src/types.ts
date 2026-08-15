@@ -128,6 +128,11 @@ export interface AgentFetchHandlerConfig {
   readonly allowAnonymousDevelopment?: boolean;
   readonly anonymousAuthentication?: AuthenticatedRequest;
   readonly onSecurityWarning?: (warning: Readonly<{ code: string; message: string }>) => void;
+  /** Host-owned admission control. Denials become a stable 429 response. */
+  readonly checkRateLimit?: (
+    request: Request,
+    context: AgentRuntimeContext,
+  ) => Promise<Readonly<{ allowed: boolean; retryAfterSeconds?: number }>>;
   readonly allowedOrigins?: readonly string[];
   readonly maximumBodyBytes?: number;
   readonly maximumArtifactResponseBytes?: number;
