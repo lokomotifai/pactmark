@@ -237,6 +237,22 @@ describe("stdio transport boundary", () => {
     process.env["PACTMARK_MCP_AMBIENT_CANARY"] = "must-not-be-inherited";
     let connection: Awaited<ReturnType<typeof connectMCPServer>> | undefined;
     try {
+      if (process.platform !== "linux" && process.platform !== "darwin") {
+        await expect(
+          connectMCPServer(
+            {
+              transportProfile: profile,
+              expectedServerIdentity: identity,
+              toolPins: [pin],
+              host: { runtimeProfile: "preview" },
+            },
+            exposure,
+            { authorize: () => Promise.resolve({ allowed: true, grantId: "grant-exact-env" }) },
+            new AbortController().signal,
+          ),
+        ).rejects.toMatchObject({ code: "KAF_MCP_PLATFORM_UNSUPPORTED" });
+        return;
+      }
       connection = await connectMCPServer(
         {
           transportProfile: profile,
@@ -275,25 +291,6 @@ describe("stdio transport boundary", () => {
         { runtimeProfile: "preview" },
       );
 
-    const idle = await createProbe("idle", 1);
-    await idle.start();
-    await expect(idle.start()).rejects.toMatchObject({ code: "KAF_MCP_CONNECTION_FAILED" });
-    await expect(idle.send({ jsonrpc: "2.0", id: 1, method: "ping" })).rejects.toMatchObject({
-      code: "KAF_MCP_LIMIT_EXCEEDED",
-    });
-    await idle.close();
-    await idle.close();
-
-    for (const mode of ["stderr", "malformed"] as const) {
-      const transport = await createProbe(mode);
-      const observed = new Promise<Error>((resolve) => {
-        transport.onerror = resolve;
-      });
-      await transport.start();
-      await expect(observed).resolves.toBeInstanceOf(Error);
-      await transport.close();
-    }
-
     const controller = new AbortController();
     const cancelled = await createOfficialMCPTransport(
       stdioProfile({ id: "probe-cancelled", arguments: [probePath, "idle"] }),
@@ -313,6 +310,34 @@ describe("stdio transport boundary", () => {
         alreadyAborted.signal,
       ),
     ).rejects.toMatchObject({ code: "KAF_MCP_ABORTED" });
+
+    if (process.platform !== "linux" && process.platform !== "darwin") {
+      const unsupported = await createProbe("idle");
+      await expect(unsupported.start()).rejects.toMatchObject({
+        code: "KAF_MCP_PLATFORM_UNSUPPORTED",
+      });
+      await unsupported.close();
+      return;
+    }
+
+    const idle = await createProbe("idle", 1);
+    await idle.start();
+    await expect(idle.start()).rejects.toMatchObject({ code: "KAF_MCP_CONNECTION_FAILED" });
+    await expect(idle.send({ jsonrpc: "2.0", id: 1, method: "ping" })).rejects.toMatchObject({
+      code: "KAF_MCP_LIMIT_EXCEEDED",
+    });
+    await idle.close();
+    await idle.close();
+
+    for (const mode of ["stderr", "malformed"] as const) {
+      const transport = await createProbe(mode);
+      const observed = new Promise<Error>((resolve) => {
+        transport.onerror = resolve;
+      });
+      await transport.start();
+      await expect(observed).resolves.toBeInstanceOf(Error);
+      await transport.close();
+    }
   });
 
   it("rechecks cancellation after production executable verification", async () => {
