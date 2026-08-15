@@ -3,7 +3,7 @@ title: Production-guarded Executor gateway
 description: Bind reviewed read-only Executor tools without delegating Pactmark authority.
 ---
 
-> Compatibility: Pactmark 0.1.x. Status: **private, production-guarded integration**.
+> Compatibility: Pactmark 0.2.x. Status: **private, production-guarded integration**.
 
 `@pactmark/executor-sh` maps reviewed Executor tools onto independent Pactmark registrations. It uses
 an already guarded `@pactmark/mcp` connection but never gives the model Executor's generic

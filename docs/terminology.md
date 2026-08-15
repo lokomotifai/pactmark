@@ -3,7 +3,7 @@ title: Terminology
 description: Canonical Pactmark API names and their documentation meanings.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 API names remain English in every locale. `AgentDefinition` is the compiled agent
 contract; `WorkOrder` is authorized bounded work; a run is its event-derived

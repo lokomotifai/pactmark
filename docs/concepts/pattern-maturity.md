@@ -3,7 +3,7 @@ title: Pattern maturity
 description: Promote reusable patterns only after repeated evidence and review.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Patterns begin as local observations. Promotion requires repeated use, compatible
 agent and verifier identities, acceptable outcomes, explicit review, and no open

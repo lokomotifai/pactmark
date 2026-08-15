@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1",
-  "compatibility": "Pactmark 0.1.x",
+  "compatibility": "Pactmark 0.2.x",
   "pages": [
     { "language": "en", "source": "docs/index.md", "route": "index.md" },
     { "language": "en", "source": "docs/404.md", "route": "404.md" },

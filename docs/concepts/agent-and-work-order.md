@@ -3,7 +3,7 @@ title: Agent and WorkOrder
 description: Separate reusable agent definition from authorized work acceptance.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## AgentDefinition
 

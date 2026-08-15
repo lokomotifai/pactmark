@@ -3,7 +3,7 @@ title: Tool, risk ve capability grant
 description: Tool görünürlüğünü default-deny policy ve exact grant ile sınırlayın.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## Risk
 

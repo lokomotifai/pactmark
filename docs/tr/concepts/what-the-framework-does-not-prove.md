@@ -3,7 +3,7 @@ title: Framework neyi kanıtlamaz
 description: Production ve güvenlik iddiasından önce kanıt sınırlarını okuyun.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## Kanıtlanmayanlar
 

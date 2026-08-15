@@ -3,7 +3,7 @@ title: What Pactmark does not prove
 description: Read the limits before making production or security claims.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Pactmark does not prove global exactly-once effects, complete security, sandbox
 isolation, certification, compliance, production availability, provider correctness,
@@ -12,5 +12,5 @@ or artifact truth. Local green tests do not constitute a live platform attestati
 The reference sandbox is explicitly unsafe for production arbitrary-code isolation.
 The Vercel and Cloudflare packages have local contract evidence only. The memory
 store is not production durability. Public release and registry ownership are
-verified for v0.1.2, but they do not establish any of the production or security
+verified for v0.2.0, but they do not establish any of the production or security
 claims excluded above.

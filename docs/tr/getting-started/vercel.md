@@ -3,7 +3,7 @@ title: Vercel deployment
 description: Vercel adapter'ını invocation süresini dayanıklılık sanmadan kullanın.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## BUGÜN
 

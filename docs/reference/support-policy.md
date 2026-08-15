@@ -3,7 +3,7 @@ title: Support policy
 description: Understand supported release lines, experimental surfaces, and disclosure limits.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 The public v0.1 release targets Node 22.14+ and Node 24.x with pinned pnpm. The
 mutable readiness record distinguishes locally tested, experimental, planned, and

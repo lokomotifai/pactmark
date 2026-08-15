@@ -3,7 +3,7 @@ title: Testing agents
 description: Test deterministic success, denial, interruption, concurrency, and drift.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Use `@pactmark/testing` for fake clocks, IDs, deterministic models, store contracts,
 crash injection, and scenario construction. It is a development dependency and never

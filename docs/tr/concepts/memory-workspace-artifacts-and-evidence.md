@@ -3,7 +3,7 @@ title: Bellek, workspace, artifact ve evidence
 description: Operasyonel context'i iş çıktısı ve kanıt iddiasından ayırın.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## Bellek ve bağlam
 

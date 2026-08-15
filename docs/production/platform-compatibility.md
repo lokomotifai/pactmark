@@ -3,7 +3,7 @@ title: Platform compatibility
 description: Distinguish locally tested hosts from experimental and unverified deployments.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 | Target                 | Status                        | Evidence boundary                                                                |
 | ---------------------- | ----------------------------- | -------------------------------------------------------------------------------- |

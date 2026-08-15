@@ -3,7 +3,7 @@ title: Observability and privacy
 description: Emit operational metadata without exporting model or secret content.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Pactmark telemetry is opt-in and metadata-only by default. Record stable event type,
 duration, bounded counts, status, and opaque digests. Do not record prompts,

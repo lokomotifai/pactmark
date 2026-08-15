@@ -3,7 +3,7 @@ title: BT production hazırlık kontrol listesi
 description: Kimlik, veri, dayanıklılık, kurtarma ve işletim kanıtlarını sahipleriyle kaydedin.
 ---
 
-> Compatibility: Pactmark 0.1.x. İşaretli madde sertifika değil, ortama özgü kanıtlı karardır.
+> Compatibility: Pactmark 0.2.x. İşaretli madde sertifika değil, ortama özgü kanıtlı karardır.
 
 ## Kimlik ve tenant
 

@@ -3,7 +3,7 @@ title: Contribution path
 description: Make reviewable changes with DCO sign-off, tests, and explicit release notes.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Read `CONTRIBUTING.md`, the product principles, applicable ADRs, and the relevant
 package README. Create a focused change, preserve package boundaries, add deterministic

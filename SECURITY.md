@@ -6,14 +6,14 @@ project's release chain.
 
 ## Supported versions
 
-Security fixes are made on the latest patch of the current `0.1.x` line and on
+Security fixes are made on the latest patch of the current `0.2.x` line and on
 `main`. Pre-1.0 support is intentionally narrow: users should upgrade to the
 latest patch before reporting an already-fixed issue.
 
 | Version           | Security fixes                                  |
 | ----------------- | ----------------------------------------------- |
-| `0.1.2`           | Supported                                       |
-| `0.1.1` and older | Not supported                                   |
+| `0.2.0`           | Supported                                       |
+| `0.1.2` and older | Not supported                                   |
 | `main`            | Receives fixes; not a released support contract |
 
 This table is a maintenance commitment, not a certification or a statement

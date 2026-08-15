@@ -2,7 +2,7 @@
 
 Status: local browser, accessibility-tree, keyboard, and static-build evidence
 Checked: 2026-08-05
-Compatibility: Pactmark 0.1.x
+Compatibility: Pactmark 0.2.x
 
 This record covers the generated Starlight documentation site. It is not a formal
 accessibility certification and does not claim compatibility with every assistive

@@ -3,7 +3,7 @@ title: Verification ve eval
 description: Exact artifact üzerindeki doğrulamayı probabilistic değerlendirmeden ayırın.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## Doğrulama
 

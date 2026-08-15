@@ -3,7 +3,7 @@ title: Run yaşam döngüsü ve dayanıklılık
 description: Append-only event truth, projection, suspension ve güvenli resume davranışını anlayın.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## Yaşam döngüsü
 

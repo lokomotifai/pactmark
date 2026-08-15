@@ -3,7 +3,7 @@ title: Migration and versioning
 description: Evolve wire contracts, registrations, packages, and database state safely.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Public and persisted contracts carry schema versions and reject unknown future
 versions. Package releases use SemVer and Changesets. Exact internal package versions

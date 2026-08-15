@@ -3,7 +3,7 @@ title: Retention, deletion, and audit
 description: Operate separate records with explicit purpose, access, and lifecycle.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Define retention independently for events, commands, work orders, protected context,
 inputs, effect ledgers, approvals, artifacts, verification, evidence, audit, logs,

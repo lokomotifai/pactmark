@@ -3,7 +3,7 @@ title: Üretim korumalı Executor gateway
 description: Pactmark authority sınırını devretmeden incelenmiş salt-okunur Executor araçlarını bağlayın.
 ---
 
-> Compatibility: Pactmark 0.1.x. Durum: **özel, üretim korumalı entegrasyon**.
+> Compatibility: Pactmark 0.2.x. Durum: **özel, üretim korumalı entegrasyon**.
 
 `@pactmark/executor-sh`, incelenmiş Executor araçlarını bağımsız Pactmark registration değerlerine
 eşler. Önceden korumalı biçimde kurulmuş bir `@pactmark/mcp` connection kullanır; ancak Executor'ın

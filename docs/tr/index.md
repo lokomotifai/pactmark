@@ -13,8 +13,8 @@ hero:
       variant: minimal
 ---
 
-> Compatibility: Pactmark 0.1.x. Yayın durumu **bekliyor**. npm komutlarını
-> kullanmadan önce güncel readiness kaydında registry yayınının doğrulandığını kontrol edin.
+> Compatibility: Pactmark 0.2.x. 0.2.0 sürümü, doğrulanmış registry byte'ları
+> ve paket başına provenance ile npm'de public olarak yayımlanmıştır.
 
 Pactmark, doğrulanmış bir `WorkOrder`'ı sınırlandırılmış run, yönetilen tool etkileri,
 doğrulanmış `Artifact` ve `EvidenceRecord` akışına dönüştürür. Policy, grant,

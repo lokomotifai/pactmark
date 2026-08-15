@@ -3,7 +3,7 @@ title: Reliability and recovery
 description: Design for at-least-once work, fenced ownership, and explicit uncertain outcomes.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Use durable command records, append-only events, transactional wake-ups, database-time
 leases, fencing tokens, bounded retries, deadlines, cancellation, and pessimistic

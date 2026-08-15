@@ -3,7 +3,7 @@ title: Decisions and human authority
 description: Bind human decisions to exact work, effects, and one-use proofs.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 An `Approval` is not free-form text. A host issues a `DecisionChallenge` after
 authenticating the actor, then atomically consumes its proof into a decision bound to
