@@ -82,7 +82,7 @@ describe("release command audit", () => {
 });
 
 describe("deterministic release artifacts", () => {
-  it("prepares a token-free OIDC config only for the exact v0.1.2 package set", () => {
+  it("prepares a token-free OIDC config only for the exact v0.2.0 package set", () => {
     withTemporary((directory) => {
       const packageNames = [
         "@pactmark/agent",
@@ -110,7 +110,7 @@ describe("deterministic release artifacts", () => {
         `${JSON.stringify({
           status: "attested",
           metadataProfile: "release",
-          releaseVersion: "0.1.2",
+          releaseVersion: "0.2.0",
           packages: packageNames.map((name) => ({ name })),
         })}\n`,
       );
@@ -224,11 +224,11 @@ describe("deterministic release artifacts", () => {
       const tarballDirectory = join(artifactDirectory, "tarballs");
       mkdirSync(tarballDirectory, { recursive: true });
       const core = join(tarballDirectory, "pactmark-core.tgz");
-      writeFileSync(core, tarball({ name: "@pactmark/core", version: "0.1.2" }));
+      writeFileSync(core, tarball({ name: "@pactmark/core", version: "0.2.0" }));
       generateReleaseArtifacts({
         outputDirectory: artifactDirectory,
         metadataProfile: "release",
-        releaseVersion: "0.1.2",
+        releaseVersion: "0.2.0",
         source: { commit: "a".repeat(40), tree: "b".repeat(64), clean: true },
         sourceDateEpoch: 1_775_347_200,
         tarballs: [{ path: core, packageDirectory: "packages/core" }],
@@ -273,11 +273,11 @@ describe("deterministic release artifacts", () => {
       const tarballDirectory = join(directory, "tarballs");
       mkdirSync(tarballDirectory, { recursive: true });
       const core = join(tarballDirectory, "core.tgz");
-      writeFileSync(core, tarball({ name: "@pactmark/core", version: "0.1.2" }));
+      writeFileSync(core, tarball({ name: "@pactmark/core", version: "0.2.0" }));
       generateReleaseArtifacts({
         outputDirectory: directory,
         metadataProfile: "release",
-        releaseVersion: "0.1.2",
+        releaseVersion: "0.2.0",
         source: { commit: "a".repeat(40), tree: "b".repeat(64), clean: true },
         sourceDateEpoch: 1,
         tarballs: [{ path: core, packageDirectory: "packages/core" }],

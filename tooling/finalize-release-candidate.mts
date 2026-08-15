@@ -43,7 +43,7 @@ export function finalizeReleaseCandidate(
   if (
     manifest.status !== "draft" ||
     manifest.metadataProfile !== "release" ||
-    manifest.releaseVersion !== "0.1.2" ||
+    manifest.releaseVersion !== "0.2.0" ||
     manifest.publication !== "not_authorized"
   ) {
     throw new Error("KAF_RELEASE_CANDIDATE_STATE_INVALID");
