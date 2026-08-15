@@ -110,6 +110,7 @@ export async function runPackedQuickstartBenchmark(
       __PACTMARK_CORE_INTEGRITY__: tarballs["@pactmark/core"],
       __PACTMARK_EVIDENCE_INTEGRITY__: tarballs["@pactmark/evidence"],
       __PACTMARK_EXECUTOR_IN_PROCESS_INTEGRITY__: tarballs["@pactmark/executor-in-process"],
+      __PACTMARK_POLICY_INTEGRITY__: tarballs["@pactmark/policy"],
       __PACTMARK_RUNTIME_INTEGRITY__: tarballs["@pactmark/runtime"],
       __PACTMARK_STORE_MEMORY_INTEGRITY__: tarballs["@pactmark/store-memory"],
     })) {

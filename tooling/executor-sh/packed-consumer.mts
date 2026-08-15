@@ -87,6 +87,21 @@ function runPnpm(args: readonly string[], cwd = repositoryRoot): string {
   }
 }
 
+function safeSubprocessDetail(cause: unknown): string | undefined {
+  const record =
+    typeof cause === "object" && cause !== null
+      ? (cause as { readonly stdout?: unknown; readonly stderr?: unknown })
+      : {};
+  const stdout = typeof record.stdout === "string" ? record.stdout : "";
+  const stderr = typeof record.stderr === "string" ? record.stderr : "";
+  const detail = `${stdout}\n${stderr}`
+    .replace(/([A-Za-z][A-Za-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gu, "$1[redacted]@")
+    .replace(/(?:token|password|secret|credential)\s*[=:]\s*\S+/giu, "[redacted]")
+    .trim()
+    .slice(0, 2_000);
+  return detail.length === 0 ? undefined : detail;
+}
+
 function validateExecutorFiles(files: readonly PackFile[]): readonly string[] {
   const normalized = files.map(({ path }) => path.replaceAll("\\", "/")).sort();
   if (
@@ -115,7 +130,7 @@ function validateExecutorFiles(files: readonly PackFile[]): readonly string[] {
 }
 
 function packPackage(
-  packageName: "@pactmark/core" | "@pactmark/mcp" | "@pactmark/executor-sh",
+  packageName: "@pactmark/core" | "@pactmark/policy" | "@pactmark/mcp" | "@pactmark/executor-sh",
   destination: string,
 ): Readonly<{ result: PackResult; tarballPath: string }> {
   const output = runPnpm([
@@ -225,6 +240,7 @@ process.stdout.write(JSON.stringify({ ok: true, node: process.versions.node }) +
 function materializeConsumerLock(input: {
   readonly tarballs: string;
   readonly core: Readonly<{ result: PackResult }>;
+  readonly policy: Readonly<{ result: PackResult }>;
   readonly mcp: Readonly<{ result: PackResult }>;
   readonly executor: Readonly<{ result: PackResult }>;
 }): string {
@@ -241,6 +257,7 @@ function materializeConsumerLock(input: {
   }
   const tarballRoot = input.tarballs.replaceAll("\\", "/");
   const coreSpecifier = `file:${tarballRoot}/${input.core.result.filename}`;
+  const policySpecifier = `file:${tarballRoot}/${input.policy.result.filename}`;
   const mcpSpecifier = `file:${tarballRoot}/${input.mcp.result.filename}`;
   const executorSpecifier = `file:${tarballRoot}/${input.executor.result.filename}`;
   const header = `lockfileVersion: "9.0"
@@ -251,6 +268,7 @@ settings:
 
 overrides:
   "@pactmark/core": ${coreSpecifier}
+  "@pactmark/policy": ${policySpecifier}
   "@pactmark/mcp": ${mcpSpecifier}
 
 importers:
@@ -259,6 +277,9 @@ importers:
       "@pactmark/core":
         specifier: ${coreSpecifier}
         version: file:../tarballs/${input.core.result.filename}
+      "@pactmark/policy":
+        specifier: ${policySpecifier}
+        version: file:../tarballs/${input.policy.result.filename}
       "@pactmark/executor-sh":
         specifier: ${executorSpecifier}
         version: file:../tarballs/${input.executor.result.filename}
@@ -283,13 +304,20 @@ importers:
       "@pactmark/mcp": file:../tarballs/${input.mcp.result.filename}
       zod: 4.4.3
 `;
+  const mcpSnapshotPolicyDependency = `      "@pactmark/policy": file:../tarballs/${input.policy.result.filename}
+`;
   const packagesAndSnapshots = template
     .slice(packagesIndex)
     .replace(packagesMarker, `${packagesMarker}${executorPackage}`)
     .replace(snapshotsMarker, `${snapshotsMarker}${executorSnapshot}`)
+    .replace(
+      '      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz\n      zod: 4.4.3\n    transitivePeerDependencies:',
+      `      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz\n${mcpSnapshotPolicyDependency}      zod: 4.4.3\n    transitivePeerDependencies:`,
+    )
     .replaceAll("__PACTMARK_TARBALL_ROOT__", tarballRoot)
     .replaceAll("__PACTMARK_TARBALL_INTEGRITY_4__", input.core.result.integrity)
     .replaceAll("__PACTMARK_TARBALL_INTEGRITY_9__", input.mcp.result.integrity)
+    .replaceAll("__PACTMARK_TARBALL_INTEGRITY_12__", input.policy.result.integrity)
     .replace(/__PACTMARK_TARBALL_INTEGRITY_\d+__/gu, input.core.result.integrity);
   return `${header}${packagesAndSnapshots}`;
 }
@@ -300,6 +328,7 @@ export interface ExecutorPackedConsumerResult {
   readonly node: string;
   readonly executorVersion: "0.1.0";
   readonly coreVersion: "0.1.2";
+  readonly policyVersion: "0.1.2";
   readonly mcpVersion: "0.1.2";
   readonly workspaceLinksAbsent: true;
   readonly runtimeSmokePassed: true;
@@ -317,20 +346,24 @@ export async function runExecutorPackedConsumer(): Promise<ExecutorPackedConsume
     await mkdir(consumer, { recursive: true, mode: 0o700 });
     for (const packageName of [
       "@pactmark/core",
+      "@pactmark/policy",
       "@pactmark/mcp",
       "@pactmark/executor-sh",
     ] as const) {
       runPnpm(["--filter", packageName, "build"]);
     }
     const core = packPackage("@pactmark/core", tarballs);
+    const policy = packPackage("@pactmark/policy", tarballs);
     const mcp = packPackage("@pactmark/mcp", tarballs);
     const executor = packPackage("@pactmark/executor-sh", tarballs);
     validateExecutorFiles(executor.result.files);
     assertPackedManifest(packedManifest(core.tarballPath), "@pactmark/core", "0.1.2");
+    assertPackedManifest(packedManifest(policy.tarballPath), "@pactmark/policy", "0.1.2");
     assertPackedManifest(packedManifest(mcp.tarballPath), "@pactmark/mcp", "0.1.2");
     assertPackedManifest(packedManifest(executor.tarballPath), "@pactmark/executor-sh", "0.1.0");
     const fileDependencies = {
       "@pactmark/core": `file:${core.tarballPath.replaceAll("\\", "/")}`,
+      "@pactmark/policy": `file:${policy.tarballPath.replaceAll("\\", "/")}`,
       "@pactmark/mcp": `file:${mcp.tarballPath.replaceAll("\\", "/")}`,
       "@pactmark/executor-sh": `file:${executor.tarballPath.replaceAll("\\", "/")}`,
     };
@@ -350,12 +383,12 @@ export async function runExecutorPackedConsumer(): Promise<ExecutorPackedConsume
     );
     writeFileSync(
       join(consumer, "pnpm-workspace.yaml"),
-      `trustLockfile: true\nverifyDepsBeforeRun: false\nenableGlobalVirtualStore: false\noverrides:\n  "@pactmark/core": ${JSON.stringify(fileDependencies["@pactmark/core"])}\n  "@pactmark/mcp": ${JSON.stringify(fileDependencies["@pactmark/mcp"])}\n`,
+      `trustLockfile: true\nverifyDepsBeforeRun: false\nenableGlobalVirtualStore: false\noverrides:\n  "@pactmark/core": ${JSON.stringify(fileDependencies["@pactmark/core"])}\n  "@pactmark/policy": ${JSON.stringify(fileDependencies["@pactmark/policy"])}\n  "@pactmark/mcp": ${JSON.stringify(fileDependencies["@pactmark/mcp"])}\n`,
     );
     writeFileSync(join(consumer, "smoke.mjs"), smokeSource());
     writeFileSync(
       join(consumer, "pnpm-lock.yaml"),
-      materializeConsumerLock({ tarballs, core, mcp, executor }),
+      materializeConsumerLock({ tarballs, core, policy, mcp, executor }),
     );
     const storeDirectory = runPnpm(["store", "path"]).trim();
     runPnpm(
@@ -373,12 +406,21 @@ export async function runExecutorPackedConsumer(): Promise<ExecutorPackedConsume
     if (/\b(?:link|workspace):/u.test(lockfile) || !lockfile.includes(".tgz")) {
       throw new Error("KAF_EXECUTOR_PACK_WORKSPACE_LINK_DETECTED");
     }
-    const runtime = execFileSync(process.execPath, [join(consumer, "smoke.mjs")], {
-      cwd: consumer,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 30_000,
-    });
+    let runtime: string;
+    try {
+      runtime = execFileSync(process.execPath, [join(consumer, "smoke.mjs")], {
+        cwd: consumer,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 30_000,
+      });
+    } catch (cause) {
+      throw new ExecutorPackedConsumerError(
+        "KAF_EXECUTOR_PACKED_RUNTIME_FAILED",
+        safeSubprocessDetail(cause),
+        { cause },
+      );
+    }
     const runtimeResult = object(
       JSON.parse(runtime.trim()) as unknown,
       "KAF_EXECUTOR_PACKED_RUNTIME_FAILED",
@@ -392,6 +434,7 @@ export async function runExecutorPackedConsumer(): Promise<ExecutorPackedConsume
       node: process.versions.node,
       executorVersion: "0.1.0",
       coreVersion: "0.1.2",
+      policyVersion: "0.1.2",
       mcpVersion: "0.1.2",
       workspaceLinksAbsent: true,
       runtimeSmokePassed: true,

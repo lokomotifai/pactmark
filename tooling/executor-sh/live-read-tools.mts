@@ -126,7 +126,7 @@ export async function runExecutorLiveReadToolMatrix(): Promise<ExecutorLiveReadT
   try {
     await assertPinnedImage(platform);
     await mkdir(dataDirectory);
-    await chmod(dataDirectory, 0o777);
+    await chmod(dataDirectory, 0o770);
     await runDocker([
       "run",
       "--detach",
