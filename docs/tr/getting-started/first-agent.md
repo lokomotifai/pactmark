@@ -3,8 +3,7 @@ title: İlk agent'ınızı oluşturun
 description: Model anahtarı olmadan deterministik bir Pactmark agent'ı çalıştırın.
 ---
 
-> Compatibility: Pactmark 0.2.x candidate. Korumalı v0.2.0 publication ve bağımsız
-> registry-byte doğrulaması henüz beklemektedir.
+> Compatibility: Pactmark 0.2.x. Sürüm 0.2.0 güncel, doğrulanmış public release’tir.
 
 ## Güncel yayımlanmış sürüm yolu
 
@@ -12,8 +11,7 @@ description: Model anahtarı olmadan deterministik bir Pactmark agent'ı çalı�
 klasörüne geçin ve `npm run dev` komutunu çalıştırın. Kontrollü ortamlarda exact
 version sabitleyin.
 
-v0.2.0 publication kapısı kapanana kadar `latest`, doğrulanmış önceki public
-sürüme çözülmeye devam eder.
+`latest`, bağımsız byte doğrulamasından geçmiş v0.2.0 public sürümüne çözülür.
 
 `AgentDefinition` ve doğrulanmış `WorkOrder` akışının beklenen ilerlemesi sırasıyla
 `RunAccepted`, `ToolCallCompleted` ve `RunCompleted` olaylarıdır. Üretilen proje

@@ -17,5 +17,6 @@ dayanıklılık; reference sandbox production arbitrary-code isolation değildir
 
 ## Harici doğrulama
 
-Public registry, GitHub ayarları, canlı Vercel/Cloudflare ve production database
-kanıtları readiness kaydında incelenmeden destek veya yayın iddiası yapılamaz.
+v0.2.0 public registry baytları, package başına provenance ve GitHub Release kimliği
+doğrulanmıştır. Bu sonuç; canlı Vercel/Cloudflare, production database, güvenlik,
+sertifikasyon veya production readiness iddiası oluşturmaz.

@@ -3,15 +3,13 @@ title: Build your first agent
 description: Create and run a deterministic Pactmark agent without a model key.
 ---
 
-> Compatibility: Pactmark 0.2.x candidate. Protected v0.2.0 publication and
-> independent registry-byte verification are pending.
+> Compatibility: Pactmark 0.2.x. Version 0.2.0 is the current verified public release.
 
 ## Current published release path
 
 Run `npm create pactmark@latest -- my-agent`, change to `my-agent`, and run
-`npm run dev`. Until the v0.2.0 publication gate closes, `latest` continues to
-resolve to the previous verified public release. Pin exact versions in controlled
-environments.
+`npm run dev`. `latest` resolves to the independently byte-verified v0.2.0 public
+release. Pin exact versions in controlled environments.
 
 Expected progress is `RunAccepted`, `ToolCallCompleted`, then `RunCompleted`. The
 generated project uses a deterministic local model and needs no API key.

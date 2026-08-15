@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="docs/tr/index.md">
+  <a href="https://pactmark-docs.lokomotif.ai/tr">
     <img src="assets/brand/pactmark-logo.svg" width="132" height="132" alt="Pactmark">
   </a>
 </p>
@@ -17,22 +17,22 @@
   <a href="https://github.com/lokomotifai/pactmark/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/ci.yml?branch=main&amp;style=flat-square&amp;label=CI"></a>
   <a href="https://github.com/lokomotifai/pactmark/actions/workflows/security.yml"><img alt="Güvenlik temel hattı" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/security.yml?branch=main&amp;style=flat-square&amp;label=security"></a>
   <a href="https://www.npmjs.com/package/@pactmark/agent"><img alt="npm sürümü" src="https://img.shields.io/npm/v/%40pactmark%2Fagent?style=flat-square&amp;label=npm&amp;color=D11F26"></a>
-  <a href="docs/releases/v0.2-readiness.md"><img alt="v0.2.0 release candidate" src="https://img.shields.io/badge/release-v0.2.0%20candidate-D11F26?style=flat-square"></a>
+  <a href="https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0"><img alt="v0.2.0 doğrulanmış release" src="https://img.shields.io/badge/release-v0.2.0%20verified-D11F26?style=flat-square"></a>
   <a href="LICENSE"><img alt="Apache-2.0 lisansı" src="https://img.shields.io/badge/license-Apache--2.0-3B3F46?style=flat-square"></a>
 </p>
 
 <p align="center">
   <a href="https://nodejs.org/"><img alt="Node.js 22 ve 24" src="https://img.shields.io/badge/Node.js-22%20%7C%2024-3C873A?style=flat-square"></a>
   <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square"></a>
-  <a href="docs/tr/index.md"><img alt="Türkçe dokümantasyon" src="https://img.shields.io/badge/dokümantasyon-Türkçe-D11F26?style=flat-square"></a>
+  <a href="https://pactmark-docs.lokomotif.ai/tr"><img alt="Türkçe dokümantasyon" src="https://img.shields.io/badge/dokümantasyon-Türkçe-D11F26?style=flat-square"></a>
   <a href="README.md"><img alt="English README" src="https://img.shields.io/badge/README-English-17191F?style=flat-square"></a>
   <a href="https://github.com/lokomotifai/pactmark/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/lokomotifai/pactmark?style=flat-square"></a>
 </p>
 
 <p align="center">
-  <a href="docs/tr/getting-started/first-agent.md"><strong>İlk agent’ı oluştur</strong></a>
+  <a href="https://pactmark-docs.lokomotif.ai/tr/getting-started/first-agent"><strong>İlk agent’ı oluştur</strong></a>
   ·
-  <a href="docs/tr/index.md"><strong>Dokümantasyonu oku</strong></a>
+  <a href="https://pactmark-docs.lokomotif.ai/tr"><strong>Dokümantasyonu oku</strong></a>
   ·
   <a href="examples/approval-agent/"><strong>Approval sınırını incele</strong></a>
   ·
@@ -49,10 +49,11 @@ Pactmark, açık yetki altında sınırlandırılmış işler yapan agent’lar 
 kanıt-yerel bir framework’tür. “Model makul bir şey döndürdü” ifadesinin başarı
 tanımı olamayacağı sistemler için tasarlanmıştır.
 
-**0.2.0**, doğrulanmış bir release candidate’tır. 19 package manifest’i ve packed
-consumer’ı local ve hosted kapılardan geçti; korumalı publication, anonim registry
-byte doğrulaması ve immutable GitHub Release, release kaydında henüz bekliyor.
-Güncel public npm sürümüne yukarıdaki npm badge’i üzerinden ulaşılabilir.
+**0.2.0**, 19 package’ın tamamında public olarak yayımlanmıştır. Korumalı OIDC
+workflow’u, anonim registry doğrulaması ve immutable GitHub Release; registry’nin
+sunduğu her tarball’ın frozen release manifest’iyle eşleştiğini ve npm SLSA
+provenance taşıdığını doğrular. Bu tedarik zinciri sonuçları production deployment
+hazırlığı veya framework güvenliği sertifikası değildir.
 
 ## Tek görselde temel fark
 
@@ -223,8 +224,10 @@ bilinçli olarak bir feature checklist’inden daha muhafazakârdır.
 - Candidate tarball’lar tekrar üretilerek karşılaştırılır.
 - Frozen candidate; SHA-256 checksum, source/release manifest ve CycloneDX SBOM
   içerir; korumalı publication npm provenance ve GitHub attestation ekler.
-- Anonim v0.2.0 registry-byte doğrulaması zorunlu bir post-publication kapısıdır
-  ve henüz tamamlanmamıştır.
+- Anonim doğrulama; 19 v0.2.0 registry tarball’ını, package source metadata’sını,
+  `latest` tag’lerini ve SLSA provenance kayıtlarını frozen release ile eşleştirdi.
+- Immutable [v0.2.0 GitHub Release](https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0),
+  19 tarball ile yedi checksum, manifest, SBOM ve attestation asset’ini saklar.
 
 [v0.2.0 release kanıtı](docs/releases/v0.2-readiness.md), her kapının kesin
 durumunu gösterir. Provenance bir artifact’in nereden geldiğini gösterir;

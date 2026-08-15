@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="docs/index.md">
+  <a href="https://pactmark-docs.lokomotif.ai">
     <img src="assets/brand/pactmark-logo.svg" width="132" height="132" alt="Pactmark">
   </a>
 </p>
@@ -17,23 +17,23 @@
   <a href="https://github.com/lokomotifai/pactmark/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/ci.yml?branch=main&amp;style=flat-square&amp;label=CI"></a>
   <a href="https://github.com/lokomotifai/pactmark/actions/workflows/security.yml"><img alt="Security baseline" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/security.yml?branch=main&amp;style=flat-square&amp;label=security"></a>
   <a href="https://www.npmjs.com/package/@pactmark/agent"><img alt="npm version" src="https://img.shields.io/npm/v/%40pactmark%2Fagent?style=flat-square&amp;label=npm&amp;color=D11F26"></a>
-  <a href="docs/releases/v0.2-readiness.md"><img alt="v0.2.0 release candidate" src="https://img.shields.io/badge/release-v0.2.0%20candidate-D11F26?style=flat-square"></a>
+  <a href="https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0"><img alt="v0.2.0 verified release" src="https://img.shields.io/badge/release-v0.2.0%20verified-D11F26?style=flat-square"></a>
   <a href="LICENSE"><img alt="Apache-2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-3B3F46?style=flat-square"></a>
 </p>
 
 <p align="center">
   <a href="https://nodejs.org/"><img alt="Node.js 22 and 24" src="https://img.shields.io/badge/Node.js-22%20%7C%2024-3C873A?style=flat-square"></a>
   <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square"></a>
-  <a href="docs/index.md"><img alt="English documentation" src="https://img.shields.io/badge/docs-English-17191F?style=flat-square"></a>
-  <a href="docs/tr/index.md"><img alt="Türkçe dokümantasyon" src="https://img.shields.io/badge/dokümantasyon-Türkçe-D11F26?style=flat-square"></a>
+  <a href="https://pactmark-docs.lokomotif.ai"><img alt="English documentation" src="https://img.shields.io/badge/docs-English-17191F?style=flat-square"></a>
+  <a href="https://pactmark-docs.lokomotif.ai/tr"><img alt="Türkçe dokümantasyon" src="https://img.shields.io/badge/dokümantasyon-Türkçe-D11F26?style=flat-square"></a>
   <a href="https://github.com/lokomotifai/pactmark/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/lokomotifai/pactmark?style=flat-square"></a>
   <a href="https://github.com/lokomotifai/pactmark/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/lokomotifai/pactmark?style=flat-square"></a>
 </p>
 
 <p align="center">
-  <a href="docs/getting-started/first-agent.md"><strong>Build a first agent</strong></a>
+  <a href="https://pactmark-docs.lokomotif.ai/getting-started/first-agent"><strong>Build a first agent</strong></a>
   ·
-  <a href="docs/index.md"><strong>Read the docs</strong></a>
+  <a href="https://pactmark-docs.lokomotif.ai"><strong>Read the docs</strong></a>
   ·
   <a href="examples/approval-agent/"><strong>Trace an approval boundary</strong></a>
   ·
@@ -50,11 +50,11 @@ Pactmark is an evidence-native framework for agents that perform bounded work
 under explicit authority. It is for systems where “the model returned something
 plausible” is not an acceptable definition of success.
 
-Version **0.2.0** is a verified release candidate. Its 19 package manifests and
-packed consumers have passed local and hosted gates; protected publication,
-anonymous registry-byte verification, and the immutable GitHub Release remain
-pending in the release record. The current public npm version remains available
-through the npm badge above.
+Version **0.2.0** is publicly available across all 19 packages. The protected OIDC
+workflow, anonymous registry verification, and immutable GitHub Release establish
+that every registry-served tarball matches the frozen release manifest and carries
+npm SLSA provenance. These supply-chain results do not imply production deployment
+readiness or certify the framework's security.
 
 ## The difference in one picture
 
@@ -261,8 +261,10 @@ a long-lived npm token in the repository.
 - The frozen candidate contains SHA-256 checksums, source/release manifests, and
   a CycloneDX SBOM; protected publication adds npm provenance and GitHub
   attestations.
-- Anonymous v0.2.0 registry-byte verification is a required post-publication
-  gate and is not complete yet.
+- Anonymous verification matched all 19 v0.2.0 registry tarballs, package source
+  metadata, `latest` tags, and SLSA provenance records to the frozen release.
+- The immutable [v0.2.0 GitHub Release](https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0)
+  retains the 19 tarballs and seven checksum, manifest, SBOM, and attestation assets.
 
 Read the [v0.2.0 release evidence](docs/releases/v0.2-readiness.md) for the exact
 state of each gate. Provenance tells you where an artifact came from; it does
