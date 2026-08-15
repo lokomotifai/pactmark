@@ -26,6 +26,7 @@ describe("WP-00 bootstrap contract", () => {
       "node --import tsx tooling/check-public-surface.mts",
     );
     expect(manifest.scripts["security:verify"]).toContain("pnpm public-surface:check");
-    expect(manifest.scripts.verify).toContain("pnpm security:verify");
+    expect(manifest.scripts.verify).toBe("pnpm verify:release");
+    expect(manifest.scripts["verify:release"]).toContain("pnpm security:verify");
   });
 });

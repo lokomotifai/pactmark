@@ -49,10 +49,12 @@ account.
 Run the smallest relevant check while iterating. Before requesting final review:
 
 ```sh
-pnpm verify
+pnpm check
+pnpm verify:ci
 ```
 
-The aggregate gate is intentionally extensive. If an environment prevents one
+The release aggregate, `pnpm verify`, is intentionally extensive and is required before
+publication. If an environment prevents one
 of its host-level checks, run every available focused check and state the exact
 unrun command and reason in the pull request; a maintainer decides whether CI
 provides the missing evidence.

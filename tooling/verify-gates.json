@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1",
   "aggregates": {
-    "verify": [
+    "verify:release": [
       "format:check",
       "lint",
       "typecheck",
@@ -44,6 +44,7 @@
       "test:admission",
       "test:sandbox-contract",
       "test:sandbox-container",
+      "policy:wiring-check",
       "audit:dependencies:offline",
       "audit:licenses",
       "audit:workflows",

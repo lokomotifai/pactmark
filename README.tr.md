@@ -72,7 +72,7 @@ Pactmark, o çağrının çevresindeki sorumluluğu tanımlar:
 | Provider ve tool credential’ları nerede yaşar? | Host’un credential port’larının arkasında; çözümlenmiş değerler model context’ine veya sıradan evidence’a girmez. |
 | Crash sonrasında ne olur?                      | Append-only run truth üzerinden durum yeniden kurulur; belirsiz effect kayıtlı stratejiyle reconcile edilir.      |
 | Çalışma gerçekten ne üretti?                   | Tanımlı verifier sonuçlarına bağlı, içerik adresli artifact’ler.                                                  |
-| Başka bir sistem neye güvenebilir?             | İddiası event ve verification sınırlarını aşmayan bir `EvidenceRecord`.                                           |
+| Başka bir sistem neye güvenebilir?             | Sınırları açık, self-attested bir `EvidenceRecord`; taşınabilir authenticity ayrıca host imzası gerektirir.       |
 
 ## 60 saniyede başla
 
@@ -240,16 +240,22 @@ release satırları Node.js 22.14+ ve 24.x’tir.
 ```sh
 corepack enable
 pnpm install --frozen-lockfile
-pnpm verify
+pnpm check
 ```
 
-`pnpm verify`; format, lint, strict type, build, unit/integration, packed
+Normal geliştirme döngüsünde `pnpm check`, deterministic pull request yüzeyi için
+`pnpm verify:ci`, release öncesinde `pnpm verify` kullanılır. Release aggregate;
+format, lint, strict type, build, unit/integration, packed
 consumer, portability, example, PostgreSQL, crash/replay, OCI/platform contract,
 API report, dependency boundary, security audit, SBOM, dokümantasyon ve release
 dry-run kapılarını çalıştırır. Live provider çağrıları, external deployment ve
 network-fresh advisory kontrolleri ayrı yetkilendirilmiş kapılardır.
 
 Katkı göndermeden önce [CONTRIBUTING.md](CONTRIBUTING.md) dosyasını okuyun.
+
+Public hatalar legacy `KAF_*` v0.1 wire-code namespace’ini kullanır. Bu namespace consumer
+uyumluluğu için korunur, ayrı bir ürün adı değildir; client’lar tam hata kodunu opaque ve kararlı
+bir identifier olarak ele almalıdır.
 
 ## Topluluk sözleşmesi
 
