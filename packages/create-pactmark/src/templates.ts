@@ -525,8 +525,12 @@ const runtime = createLocalRuntime({ agents: [agent], authorityIssuer: authority
 const handler = createAgentFetchHandler({
   basePath: "/api/agent",
   runtime,
-  allowAnonymousDevelopment: true,
-  anonymousAuthentication: { authority, principal, tenant, credentialMode: "mtls_or_host" },
+  policyEnforcement: "complete",
+  authenticate: (request, context) => Promise.resolve(
+    context.env["PACTMARK_BEARER_TOKEN"] !== undefined &&
+    request.headers.get("authorization") === "Bearer " + context.env["PACTMARK_BEARER_TOKEN"]
+      ? { authority, principal, tenant, credentialMode: "bearer" as const }
+      : undefined,
   authorize: (authentication) => Promise.resolve(authentication.tenant.id === tenant.id),
   resolveAgent: (reference) => Promise.resolve(
     reference.id === agent.id && reference.version === agent.version ? agent : undefined,
@@ -540,7 +544,7 @@ if (!Number.isSafeInteger(parsedPort) || parsedPort < 1 || parsedPort > 65_535) 
 }
 const server = createPactmarkNodeServer(handler, {
   capabilities: runtime.getCapabilities(),
-  readEnvironment: () => ({}),
+  readEnvironment: () => ({ PACTMARK_BEARER_TOKEN: process.env["PACTMARK_BEARER_TOKEN"] }),
 });
 installGracefulShutdown(server);
 server.listen(parsedPort, "0.0.0.0", () => {
@@ -583,14 +587,21 @@ const agentRuntime = createLocalRuntime({ agents: [agent], authorityIssuer: auth
 const handler = createVercelRouteHandler({
   basePath: "/api/agent",
   runtime: agentRuntime,
-  allowAnonymousDevelopment: true,
-  anonymousAuthentication: { authority, principal, tenant, credentialMode: "mtls_or_host" },
+  policyEnforcement: "complete",
+  authenticate: (request, context) => Promise.resolve(
+    context.env["PACTMARK_BEARER_TOKEN"] !== undefined &&
+    request.headers.get("authorization") === "Bearer " + context.env["PACTMARK_BEARER_TOKEN"]
+      ? { authority, principal, tenant, credentialMode: "bearer" as const }
+      : undefined,
   authorize: (authentication) => Promise.resolve(authentication.tenant.id === tenant.id),
   resolveAgent: (reference) => Promise.resolve(
     reference.id === agent.id && reference.version === agent.version ? agent : undefined,
   ),
   allowedOrigins: ["http://localhost:3000"],
-  readEnvironment: () => ({ PACTMARK_PROFILE: process.env["PACTMARK_PROFILE"] }),
+  readEnvironment: () => ({
+    PACTMARK_PROFILE: process.env["PACTMARK_PROFILE"],
+    PACTMARK_BEARER_TOKEN: process.env["PACTMARK_BEARER_TOKEN"],
+  }),
 });
 
 export const GET = handler;
@@ -624,14 +635,19 @@ const runtime = createLocalRuntime({ agents: [agent], authorityIssuer: authority
 export default createCloudflareWorker({
   basePath: "/api/agent",
   runtime,
-  allowAnonymousDevelopment: true,
-  anonymousAuthentication: { authority, principal, tenant, credentialMode: "mtls_or_host" },
+  policyEnforcement: "complete",
+  authenticate: (request, context) => Promise.resolve(
+    context.env["PACTMARK_BEARER_TOKEN"] !== undefined &&
+    request.headers.get("authorization") === "Bearer " + context.env["PACTMARK_BEARER_TOKEN"]
+      ? { authority, principal, tenant, credentialMode: "bearer" as const }
+      : undefined,
   authorize: (authentication) => Promise.resolve(authentication.tenant.id === tenant.id),
   resolveAgent: (reference) => Promise.resolve(
     reference.id === agent.id && reference.version === agent.version ? agent : undefined,
   ),
   selectEnvironment: (bindings) => ({
     PACTMARK_PROFILE: bindings["PACTMARK_PROFILE"] === "preview" ? "preview" : undefined,
+    PACTMARK_BEARER_TOKEN: bindings["PACTMARK_BEARER_TOKEN"],
   }),
 });
 `,

@@ -169,7 +169,15 @@ describe("Postgres nonce registry", () => {
         nonce: nonce(3),
         invocationCeiling: 1,
       }),
-    ).resolves.toBe("ceiling_reached");
+    ).resolves.toBe("key_binding_mismatch");
+    await expect(
+      registry.reserve({
+        namespace: "protected",
+        keyId: "key-1",
+        nonce: nonce(4),
+        invocationCeiling: 2,
+      }),
+    ).resolves.toBe("ceiling_configuration_mismatch");
     expect(database.statements).toEqual(
       expect.arrayContaining([
         expect.stringContaining("INSERT INTO pactmark_protection_key_counters"),
@@ -250,6 +258,21 @@ class NonceDatabase implements PostgresDatabase, PostgresClient {
     values: readonly unknown[] = [],
   ): Promise<SqlResult<Row>> {
     this.statements.push(text.replace(/\s+/gu, " ").trim());
+    if (text.includes("SELECT namespace_id,invocation_count,invocation_ceiling")) {
+      const keyId = String(values[0]);
+      const count = this.#counts.get(keyId);
+      if (count === undefined) return Promise.resolve({ rows: [], rowCount: 0 });
+      return Promise.resolve({
+        rows: [
+          {
+            namespace_id: this.#namespaces.get(keyId),
+            invocation_count: count,
+            invocation_ceiling: this.#ceilings.get(keyId),
+          },
+        ] as unknown as Row[],
+        rowCount: 1,
+      });
+    }
     const namespace = String(values[0]);
     const counterKey = String(values[1]);
     if (text.includes("INSERT INTO pactmark_protection_key_counters")) {

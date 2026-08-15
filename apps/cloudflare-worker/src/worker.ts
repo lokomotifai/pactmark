@@ -38,6 +38,7 @@ function getWorkerInstance(): WorkerInstance {
   const worker = createCloudflareWorker({
     basePath: "/api/agent",
     runtime,
+    policyEnforcement: "complete",
     allowAnonymousDevelopment: true,
     anonymousAuthentication: { authority, principal, tenant, credentialMode: "mtls_or_host" },
     authorize: (authentication) =>

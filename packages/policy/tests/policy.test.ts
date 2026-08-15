@@ -263,7 +263,10 @@ describe("deterministic default-deny policy", () => {
         workOrder: r1.workOrder,
         tool: r1.tool,
         argumentsDigest: r1.argumentsDigest,
-        targetDigest: r1.targetDigest,
+        resources: r1.normalizedResources,
+        schemaValidated: true,
+        networkPolicy: r1.networkPolicy,
+        callsAlreadyUsed: 0,
       }),
     ).resolves.toMatchObject({ decision: "allow_with_grant" });
     const r4 = makeInput("R4");
@@ -272,7 +275,10 @@ describe("deterministic default-deny policy", () => {
         workOrder: r4.workOrder,
         tool: r4.tool,
         argumentsDigest: r4.argumentsDigest,
-        targetDigest: r4.targetDigest,
+        resources: r4.normalizedResources,
+        schemaValidated: true,
+        networkPolicy: r4.networkPolicy,
+        callsAlreadyUsed: 0,
       }),
     ).resolves.toMatchObject({ decision: "require_approval" });
     await expect(
@@ -280,7 +286,10 @@ describe("deterministic default-deny policy", () => {
         workOrder: { ...r1.workOrder, purpose: { code: "other", registryVersion: "x" } },
         tool: r1.tool,
         argumentsDigest: r1.argumentsDigest,
-        targetDigest: r1.targetDigest,
+        resources: r1.normalizedResources,
+        schemaValidated: true,
+        networkPolicy: r1.networkPolicy,
+        callsAlreadyUsed: 0,
       }),
     ).resolves.toMatchObject({ reasonCode: "KAF_POLICY_UNKNOWN_PURPOSE" });
     const switches = createKillSwitchRegistry();
@@ -297,7 +306,10 @@ describe("deterministic default-deny policy", () => {
         workOrder: r1.workOrder,
         tool: r1.tool,
         argumentsDigest: r1.argumentsDigest,
-        targetDigest: r1.targetDigest,
+        resources: r1.normalizedResources,
+        schemaValidated: true,
+        networkPolicy: r1.networkPolicy,
+        callsAlreadyUsed: 0,
       }),
     ).resolves.toMatchObject({ reasonCode: "KAF_POLICY_REGISTRATION_KILLED" });
   });

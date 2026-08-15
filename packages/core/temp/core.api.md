@@ -98,7 +98,19 @@ export const AcceptedAgentWorkOrderSchema: z.ZodObject<{
     }, z.core.$strict>;
     requestedCapabilities: z.ZodArray<z.ZodString>;
     resourceScopeCeiling: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>;
@@ -236,7 +248,19 @@ export const AcceptedCompensationWorkOrderSchema: z.ZodObject<{
     }, z.core.$strict>;
     requestedCapabilities: z.ZodArray<z.ZodString>;
     resourceScopeCeiling: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>;
@@ -383,7 +407,19 @@ export const AcceptedWorkOrderSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strict>;
     requestedCapabilities: z.ZodArray<z.ZodString>;
     resourceScopeCeiling: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>;
@@ -515,7 +551,19 @@ export const AcceptedWorkOrderSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strict>;
     requestedCapabilities: z.ZodArray<z.ZodString>;
     resourceScopeCeiling: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>;
@@ -1198,7 +1246,19 @@ export const CapabilityGrantBindingSchema: z.ZodObject<{
     toolVersion: z.ZodString;
     capability: z.ZodString;
     normalizedResources: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>;
@@ -1250,7 +1310,19 @@ export const CapabilityGrantIssueRequestSchema: z.ZodObject<{
     toolVersion: z.ZodString;
     capability: z.ZodString;
     normalizedResources: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>;
@@ -1306,7 +1378,19 @@ export const CapabilityGrantSchema: z.ZodObject<{
     toolVersion: z.ZodString;
     toolRegistrationDigest: z.ZodString;
     normalizedResources: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>;
@@ -1393,7 +1477,19 @@ export const CommandContextSchema: z.ZodObject<{
     commandId: z.ZodString;
     operation: z.ZodString;
     normalizedResourceScope: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>;
@@ -1447,7 +1543,19 @@ export const CommandRecordSchema: z.ZodObject<{
         }, z.core.$strict>;
         operation: z.ZodString;
         normalizedResourceScope: z.ZodArray<z.ZodObject<{
-            kind: z.ZodString;
+            kind: z.ZodEnum<{
+                opaque: "opaque";
+                record: "record";
+                url: "url";
+                path: "path";
+                dataset: "dataset";
+                host: "host";
+                run: "run";
+                tenant: "tenant";
+                identifier: "identifier";
+                urn: "urn";
+                artifact: "artifact";
+            }>;
             value: z.ZodString;
             normalizationVersion: z.ZodString;
         }, z.core.$strict>>;
@@ -1531,7 +1639,19 @@ export const CommandScopeSchema: z.ZodObject<{
     }, z.core.$strict>;
     operation: z.ZodString;
     normalizedResourceScope: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>;
@@ -4086,10 +4206,19 @@ export interface PolicyEngine {
         workOrder: AcceptedWorkOrder;
         tool: ToolRegistrationContract;
         argumentsDigest: Digest;
-        targetDigest: Digest;
+        resources: readonly ResourceScope[];
+        schemaValidated: true;
+        networkPolicy: "none" | "declared" | "enforced";
+        callsAlreadyUsed: number;
+        requestedCost?: number;
     }>): Promise<Readonly<{
-        decision: "deny" | "allow_with_grant" | "require_approval";
+        decision: "deny";
         reasonCode: string;
+    }> | Readonly<{
+        decision: "allow_with_grant" | "require_approval";
+        reasonCode: string;
+        normalizedResources: readonly ResourceScope[];
+        normalizedTargetDigest: Digest;
     }>>;
 }
 
@@ -4421,11 +4550,15 @@ export const RequestedDecisionOwnerSchema: z.ZodDiscriminatedUnion<[z.ZodObject<
 // @public (undocumented)
 export class ResolvedModelCredential {
     // (undocumented)
+    [Symbol.toPrimitive](): never;
+    // (undocumented)
     readonly credentialKind: "resolved_model";
     // (undocumented)
     static fromAdapter(value: string): ResolvedModelCredential;
     // (undocumented)
     toJSON(): never;
+    // (undocumented)
+    toString(): never;
     // (undocumented)
     use<R>(consumer: (value: string) => R): R;
 }
@@ -4433,11 +4566,15 @@ export class ResolvedModelCredential {
 // @public (undocumented)
 export class ResolvedToolCredential {
     // (undocumented)
+    [Symbol.toPrimitive](): never;
+    // (undocumented)
     readonly credentialKind: "resolved_tool";
     // (undocumented)
     static fromAdapter(value: string): ResolvedToolCredential;
     // (undocumented)
     toJSON(): never;
+    // (undocumented)
+    toString(): never;
     // (undocumented)
     use<R>(consumer: (value: string) => R): R;
 }
@@ -4446,8 +4583,38 @@ export class ResolvedToolCredential {
 export type ResourceScope = z.infer<typeof ResourceScopeSchema>;
 
 // @public (undocumented)
+export type ResourceScopeKind = z.infer<typeof ResourceScopeKindSchema>;
+
+// @public
+export const ResourceScopeKindSchema: z.ZodEnum<{
+    opaque: "opaque";
+    record: "record";
+    url: "url";
+    path: "path";
+    dataset: "dataset";
+    host: "host";
+    run: "run";
+    tenant: "tenant";
+    identifier: "identifier";
+    urn: "urn";
+    artifact: "artifact";
+}>;
+
+// @public (undocumented)
 export const ResourceScopeSchema: z.ZodObject<{
-    kind: z.ZodString;
+    kind: z.ZodEnum<{
+        opaque: "opaque";
+        record: "record";
+        url: "url";
+        path: "path";
+        dataset: "dataset";
+        host: "host";
+        run: "run";
+        tenant: "tenant";
+        identifier: "identifier";
+        urn: "urn";
+        artifact: "artifact";
+    }>;
     value: z.ZodString;
     normalizationVersion: z.ZodString;
 }, z.core.$strict>;
@@ -4621,7 +4788,19 @@ export const RunDelegationDescriptorSchema: z.ZodObject<{
         registryVersion: z.ZodString;
     }, z.core.$strict>;
     maximumScopes: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>;
@@ -6564,6 +6743,20 @@ export const TerminalRunStatusSchema: z.ZodEnum<{
     cancelled: "cancelled";
 }>;
 
+// @public
+export interface ToolCallResolver {
+    // (undocumented)
+    resolve(input: Readonly<{
+        workOrder: AcceptedWorkOrder;
+        registration: ToolRegistrationContract;
+        proposedInput: JsonValue;
+    }>): Promise<Readonly<{
+        validatedInput: JsonValue;
+        resources: readonly ResourceScope[];
+        requestedCost?: number;
+    }>>;
+}
+
 // @public (undocumented)
 export class ToolCredentialDeniedError extends Error {
     constructor();
@@ -7298,7 +7491,19 @@ export const WorkOrderRequestSchema: z.ZodObject<{
     }, z.core.$strict>], "mode">;
     requestedCapabilities: z.ZodArray<z.ZodString>;
     resourceScopeCeiling: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
+        kind: z.ZodEnum<{
+            opaque: "opaque";
+            record: "record";
+            url: "url";
+            path: "path";
+            dataset: "dataset";
+            host: "host";
+            run: "run";
+            tenant: "tenant";
+            identifier: "identifier";
+            urn: "urn";
+            artifact: "artifact";
+        }>;
         value: z.ZodString;
         normalizationVersion: z.ZodString;
     }, z.core.$strict>>>;

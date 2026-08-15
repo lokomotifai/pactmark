@@ -11,7 +11,7 @@ import type { Run, RunProjection } from "./run.js";
 import type { RunLease } from "./storage.js";
 import type { EgressHttpClient, ToolRegistrationContract } from "./tool.js";
 import type { VerificationRecord, VerificationResult } from "./verification.js";
-import type { AcceptedWorkOrder } from "./work-order.js";
+import type { AcceptedWorkOrder, ResourceScope } from "./work-order.js";
 
 export interface Clock {
   now(): string;
@@ -217,10 +217,41 @@ export interface PolicyEngine {
       workOrder: AcceptedWorkOrder;
       tool: ToolRegistrationContract;
       argumentsDigest: Digest;
-      targetDigest: Digest;
+      resources: readonly ResourceScope[];
+      schemaValidated: true;
+      networkPolicy: "none" | "declared" | "enforced";
+      callsAlreadyUsed: number;
+      requestedCost?: number;
     }>,
   ): Promise<
-    Readonly<{ decision: "deny" | "allow_with_grant" | "require_approval"; reasonCode: string }>
+    | Readonly<{ decision: "deny"; reasonCode: string }>
+    | Readonly<{
+        decision: "allow_with_grant" | "require_approval";
+        reasonCode: string;
+        normalizedResources: readonly ResourceScope[];
+        normalizedTargetDigest: Digest;
+      }>
+  >;
+}
+
+/**
+ * Host-owned boundary that validates model-proposed arguments and extracts the
+ * concrete resources they can touch. The runtime never trusts a model-supplied
+ * target digest as authority.
+ */
+export interface ToolCallResolver {
+  resolve(
+    input: Readonly<{
+      workOrder: AcceptedWorkOrder;
+      registration: ToolRegistrationContract;
+      proposedInput: JsonValue;
+    }>,
+  ): Promise<
+    Readonly<{
+      validatedInput: JsonValue;
+      resources: readonly ResourceScope[];
+      requestedCost?: number;
+    }>
   >;
 }
 export interface VerifierRegistry {

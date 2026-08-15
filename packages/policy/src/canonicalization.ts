@@ -46,6 +46,16 @@ export function canonicalizeTenantNamespace(value: string): string {
   return normalized;
 }
 
+export function canonicalizeUrn(value: string): string {
+  const normalized = normalizedText(value).trim();
+  const match =
+    /^urn:([a-z0-9][a-z0-9-]{0,31}):([a-z0-9][a-z0-9()+,.:=@;$_!*'/?#%-]{0,2043})$/iu.exec(
+      normalized,
+    );
+  if (match === null) throw new PolicyNormalizationError("URN is invalid");
+  return `urn:${(match[1] ?? "").toLowerCase()}:${match[2] ?? ""}`;
+}
+
 function repeatedlyDecode(value: string): string {
   let current = value;
   for (let index = 0; index < 4; index += 1) {
@@ -81,10 +91,30 @@ export function canonicalizeResourcePath(value: string): string {
   return segments.join("/");
 }
 
-export function assertNoSymlinkEscape(root: string, physicallyResolvedPath: string): void {
-  const canonicalRoot = canonicalizeResourcePath(root);
-  const canonicalResolved = canonicalizeResourcePath(physicallyResolvedPath);
-  if (canonicalResolved !== canonicalRoot && !canonicalResolved.startsWith(`${canonicalRoot}/`)) {
+function normalizePhysicalAbsolutePath(value: string): string {
+  const slashPath = normalizedText(value).replaceAll("\\", "/");
+  if (!slashPath.startsWith("/") && !/^[a-zA-Z]:\//u.test(slashPath)) {
+    throw new PolicyNormalizationError("A physically resolved path must be absolute");
+  }
+  const prefix = slashPath.startsWith("/") ? "/" : `${slashPath.slice(0, 1).toLowerCase()}:/`;
+  const remainder = slashPath.slice(prefix.length);
+  const segments = remainder.split("/").filter((segment) => segment !== "");
+  if (segments.some((segment) => segment === "." || segment === "..")) {
+    throw new PolicyNormalizationError("A physically resolved path cannot contain traversal");
+  }
+  for (const segment of segments) rejectControls(segment);
+  return `${prefix}${segments.join("/")}`.replace(/\/$/u, "") || "/";
+}
+
+/** Caller must pass paths already resolved with the host filesystem's realpath equivalent. */
+export function assertResolvedPathWithinRoot(
+  physicallyResolvedRoot: string,
+  physicallyResolvedPath: string,
+): void {
+  const canonicalRoot = normalizePhysicalAbsolutePath(physicallyResolvedRoot);
+  const canonicalResolved = normalizePhysicalAbsolutePath(physicallyResolvedPath);
+  const descendantPrefix = canonicalRoot === "/" ? "/" : `${canonicalRoot}/`;
+  if (canonicalResolved !== canonicalRoot && !canonicalResolved.startsWith(descendantPrefix)) {
     throw new PolicyNormalizationError("Resolved path escapes the authorized root");
   }
 }
@@ -106,9 +136,51 @@ function isBlockedIpv4(octets: readonly number[]): boolean {
     (a === 169 && b === 254) ||
     (a === 172 && b >= 16 && b <= 31) ||
     (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19)) ||
     (a === 100 && b >= 64 && b <= 127) ||
     a >= 224
   );
+}
+
+function isDeniedCanonicalHost(host: string): boolean {
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host === "metadata.google.internal" ||
+    host === "metadata.azure.internal"
+  ) {
+    return true;
+  }
+  const ipv4 = parseIpv4(host);
+  if (ipv4 !== undefined) return isBlockedIpv4(ipv4);
+  const compactIpv6 = host.replace(/^0+|:0+(?=[0-9a-f])/gu, "");
+  return (
+    host.includes(":") &&
+    (host === "::" ||
+      host === "::1" ||
+      /^f[cd][0-9a-f]{2}:/u.test(host) ||
+      /^fe[89ab][0-9a-f]:/u.test(host) ||
+      host.startsWith("::ffff:") ||
+      compactIpv6.includes("::ffff:127.") ||
+      compactIpv6.includes("::ffff:10.") ||
+      compactIpv6.includes("::ffff:169.254."))
+  );
+}
+
+/** Shared hostname classification for policy and network adapters. Invalid hosts fail closed. */
+export function isPrivateOrReservedHostname(value: string): boolean {
+  try {
+    const raw = normalizedText(value).trim().toLowerCase();
+    const url = new URL(`https://${raw}/`);
+    const host = url.hostname
+      .replace(/^\[|\]$/gu, "")
+      .replace(/\.$/u, "")
+      .toLowerCase();
+    return isDeniedCanonicalHost(host);
+  } catch {
+    return true;
+  }
 }
 
 export function canonicalizeHost(value: string): string {
@@ -143,33 +215,8 @@ export function canonicalizeHost(value: string): string {
   ) {
     throw new PolicyNormalizationError("Host name is ambiguous or non-canonical");
   }
-  if (
-    host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host === "metadata.google.internal" ||
-    host === "metadata.azure.internal"
-  ) {
-    throw new PolicyNormalizationError("Loopback or metadata host is denied");
-  }
-  const ipv4 = parseIpv4(host);
-  if (ipv4 !== undefined && isBlockedIpv4(ipv4)) {
-    throw new PolicyNormalizationError(
-      "Private, reserved, loopback, or link-local address is denied",
-    );
-  }
-  const compactIpv6 = host.replace(/^0+|:0+(?=[0-9a-f])/gu, "");
-  if (
-    host.includes(":") &&
-    (host === "::" ||
-      host === "::1" ||
-      /^f[cd][0-9a-f]{2}:/u.test(host) ||
-      /^fe[89ab][0-9a-f]:/u.test(host) ||
-      host.startsWith("::ffff:") ||
-      compactIpv6.includes("::ffff:127.") ||
-      compactIpv6.includes("::ffff:10.") ||
-      compactIpv6.includes("::ffff:169.254."))
-  ) {
-    throw new PolicyNormalizationError("Private, mapped, loopback, or link-local IPv6 is denied");
+  if (isDeniedCanonicalHost(host)) {
+    throw new PolicyNormalizationError("Private, reserved, loopback, or metadata host is denied");
   }
   const port = url.port;
   return port === "" ? host : `${host}:${port}`;
@@ -240,6 +287,8 @@ export function canonicalizeResourceScope(scope: ResourceScope): ResourceScope {
         return canonicalizeIdentifier(scope.value);
       case "tenant":
         return canonicalizeTenantNamespace(scope.value);
+      case "urn":
+        return canonicalizeUrn(scope.value);
       default:
         throw new PolicyNormalizationError("Unknown resource kind");
     }

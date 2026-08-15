@@ -30,6 +30,7 @@ export function proxy(request: NextRequest) {
   response.headers.set("Content-Security-Policy", policy);
   response.headers.set("Cache-Control", "private, no-store, max-age=0, no-transform");
   response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   response.headers.set("Referrer-Policy", "no-referrer");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");

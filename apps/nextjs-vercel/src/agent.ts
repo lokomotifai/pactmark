@@ -107,6 +107,13 @@ const nextLookupTool = defineTool({
     maxCallsPerRun: 1,
     timeoutMs: 1_000,
   },
+  resources: (_input, context) => [
+    {
+      kind: "tenant",
+      value: context.tenantId,
+      normalizationVersion: "pactmark.policy-normalization@1",
+    },
+  ],
   operation: {
     kind: "read",
     execute: ({ item }) => Promise.resolve({ item, status: "available" as const }),

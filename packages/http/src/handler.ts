@@ -6,9 +6,9 @@ import {
   JsonValueSchema,
   KafError,
   RuntimeCapabilitiesSchema,
+  RuntimeReadinessReportSchema,
   WorkOrderRequestSchema,
   createCommandContext,
-  digestBytes,
   digestCanonicalJson,
   type JsonValue,
 } from "@pactmark/core";
@@ -32,6 +32,19 @@ const sensitiveHeaders = Object.freeze({
   "CDN-Cache-Control": "no-store",
   Vary: "Authorization, Cookie, Origin, Accept, Last-Event-ID",
 });
+
+async function verifyContentDigest(content: Uint8Array, expected: string): Promise<boolean> {
+  const ownedContent = new Uint8Array(content.byteLength);
+  ownedContent.set(content);
+  const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", ownedContent));
+  const actual = `sha256:${[...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+  if (actual.length !== expected.length) return false;
+  let mismatch = 0;
+  for (let index = 0; index < actual.length; index += 1) {
+    mismatch |= actual.charCodeAt(index) ^ expected.charCodeAt(index);
+  }
+  return mismatch === 0;
+}
 
 class HttpFailure extends Error {
   constructor(
@@ -153,12 +166,25 @@ function assertCookieBoundary(request: Request, authentication: AuthenticatedReq
   if (request.headers.get("sec-fetch-site") !== "same-origin") {
     throw new HttpFailure(403, "KAF_HTTP_FETCH_METADATA_DENIED");
   }
+  if (request.method !== "POST") return;
   if (
     authentication.csrfToken === undefined ||
-    request.headers.get("x-csrf-token") !== authentication.csrfToken
+    !constantTimeTextEqual(request.headers.get("x-csrf-token"), authentication.csrfToken)
   ) {
     throw new HttpFailure(403, "KAF_HTTP_CSRF_INVALID");
   }
+}
+
+function constantTimeTextEqual(candidate: string | null, expected: string): boolean {
+  if (candidate === null) return false;
+  const left = new TextEncoder().encode(candidate);
+  const right = new TextEncoder().encode(expected);
+  let difference = left.length ^ right.length;
+  const length = Math.max(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    difference |= (left[index] ?? 0) ^ (right[index] ?? 0);
+  }
+  return difference === 0;
 }
 
 function commandFor(request: Request, operation: string, payload: JsonValue, scope: string[]) {
@@ -365,17 +391,31 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
     1024 * 1024,
     "KAF_HTTP_EVIDENCE_RESPONSE_LIMIT_INVALID",
   );
-  if (
-    config.authenticate === undefined &&
-    !(config.allowAnonymousDevelopment === true && config.anonymousAuthentication !== undefined)
-  ) {
+  const anonymousDevelopment =
+    config.allowAnonymousDevelopment === true && config.anonymousAuthentication !== undefined;
+  if (config.authenticate === undefined && !anonymousDevelopment) {
     throw new TypeError("KAF_HTTP_AUTHENTICATION_REQUIRED");
   }
-  RuntimeCapabilitiesSchema.parse(config.runtime.getCapabilities());
+  const capabilities = RuntimeCapabilitiesSchema.parse(config.runtime.getCapabilities());
+  if (anonymousDevelopment && capabilities.executionProfile !== "ephemeral") {
+    throw new TypeError("KAF_HTTP_ANONYMOUS_PROFILE_INVALID");
+  }
+  if (anonymousDevelopment) {
+    const warn =
+      config.onSecurityWarning ??
+      ((warning: Readonly<{ message: string }>) => {
+        console.warn(warning.message);
+      });
+    warn({
+      code: "KAF_HTTP_ANONYMOUS_DEVELOPMENT",
+      message:
+        "Pactmark anonymous development access is enabled for an ephemeral runtime; never expose this handler as a trusted service.",
+    });
+  }
   const openapi = createOpenApiDocument(basePath);
   const documentationBaseUrl = config.documentationBaseUrl ?? "https://pactmark.dev/errors";
 
-  return async (request, context) => {
+  const handle: AgentFetchHandler = async (request, context) => {
     const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
     try {
       const url = new URL(request.url);
@@ -388,8 +428,50 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
         return jsonResponse({ status: "ok" });
       }
       if (request.method === "GET" && path === "/readyz") {
-        const report = config.runtime.evaluateReadiness({ profile: "production" });
-        return jsonResponse(report, report.ready ? 200 : 503);
+        const readinessAuthentication = await authenticate(config, request, context);
+        assertCookieBoundary(request, readinessAuthentication);
+        const runtimeReport = config.runtime.evaluateReadiness({ profile: "production" });
+        const authenticationCheck = {
+          schemaVersion: "1" as const,
+          id: "production-http-authentication",
+          status: anonymousDevelopment ? ("fail" as const) : ("pass" as const),
+          code: anonymousDevelopment
+            ? "KAF_READINESS_HTTP_AUTHENTICATION_REQUIRED"
+            : "KAF_READINESS_HTTP_AUTHENTICATION_CONFIGURED",
+          safeMessage: anonymousDevelopment
+            ? "Production HTTP authentication is not configured."
+            : "Production HTTP authentication is configured.",
+          remediationSlug: "configure-http-authentication",
+        };
+        const policyComplete = config.policyEnforcement === "complete";
+        const policyCheck = {
+          schemaVersion: "1" as const,
+          id: "production-policy-engine-complete",
+          status: policyComplete ? ("pass" as const) : ("fail" as const),
+          code: policyComplete
+            ? "KAF_READINESS_POLICY_ENGINE_COMPLETE"
+            : "KAF_READINESS_POLICY_ENGINE_INCOMPLETE",
+          safeMessage: policyComplete
+            ? "The host declares the complete Pactmark policy contract."
+            : "The host has not declared the complete Pactmark policy contract.",
+          remediationSlug: "configure-complete-policy-engine",
+        };
+        const report = RuntimeReadinessReportSchema.parse({
+          ...runtimeReport,
+          ready: runtimeReport.ready && !anonymousDevelopment && policyComplete,
+          checks: [...runtimeReport.checks, authenticationCheck, policyCheck],
+          rulesVersion: `${runtimeReport.rulesVersion}+pactmark.http-readiness@1`,
+        });
+        return jsonResponse(
+          config.exposeDetailedReadiness === true
+            ? report
+            : {
+                ready: report.ready,
+                status: report.ready ? "ready" : "not_ready",
+                code: report.ready ? "KAF_RUNTIME_READY" : "KAF_RUNTIME_NOT_READY",
+              },
+          report.ready ? 200 : 503,
+        );
       }
       if (request.method === "GET" && path === "/openapi.json") {
         if (request.headers.get("if-none-match") === openapi.etag) {
@@ -405,7 +487,7 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
       }
 
       const authentication = await authenticate(config, request, context);
-      if (request.method === "POST") assertCookieBoundary(request, authentication);
+      assertCookieBoundary(request, authentication);
 
       if (request.method === "POST" && path === "/v1/runs") {
         await authorize(config, authentication, "run.start");
@@ -475,7 +557,7 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
         const { artifactDigest, ...artifactMaterial } = artifact;
         if (
           artifactDigest !== digestCanonicalJson(artifactMaterial) ||
-          artifact.contentDigest !== digestBytes(stored.content) ||
+          !(await verifyContentDigest(stored.content, artifact.contentDigest)) ||
           artifact.byteSize !== stored.content.byteLength
         ) {
           throw new HttpFailure(500, "KAF_HTTP_ARTIFACT_INTEGRITY_INVALID");
@@ -536,7 +618,7 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
         const { artifactDigest, ...artifactMaterial } = artifact;
         if (
           artifactDigest !== digestCanonicalJson(artifactMaterial) ||
-          artifact.contentDigest !== digestBytes(stored.content) ||
+          !(await verifyContentDigest(stored.content, artifact.contentDigest)) ||
           artifact.byteSize !== stored.content.byteLength
         ) {
           throw new HttpFailure(500, "KAF_HTTP_ARTIFACT_INTEGRITY_INVALID");
@@ -705,5 +787,13 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
     } catch (error) {
       return problem(error, requestId, documentationBaseUrl);
     }
+  };
+  return async (request, context) => {
+    const response = await handle(request, context);
+    if (anonymousDevelopment) {
+      response.headers.set("Warning", '299 Pactmark "Anonymous development access enabled"');
+      response.headers.set("X-Pactmark-Development-Mode", "anonymous");
+    }
+    return response;
   };
 }

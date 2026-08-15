@@ -3,9 +3,8 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { ReadBuffer, serializeMessage } from "@modelcontextprotocol/sdk/shared/stdio.js";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
-import { isIP } from "node:net";
+import { constants } from "node:fs";
+import { open, stat, type FileHandle } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
@@ -27,6 +26,7 @@ import type {
   ResolvedToolCredential,
   SecretResolver,
 } from "@pactmark/core";
+import { isPrivateOrReservedHostname } from "@pactmark/policy";
 
 export interface MCPProtocolClient {
   connect(
@@ -132,6 +132,8 @@ export interface MCPHttpEgressBoundary {
     credentialOriginEnforcement: true;
     requestResponseLimits: true;
   }>;
+  /** Resolve immediately before connect and reject every private or reserved address. */
+  validateResolvedEndpoint(endpoint: URL, signal: AbortSignal): Promise<void>;
   readonly client: EgressHttpClient;
 }
 
@@ -176,7 +178,14 @@ function enforcedHttpEgress(
       "The enforced HTTP egress boundary does not match the pinned MCP profile",
     );
   }
-  return boundary.client;
+  return Object.freeze({
+    async fetch(input: RequestInfo | URL, init?: RequestInit) {
+      const endpoint = new URL(input instanceof Request ? input.url : input);
+      const signal = init?.signal ?? new AbortController().signal;
+      await boundary.validateResolvedEndpoint(endpoint, signal);
+      return boundary.client.fetch(endpoint, init);
+    },
+  });
 }
 
 function allCapabilitiesEnabled(capabilities: Readonly<Record<string, boolean>>): boolean {
@@ -196,10 +205,12 @@ class ExactEnvironmentStdioTransport implements MCPClientTransport {
   readonly #readBuffer: ReadBuffer;
   #process: ChildProcessWithoutNullStreams | undefined;
   #closing: Promise<void> | undefined;
+  #executableFile: FileHandle | undefined;
 
   constructor(
     private readonly request: Readonly<{
       command: string;
+      executableFile: FileHandle;
       args: readonly string[];
       cwd: string;
       env: Readonly<Record<string, string>>;
@@ -209,6 +220,7 @@ class ExactEnvironmentStdioTransport implements MCPClientTransport {
     }>,
   ) {
     this.#readBuffer = new ReadBuffer({ maxBufferSize: request.maxResponseBytes });
+    this.#executableFile = request.executableFile;
   }
 
   async start(): Promise<void> {
@@ -218,18 +230,65 @@ class ExactEnvironmentStdioTransport implements MCPClientTransport {
     if (this.request.signal.aborted) {
       throw new MCPAdapterError("KAF_MCP_ABORTED", "MCP stdio launch was cancelled");
     }
+    const executableFile = this.#executableFile;
+    if (executableFile === undefined) {
+      throw new MCPAdapterError(
+        "KAF_MCP_IDENTITY_DRIFT",
+        "The verified MCP executable handle is unavailable",
+      );
+    }
+    if (process.platform !== "linux" && process.platform !== "darwin") {
+      await executableFile.close();
+      this.#executableFile = undefined;
+      throw new MCPAdapterError(
+        "KAF_MCP_PLATFORM_UNSUPPORTED",
+        "Descriptor-pinned preview stdio launch is unsupported on this platform",
+      );
+    }
+    const [verifiedFile, currentPath] = await Promise.all([
+      executableFile.stat(),
+      stat(this.request.command),
+    ]);
+    if (
+      verifiedFile.dev !== currentPath.dev ||
+      verifiedFile.ino !== currentPath.ino ||
+      verifiedFile.size !== currentPath.size ||
+      verifiedFile.mtimeMs !== currentPath.mtimeMs
+    ) {
+      await executableFile.close();
+      this.#executableFile = undefined;
+      throw new MCPAdapterError(
+        "KAF_MCP_IDENTITY_DRIFT",
+        "The pinned MCP executable changed before launch",
+      );
+    }
+    // Linux can execute the already-verified descriptor. macOS posix_spawn rejects /dev/fd
+    // executables, so preview mode performs an immediate inode identity check and retains the
+    // verified descriptor through spawn. Production never uses this path; it requires a sandbox.
+    const spawnCommand = process.platform === "linux" ? "/proc/self/fd/3" : this.request.command;
+    const stdio: ("pipe" | number)[] =
+      process.platform === "linux"
+        ? ["pipe", "pipe", "pipe", executableFile.fd]
+        : ["pipe", "pipe", "pipe"];
     await new Promise<void>((resolve, reject) => {
-      const child = spawn(this.request.command, [...this.request.args], {
+      const child = spawn(spawnCommand, [...this.request.args], {
         cwd: this.request.cwd,
         env: { ...this.request.env },
         shell: false,
         windowsHide: true,
-        stdio: ["pipe", "pipe", "pipe"],
+        detached: true,
+        stdio,
       }) as ChildProcessWithoutNullStreams;
       this.#process = child;
       let stderrBytes = 0;
-      child.once("spawn", resolve);
+      child.once("spawn", () => {
+        this.#executableFile = undefined;
+        void executableFile.close();
+        resolve();
+      });
       child.once("error", (error: Error) => {
+        this.#executableFile = undefined;
+        void executableFile.close();
         this.onerror?.(error);
         reject(error);
       });
@@ -303,6 +362,9 @@ class ExactEnvironmentStdioTransport implements MCPClientTransport {
   }
 
   async #close(): Promise<void> {
+    const executableFile = this.#executableFile;
+    this.#executableFile = undefined;
+    await executableFile?.close();
     const child = this.#process;
     this.#process = undefined;
     this.#readBuffer.clear();
@@ -313,54 +375,25 @@ class ExactEnvironmentStdioTransport implements MCPClientTransport {
       });
     });
     child.stdin.end();
-    child.kill("SIGTERM");
+    terminateProcessTree(child, "SIGTERM");
     await Promise.race([closed, new Promise<void>((resolve) => setTimeout(resolve, 250))]);
     if (child.exitCode === null && child.signalCode === null) {
-      child.kill("SIGKILL");
+      terminateProcessTree(child, "SIGKILL");
       await Promise.race([closed, new Promise<void>((resolve) => setTimeout(resolve, 250))]);
     }
   }
 }
 
-function isPrivateHostname(hostname: string): boolean {
-  const lower = hostname.toLowerCase().replace(/^\[|\]$/gu, "");
-  if (
-    lower === "localhost" ||
-    lower.endsWith(".localhost") ||
-    lower.endsWith(".local") ||
-    lower === "metadata.google.internal"
-  ) {
-    return true;
-  }
-  if (isIP(lower) === 4) {
-    const octets = lower.split(".").map(Number);
-    const first = octets[0] ?? -1;
-    const second = octets[1] ?? -1;
-    return isPrivateIPv4Prefix(first, second);
-  }
-  if (isIP(lower) === 6) {
-    const mapped = /^::ffff:([\da-f]{1,4}):([\da-f]{1,4})$/u.exec(lower);
-    if (mapped !== null) {
-      const high = Number.parseInt(mapped[1] ?? "", 16);
-      return isPrivateIPv4Prefix(high >>> 8, high & 0xff);
+function terminateProcessTree(child: ChildProcessWithoutNullStreams, signal: NodeJS.Signals): void {
+  if (process.platform !== "win32" && child.pid !== undefined) {
+    try {
+      process.kill(-child.pid, signal);
+      return;
+    } catch {
+      // The child may have exited between the liveness check and group signal.
     }
-    return lower === "::" || lower === "::1" || /^f[cd]/u.test(lower) || /^fe[89ab]/u.test(lower);
   }
-  return false;
-}
-
-function isPrivateIPv4Prefix(first: number, second: number): boolean {
-  return (
-    first === 0 ||
-    first === 10 ||
-    first === 127 ||
-    (first === 100 && second >= 64 && second <= 127) ||
-    (first === 169 && second === 254) ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 168) ||
-    (first === 198 && (second === 18 || second === 19)) ||
-    first >= 224
-  );
+  child.kill(signal);
 }
 
 function validateHttpEndpoint(
@@ -368,7 +401,7 @@ function validateHttpEndpoint(
   trustedHostCapability: MCPTrustedHostCapability | undefined,
 ): URL {
   const endpoint = new URL(profile.endpoint);
-  const privateEndpoint = isPrivateHostname(endpoint.hostname);
+  const privateEndpoint = isPrivateOrReservedHostname(endpoint.hostname);
   const privateCapabilityValid =
     profile.trustedPrivateEndpoint &&
     trustedHostCapability?.transportProfileDigest === profile.mcpTransportSecurityProfileDigest &&
@@ -390,25 +423,32 @@ function validateHttpEndpoint(
   return endpoint;
 }
 
-async function verifyExecutableArtifact(
+async function openVerifiedExecutableArtifact(
   profile: MCPStdioTransportSecurityProfile,
   signal: AbortSignal,
-): Promise<void> {
+): Promise<FileHandle> {
   const hash = createHash("sha256");
+  let executableFile: FileHandle | undefined;
   try {
-    const [executable, workingDirectory] = await Promise.all([
-      stat(profile.executablePath),
+    const opened = await Promise.all([
+      open(profile.executablePath, constants.O_RDONLY | constants.O_NOFOLLOW),
       stat(profile.workingDirectory),
+    ]);
+    executableFile = opened[0];
+    const [executable, workingDirectory] = await Promise.all([
+      executableFile.stat(),
+      Promise.resolve(opened[1]),
     ]);
     if (!executable.isFile() || !workingDirectory.isDirectory()) {
       throw new TypeError("Pinned stdio paths have the wrong type");
     }
-    for await (const chunk of createReadStream(profile.executablePath)) {
+    for await (const chunk of executableFile.createReadStream({ autoClose: false })) {
       if (signal.aborted) throw new DOMException("cancelled", "AbortError");
       if (!Buffer.isBuffer(chunk)) throw new TypeError("Unexpected executable byte stream");
       hash.update(chunk);
     }
   } catch (error) {
+    await executableFile?.close();
     throw new MCPAdapterError(
       "KAF_MCP_IDENTITY_DRIFT",
       "The pinned MCP executable could not be verified",
@@ -416,11 +456,13 @@ async function verifyExecutableArtifact(
     );
   }
   if (`sha256:${hash.digest("hex")}` !== profile.executableArtifactDigest) {
+    await executableFile.close();
     throw new MCPAdapterError(
       "KAF_MCP_IDENTITY_DRIFT",
       "The MCP executable bytes differ from the pinned artifact digest",
     );
   }
+  return executableFile;
 }
 
 function bodySize(body: BodyInit | null | undefined): number {
@@ -672,8 +714,14 @@ export async function createOfficialMCPTransport(
         }),
       );
     }
-    await verifyExecutableArtifact(profile, signal);
-    const environment = await resolveEnvironment(profile, host.stdioEnvironmentResolver, signal);
+    const executableFile = await openVerifiedExecutableArtifact(profile, signal);
+    let environment: Readonly<Record<string, string>>;
+    try {
+      environment = await resolveEnvironment(profile, host.stdioEnvironmentResolver, signal);
+    } catch (error) {
+      await executableFile.close();
+      throw error;
+    }
     const request = Object.freeze({
       ...executableRequest,
       environment,
@@ -681,6 +729,7 @@ export async function createOfficialMCPTransport(
       maxBufferSize: profile.maxResponseBytes,
     });
     if (host.previewStdioTransportFactory !== undefined) {
+      await executableFile.close();
       return host.previewStdioTransportFactory({
         command: request.executablePath,
         args: request.arguments,
@@ -693,6 +742,7 @@ export async function createOfficialMCPTransport(
     }
     return new ExactEnvironmentStdioTransport({
       command: request.executablePath,
+      executableFile,
       args: request.arguments,
       cwd: request.workingDirectory,
       env: request.environment,
@@ -785,7 +835,7 @@ export function evaluateMCPReadiness(
           {
             code: "KAF_MCP_HTTP_PRIVATE_ENDPOINT_READY",
             passed:
-              !isPrivateHostname(new URL(parsed.endpoint).hostname) ||
+              !isPrivateOrReservedHostname(new URL(parsed.endpoint).hostname) ||
               (parsed.trustedPrivateEndpoint &&
                 host.trustedHostCapability?.transportProfileDigest ===
                   parsed.mcpTransportSecurityProfileDigest &&

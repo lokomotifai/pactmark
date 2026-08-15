@@ -138,6 +138,9 @@ function requestFor(agent: { id: string; version: string }, capabilitiesInput: s
     dataClass: "public",
     retention: { mode: "session" },
     requestedCapabilities: capabilitiesInput,
+    resourceScopeCeiling: [
+      { kind: "tenant", value: "local", normalizationVersion: "pactmark.policy-normalization@1" },
+    ],
     budget: {
       maxTurns: 4,
       maxModelCalls: 4,
@@ -259,6 +262,13 @@ describe("public definitions", () => {
         maxCallsPerRun: 1,
         timeoutMs: 1_000,
       },
+      resources: (_input, context) => [
+        {
+          kind: "tenant",
+          value: context.tenantId,
+          normalizationVersion: "pactmark.policy-normalization@1",
+        },
+      ],
       operation: { kind: "read", execute: operation as never },
     });
     const policy = definePolicy({
@@ -331,6 +341,13 @@ describe("local runtime", () => {
         maxCallsPerRun: 2,
         timeoutMs: 1_000,
       },
+      resources: (_input, context) => [
+        {
+          kind: "tenant",
+          value: context.tenantId,
+          normalizationVersion: "pactmark.policy-normalization@1",
+        },
+      ],
       operation: { kind: "read", execute },
     });
     const model = modelDefinition((invocation) =>
@@ -505,6 +522,13 @@ describe("local runtime", () => {
         maxCallsPerRun: 1,
         timeoutMs: 1_000,
       },
+      resources: (_input, context) => [
+        {
+          kind: "tenant",
+          value: context.tenantId,
+          normalizationVersion: "pactmark.policy-normalization@1",
+        },
+      ],
       operation: { kind: "read", execute: () => Promise.resolve({ result: "never" }) },
     });
     const model = modelDefinition(() => ({
@@ -626,6 +650,13 @@ describe("local runtime", () => {
         maxCallsPerRun: 1,
         timeoutMs: 1_000,
       },
+      resources: (_input, context) => [
+        {
+          kind: "tenant",
+          value: context.tenantId,
+          normalizationVersion: "pactmark.policy-normalization@1",
+        },
+      ],
       operation: {
         kind: "read",
         async execute(_input, context) {
@@ -696,7 +727,7 @@ describe("local runtime", () => {
 
   it.each([
     ["deny", "failed"],
-    ["require_approval", "waiting_for_approval"],
+    ["require_approval", "failed"],
   ] as const)(
     "applies the %s policy decision outside model authority",
     async (decision, status) => {
@@ -716,6 +747,13 @@ describe("local runtime", () => {
           maxCallsPerRun: 1,
           timeoutMs: 1_000,
         },
+        resources: (_input, context) => [
+          {
+            kind: "tenant",
+            value: context.tenantId,
+            normalizationVersion: "pactmark.policy-normalization@1",
+          },
+        ],
         operation: { kind: "read", execute: () => Promise.resolve({ result: "unused" }) },
       });
       const agent = defineAgent({
@@ -891,6 +929,9 @@ describe("explicit production composition", () => {
         },
       },
       toolRegistry: { resolve: () => undefined },
+      toolCallResolver: {
+        resolve: () => Promise.reject(new Error("not reached")),
+      },
       policyEngine: {
         evaluate: () =>
           Promise.resolve({ decision: "deny", reasonCode: "KAF_POLICY_DEFAULT_DENY" }),

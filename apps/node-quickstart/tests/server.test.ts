@@ -43,6 +43,13 @@ it("serves health, readiness, and OpenAPI through the real Node bridge", async (
     dataClass: "public",
     retention: { mode: "session" },
     requestedCapabilities: ["fixture:read"],
+    resourceScopeCeiling: [
+      {
+        kind: "tenant",
+        value: "node-quickstart",
+        normalizationVersion: "pactmark.policy-normalization@1",
+      },
+    ],
     budget: { maxTurns: 4, maxModelCalls: 4, maxToolCalls: 1, maxActiveExecutionMs: 10_000 },
   });
   for (let index = 0; index < 2; index += 1) {

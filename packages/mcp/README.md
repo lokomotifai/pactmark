@@ -12,6 +12,13 @@ This package does not implement a production arbitrary-code sandbox or a DNS/IP-
   `defineMCPToolPin` materialize canonical SHA-256 identities. Every connection
   re-verifies the claimed digests before transport creation or discovery.
 - The stdio profile pins an absolute executable, executable bytes, exact argument vector, working directory, explicit environment-name allowlist, filesystem and network policy IDs, and finite process/output/time limits. Direct preview launch verifies the executable and working-directory types plus exact executable bytes before resolving environment values. Pactmark's transport spawns with `shell: false` and an exact `env`; it does not use the official SDK transport's safe-default ambient environment merge. Abort and close terminate the child with bounded TERM/KILL cleanup, while stdout/stderr and individual requests are bounded.
+- Direct preview launch opens the executable with no-follow semantics and hashes
+  that open descriptor. Linux executes the same descriptor through
+  `/proc/self/fd`; macOS keeps the verified descriptor open and immediately
+  rechecks device, inode, size, and modification time before spawning because
+  `posix_spawn` cannot execute `/dev/fd`. That macOS check narrows but cannot
+  eliminate the pathname race, so direct launch remains preview-only on every
+  platform. Unsupported platforms fail closed.
 - Production stdio is rejected unless a sandbox launcher is bound to the exact
   transport-profile digest and declares process, filesystem, network, and
   resource-limit enforcement. Its `verifyExecutable` step must succeed before
@@ -29,6 +36,9 @@ This package does not implement a production arbitrary-code sandbox or a DNS/IP-
   origin, and enforce limits. Pactmark additionally checks the exact URL on
   every request, uses manual redirects, strips ambient authorization/cookie/API
   key headers, omits browser credentials, and bounds request/response/time.
+  The boundary's active resolved-endpoint validation is invoked immediately
+  before each fetch; a construction-time hostname check is not accepted as DNS
+  rebinding protection.
 - HTTP credentials are resolved only after endpoint/egress validation from a Pactmark `SecretRef` whose tenant, WorkOrder, execution definition, grant, slot, destination digest, pinned tool registration, and authorization reservation match. The bearer value is added only for the exact endpoint and is never forwarded through a redirect.
 - Server descriptions, annotations, schemas, metadata, capabilities, and tool output are parsed as untrusted data. The model-visible description and security metadata come from the host pin. Unknown, ambiguous, schema-drifted, wrong-purpose, and ungranted tools are unavailable. Exact discovered input/output JSON Schemas are compiled and enforced; authority and grant identity are checked again before every call.
 - Optional audit events contain only operation/status, digests, safe KAF codes,

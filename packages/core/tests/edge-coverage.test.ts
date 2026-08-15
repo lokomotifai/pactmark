@@ -91,6 +91,8 @@ describe("stable errors and fail-closed credential defaults", () => {
     expect(tool.use((value) => value.length)).toBe(11);
     expect(() => model.toJSON()).toThrow("KAF_CREDENTIAL_SERIALIZATION_FORBIDDEN");
     expect(() => tool.toJSON()).toThrow("KAF_CREDENTIAL_SERIALIZATION_FORBIDDEN");
+    expect(() => String(model)).toThrow("KAF_CREDENTIAL_STRINGIFICATION_FORBIDDEN");
+    expect(() => String(tool)).toThrow("KAF_CREDENTIAL_STRINGIFICATION_FORBIDDEN");
     await expect(DenyAllModelCredentialIssuer.issue({} as never)).rejects.toBeInstanceOf(
       ModelCredentialDeniedError,
     );

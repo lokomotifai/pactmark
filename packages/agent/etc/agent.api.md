@@ -25,10 +25,12 @@ import { EvidenceRecord } from '@pactmark/core';
 import { InputSubmissionStore } from '@pactmark/core';
 import { InstructionBundle } from '@pactmark/core';
 import { JsonValue } from '@pactmark/core';
+import { KillSwitchRegistry } from '@pactmark/policy';
 import { ModelDriver } from '@pactmark/core';
 import { ModelResourceProfile } from '@pactmark/core';
 import { ModelSecurityProfile } from '@pactmark/core';
 import { Principal } from '@pactmark/core';
+import { ResourceScope } from '@pactmark/core';
 import { RunEvent } from '@pactmark/core';
 import { RunProjection } from '@pactmark/core';
 import { RuntimeCapabilities } from '@pactmark/core';
@@ -81,6 +83,8 @@ export interface CreateLocalRuntimeInput {
     readonly agents: readonly DefinedAgent[];
     // (undocumented)
     readonly authorityIssuer: AuthorityIssuer;
+    // (undocumented)
+    readonly killSwitches?: KillSwitchRegistry;
 }
 
 // @public
@@ -205,6 +209,7 @@ export function defineTool<const I extends z.ZodType, const O extends z.ZodType>
 
 // @public (undocumented)
 export interface DefineToolInput<I extends z.ZodType, O extends z.ZodType> {
+    readonly cost?: (input: z.output<I>) => number;
     // (undocumented)
     readonly description: string;
     // (undocumented)
@@ -220,6 +225,11 @@ export interface DefineToolInput<I extends z.ZodType, O extends z.ZodType> {
     }>;
     // (undocumented)
     readonly output: DefinedSchema<O>;
+    readonly resources: (input: z.output<I>, context: Readonly<{
+        tenantId: string;
+        purposeCode: string;
+        dataClass: ToolSecurity["dataClasses"][number];
+    }>) => readonly ResourceScope[];
     // (undocumented)
     readonly security: Omit<ToolSecurity, "schemaVersion">;
 }

@@ -36,6 +36,7 @@
     "@pactmark/core": "workspace:*",
     "@pactmark/evidence": "workspace:*",
     "@pactmark/executor-in-process": "workspace:*",
+    "@pactmark/policy": "workspace:*",
     "@pactmark/runtime": "workspace:*",
     "@pactmark/store-memory": "workspace:*",
     "zod": "4.4.3"

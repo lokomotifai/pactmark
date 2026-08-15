@@ -117,6 +117,7 @@ function enforcedBoundary(
       credentialOriginEnforcement: true,
       requestResponseLimits: true,
     },
+    validateResolvedEndpoint: () => Promise.resolve(),
     client,
   };
 }
@@ -350,6 +351,7 @@ describe("Streamable HTTP transport", () => {
     const boundaryFetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
       boundaryServer.fetch(input, init),
     );
+    const validateResolvedEndpoint = vi.fn(() => Promise.resolve());
     const globalFetch = vi.fn(() => Promise.reject(new Error("global fetch must stay unused")));
     vi.stubGlobal("fetch", globalFetch);
     try {
@@ -360,7 +362,10 @@ describe("Streamable HTTP transport", () => {
           toolPins: [pin],
           host: {
             runtimeProfile: "production",
-            httpEgressBoundary: enforcedBoundary(profile, { fetch: boundaryFetch }),
+            httpEgressBoundary: {
+              ...enforcedBoundary(profile, { fetch: boundaryFetch }),
+              validateResolvedEndpoint,
+            },
           },
         },
         exposure,
@@ -376,6 +381,7 @@ describe("Streamable HTTP transport", () => {
       ).resolves.toEqual({ echo: "http-ok" });
       await connection.close();
       expect(boundaryFetch).toHaveBeenCalled();
+      expect(validateResolvedEndpoint).toHaveBeenCalled();
       expect(globalFetch).not.toHaveBeenCalled();
     } finally {
       vi.unstubAllGlobals();
