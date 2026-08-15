@@ -100,5 +100,5 @@ identity, tenancy, secrets, least privilege, network policy, retention, backup,
 provider terms, monitoring, and incident response.
 
 The detailed boundaries are documented in the
-[security model](docs/security/security-model.md)
-and [threat model](docs/security/threat-model.md).
+[security model](https://pactmark-docs.lokomotif.ai/security/security-model)
+and [threat model](https://pactmark-docs.lokomotif.ai/security/threat-model).

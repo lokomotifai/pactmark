@@ -15,8 +15,10 @@ individual support.
 | Security vulnerability          | [Private Vulnerability Reporting](https://github.com/lokomotifai/pactmark/security/advisories/new) — never a public issue |
 | Conduct incident                | Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)                                                                           |
 
-Search existing issues and the [English and Turkish documentation](docs/index.md)
-before opening a new report.
+Search existing issues and the
+[English documentation](https://pactmark-docs.lokomotif.ai) or
+[Turkish documentation](https://pactmark-docs.lokomotif.ai/tr) before opening a
+new report.
 
 ## What makes a useful support request
 
