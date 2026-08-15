@@ -77,16 +77,20 @@ describe("Cloudflare Module Worker", () => {
   it("pins compatibility and contains no node compatibility escape hatch", async () => {
     expect(CLOUDFLARE_COMPATIBILITY_DATE).toBe("2026-08-03");
     const configPath = fileURLToPath(new URL("../wrangler.jsonc", import.meta.url));
+    const stagingConfigPath = fileURLToPath(new URL("../wrangler.staging.jsonc", import.meta.url));
     const workerPath = fileURLToPath(new URL("../src/worker.ts", import.meta.url));
     const agentPath = fileURLToPath(new URL("../src/agent.ts", import.meta.url));
-    const [config, workerSource, agentSource] = await Promise.all([
+    const [config, stagingConfig, workerSource, agentSource] = await Promise.all([
       readFile(configPath, "utf8"),
+      readFile(stagingConfigPath, "utf8"),
       readFile(workerPath, "utf8"),
       readFile(agentPath, "utf8"),
     ]);
     expect(config).toContain('"compatibility_date": "2026-08-03"');
     expect(config).toContain('"compatibility_flags": []');
     expect(config).not.toContain("nodejs_compat");
+    expect(stagingConfig).toContain('"workers_dev": false');
+    expect(stagingConfig).toContain('"preview_urls": false');
     expect(`${workerSource}\n${agentSource}`).not.toMatch(/node:|process\.|Buffer\b|require\(/u);
   });
 });

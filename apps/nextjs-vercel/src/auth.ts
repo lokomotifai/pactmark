@@ -1,4 +1,5 @@
 import type { AuthorityContext } from "@pactmark/agent";
+import { constantTimeTextEqual } from "@pactmark/http";
 import type { VercelRouteHandlerConfig } from "@pactmark/vercel";
 
 export interface ProductionAuthConfig {
@@ -12,7 +13,11 @@ export function createProductionAuthHook(config: ProductionAuthConfig) {
   const authenticate: NonNullable<VercelRouteHandlerConfig["authenticate"]> = (request) => {
     const expected = config.readEnvironment()["PACTMARK_BEARER_TOKEN"];
     const supplied = request.headers.get("authorization");
-    if (expected === undefined || expected.length < 16 || supplied !== `Bearer ${expected}`)
+    if (
+      expected === undefined ||
+      expected.length < 16 ||
+      !constantTimeTextEqual(supplied, `Bearer ${expected}`)
+    )
       return Promise.resolve(undefined);
     return Promise.resolve({
       authority: config.authority,

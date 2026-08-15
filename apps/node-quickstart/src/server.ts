@@ -10,14 +10,23 @@ function parsePort(value: string | undefined): number {
   return port;
 }
 
-export function startNodeQuickstart(port = parsePort(process.env["PORT"])) {
+function parseBindHost(value: string | undefined): "127.0.0.1" | "0.0.0.0" {
+  if (value === undefined || value === "127.0.0.1") return "127.0.0.1";
+  if (value === "0.0.0.0") return value;
+  throw new TypeError("KAF_NODE_BIND_HOST_INVALID");
+}
+
+export function startNodeQuickstart(
+  port = parsePort(process.env["PORT"]),
+  host = parseBindHost(process.env["PACTMARK_BIND_HOST"]),
+) {
   const server = createPactmarkNodeServer(nodeQuickstartHandler, {
     capabilities: nodeQuickstartRuntime.getCapabilities(),
     readEnvironment: () => ({}),
   });
   installGracefulShutdown(server);
-  server.listen(port, "0.0.0.0", () => {
-    process.stdout.write(`${JSON.stringify({ code: "KAF_NODE_LISTENING", port })}\n`);
+  server.listen(port, host, () => {
+    process.stdout.write(`${JSON.stringify({ code: "KAF_NODE_LISTENING", host, port })}\n`);
   });
   return server;
 }

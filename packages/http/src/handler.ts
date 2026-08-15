@@ -25,11 +25,16 @@ import type {
   AgentRuntimeContext,
   AuthenticatedRequest,
 } from "./types.js";
+import { constantTimeTextEqual } from "./security.js";
 
 const sensitiveHeaders = Object.freeze({
   "Cache-Control": "private, no-store, max-age=0, no-transform",
   "Surrogate-Control": "no-store",
   "CDN-Cache-Control": "no-store",
+  "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+  "Referrer-Policy": "no-referrer",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
   Vary: "Authorization, Cookie, Origin, Accept, Last-Event-ID",
 });
 
@@ -173,18 +178,6 @@ function assertCookieBoundary(request: Request, authentication: AuthenticatedReq
   ) {
     throw new HttpFailure(403, "KAF_HTTP_CSRF_INVALID");
   }
-}
-
-function constantTimeTextEqual(candidate: string | null, expected: string): boolean {
-  if (candidate === null) return false;
-  const left = new TextEncoder().encode(candidate);
-  const right = new TextEncoder().encode(expected);
-  let difference = left.length ^ right.length;
-  const length = Math.max(left.length, right.length);
-  for (let index = 0; index < length; index += 1) {
-    difference |= (left[index] ?? 0) ^ (right[index] ?? 0);
-  }
-  return difference === 0;
 }
 
 function commandFor(request: Request, operation: string, payload: JsonValue, scope: string[]) {
@@ -375,6 +368,19 @@ function preflight(request: Request, allowedOrigins: readonly string[]): Respons
   });
 }
 
+function applyCors(
+  response: Response,
+  request: Request,
+  allowedOrigins: readonly string[],
+): Response {
+  const origin = request.headers.get("origin");
+  if (origin !== null && allowedOrigins.includes(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+  }
+  return response;
+}
+
 export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentFetchHandler {
   const basePath = normalizeBasePath(config.basePath);
   const maximumBodyBytes = config.maximumBodyBytes ?? 1024 * 1024;
@@ -393,6 +399,9 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
   );
   const anonymousDevelopment =
     config.allowAnonymousDevelopment === true && config.anonymousAuthentication !== undefined;
+  if (anonymousDevelopment && config.authenticate !== undefined) {
+    throw new TypeError("KAF_HTTP_AUTHENTICATION_MODE_CONFLICT");
+  }
   if (config.authenticate === undefined && !anonymousDevelopment) {
     throw new TypeError("KAF_HTTP_AUTHENTICATION_REQUIRED");
   }
@@ -423,6 +432,16 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
         throw new HttpFailure(404, "KAF_HTTP_NOT_FOUND");
       }
       const path = url.pathname.slice(basePath.length) || "/";
+      if (config.checkRateLimit !== undefined) {
+        const decision = await config.checkRateLimit(request, context);
+        const retryAfter = decision.retryAfterSeconds;
+        if (retryAfter !== undefined && (!Number.isSafeInteger(retryAfter) || retryAfter <= 0)) {
+          throw new HttpFailure(500, "KAF_HTTP_RATE_LIMIT_CONFIGURATION_INVALID");
+        }
+        if (!decision.allowed) {
+          throw new HttpFailure(429, "KAF_HTTP_RATE_LIMITED", true, retryAfter);
+        }
+      }
       if (request.method === "OPTIONS") return preflight(request, config.allowedOrigins ?? []);
       if (request.method === "GET" && path === "/healthz") {
         return jsonResponse({ status: "ok" });
@@ -430,6 +449,7 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
       if (request.method === "GET" && path === "/readyz") {
         const readinessAuthentication = await authenticate(config, request, context);
         assertCookieBoundary(request, readinessAuthentication);
+        await authorize(config, readinessAuthentication, "runtime.readiness");
         const runtimeReport = config.runtime.evaluateReadiness({ profile: "production" });
         const authenticationCheck = {
           schemaVersion: "1" as const,
@@ -474,6 +494,9 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
         );
       }
       if (request.method === "GET" && path === "/openapi.json") {
+        const openApiAuthentication = await authenticate(config, request, context);
+        assertCookieBoundary(request, openApiAuthentication);
+        await authorize(config, openApiAuthentication, "api.openapi.read");
         if (request.headers.get("if-none-match") === openapi.etag) {
           return new Response(null, { status: 304, headers: { ETag: openapi.etag } });
         }
@@ -789,7 +812,11 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
     }
   };
   return async (request, context) => {
-    const response = await handle(request, context);
+    const response = applyCors(
+      await handle(request, context),
+      request,
+      config.allowedOrigins ?? [],
+    );
     if (anonymousDevelopment) {
       response.headers.set("Warning", '299 Pactmark "Anonymous development access enabled"');
       response.headers.set("X-Pactmark-Development-Mode", "anonymous");

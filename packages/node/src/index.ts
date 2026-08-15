@@ -11,7 +11,7 @@ export interface NodeHttpBridgeOptions {
 }
 
 function requestUrl(request: IncomingMessage, publicOrigin: string | undefined): URL {
-  const origin = publicOrigin ?? `http://${request.headers.host ?? "localhost"}`;
+  const origin = publicOrigin ?? "http://localhost";
   return new URL(request.url ?? "/", origin);
 }
 
