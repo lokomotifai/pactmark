@@ -168,8 +168,8 @@ function assertPackedManifest(
   if (expectedName !== "@pactmark/executor-sh") return;
   const dependencies = object(manifest["dependencies"], "KAF_EXECUTOR_PACK_DEPENDENCIES_INVALID");
   if (
-    dependencies["@pactmark/core"] !== "0.1.2" ||
-    dependencies["@pactmark/mcp"] !== "0.1.2" ||
+    dependencies["@pactmark/core"] !== "0.2.0" ||
+    dependencies["@pactmark/mcp"] !== "0.2.0" ||
     dependencies["zod"] !== "4.4.3" ||
     Object.values(dependencies).some(
       (value) => typeof value === "string" && /^(?:link|workspace):/u.test(value),
@@ -311,8 +311,8 @@ importers:
     .replace(packagesMarker, `${packagesMarker}${executorPackage}`)
     .replace(snapshotsMarker, `${snapshotsMarker}${executorSnapshot}`)
     .replace(
-      '      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz\n      zod: 4.4.3\n    transitivePeerDependencies:',
-      `      "@pactmark/core": file:../tarballs/pactmark-core-0.1.2.tgz\n${mcpSnapshotPolicyDependency}      zod: 4.4.3\n    transitivePeerDependencies:`,
+      '      "@pactmark/core": file:../tarballs/pactmark-core-0.2.0.tgz\n      zod: 4.4.3\n    transitivePeerDependencies:',
+      `      "@pactmark/core": file:../tarballs/pactmark-core-0.2.0.tgz\n${mcpSnapshotPolicyDependency}      zod: 4.4.3\n    transitivePeerDependencies:`,
     )
     .replaceAll("__PACTMARK_TARBALL_ROOT__", tarballRoot)
     .replaceAll("__PACTMARK_TARBALL_INTEGRITY_4__", input.core.result.integrity)
@@ -327,9 +327,9 @@ export interface ExecutorPackedConsumerResult {
   readonly claim: "independent_tarball_consumer";
   readonly node: string;
   readonly executorVersion: "0.1.0";
-  readonly coreVersion: "0.1.2";
-  readonly policyVersion: "0.1.2";
-  readonly mcpVersion: "0.1.2";
+  readonly coreVersion: "0.2.0";
+  readonly policyVersion: "0.2.0";
+  readonly mcpVersion: "0.2.0";
   readonly workspaceLinksAbsent: true;
   readonly runtimeSmokePassed: true;
   readonly cleanupVerified: true;
@@ -357,9 +357,9 @@ export async function runExecutorPackedConsumer(): Promise<ExecutorPackedConsume
     const mcp = packPackage("@pactmark/mcp", tarballs);
     const executor = packPackage("@pactmark/executor-sh", tarballs);
     validateExecutorFiles(executor.result.files);
-    assertPackedManifest(packedManifest(core.tarballPath), "@pactmark/core", "0.1.2");
-    assertPackedManifest(packedManifest(policy.tarballPath), "@pactmark/policy", "0.1.2");
-    assertPackedManifest(packedManifest(mcp.tarballPath), "@pactmark/mcp", "0.1.2");
+    assertPackedManifest(packedManifest(core.tarballPath), "@pactmark/core", "0.2.0");
+    assertPackedManifest(packedManifest(policy.tarballPath), "@pactmark/policy", "0.2.0");
+    assertPackedManifest(packedManifest(mcp.tarballPath), "@pactmark/mcp", "0.2.0");
     assertPackedManifest(packedManifest(executor.tarballPath), "@pactmark/executor-sh", "0.1.0");
     const fileDependencies = {
       "@pactmark/core": `file:${core.tarballPath.replaceAll("\\", "/")}`,
@@ -433,9 +433,9 @@ export async function runExecutorPackedConsumer(): Promise<ExecutorPackedConsume
       claim: "independent_tarball_consumer",
       node: process.versions.node,
       executorVersion: "0.1.0",
-      coreVersion: "0.1.2",
-      policyVersion: "0.1.2",
-      mcpVersion: "0.1.2",
+      coreVersion: "0.2.0",
+      policyVersion: "0.2.0",
+      mcpVersion: "0.2.0",
       workspaceLinksAbsent: true,
       runtimeSmokePassed: true,
       cleanupVerified: true,

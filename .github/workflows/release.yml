@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: Type publish-pactmark-0.1.2 to build, attest, and publish the patch
+        description: Type publish-pactmark-0.2.0 to build, attest, and publish the release
         required: true
         type: string
 
@@ -12,16 +12,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-0.1.2
+  group: release-0.2.0
   cancel-in-progress: false
 
 jobs:
   build-candidate:
-    name: Build and freeze v0.1.2 candidate
+    name: Build and freeze v0.2.0 candidate
     if: >-
       github.repository == 'lokomotifai/pactmark' &&
       github.ref == 'refs/heads/main' &&
-      inputs.confirmation == 'publish-pactmark-0.1.2'
+      inputs.confirmation == 'publish-pactmark-0.2.0'
     runs-on: ubuntu-latest
     steps:
       # actions/checkout v7.0.1
@@ -67,7 +67,7 @@ jobs:
         # actions/upload-artifact v4
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: pactmark-v0.1.2-release-${{ github.sha }}
+          name: pactmark-v0.2.0-release-${{ github.sha }}
           path: .artifacts/release-dry-run
           if-no-files-found: error
           include-hidden-files: true
@@ -75,12 +75,12 @@ jobs:
           retention-days: 14
 
   publish:
-    name: Attest and publish frozen v0.1.2 candidate
+    name: Attest and publish frozen v0.2.0 candidate
     needs: build-candidate
     if: >-
       github.repository == 'lokomotifai/pactmark' &&
       github.ref == 'refs/heads/main' &&
-      inputs.confirmation == 'publish-pactmark-0.1.2'
+      inputs.confirmation == 'publish-pactmark-0.2.0'
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -111,7 +111,7 @@ jobs:
         # actions/download-artifact v6
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
         with:
-          name: pactmark-v0.1.2-release-${{ github.sha }}
+          name: pactmark-v0.2.0-release-${{ github.sha }}
           path: .artifacts/release-dry-run
       - name: Verify downloaded candidate checksums
         working-directory: .artifacts/release-dry-run
@@ -146,7 +146,7 @@ jobs:
         run: >-
           node --import tsx tooling/release-publish.mts
           --config .artifacts/release-dry-run/oidc-publication-config.json
-          --authorize-public-release publish-pactmark-0.1.2
+          --authorize-public-release publish-pactmark-0.2.0
         env:
           PACTMARK_RELEASE_ENVIRONMENT: release
           PACTMARK_RELEASE_RUNNER: github-hosted
@@ -154,7 +154,7 @@ jobs:
         # actions/upload-artifact v4
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: pactmark-v0.1.2-attestations-${{ github.sha }}
+          name: pactmark-v0.2.0-attestations-${{ github.sha }}
           path: .artifacts/release-dry-run/attestations
           if-no-files-found: error
           include-hidden-files: true

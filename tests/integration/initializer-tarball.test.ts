@@ -70,7 +70,7 @@ describe("initializer absolute tarball entrypoint", () => {
       readonly dependencies: Readonly<Record<string, string>>;
     };
     expect(result.created).toBe(false);
-    expect(result.frameworkVersion).toBe("0.1.2");
+    expect(result.frameworkVersion).toBe("0.2.0");
     expect(result.targetPath).toBe(join(realpathSync(root), "dry-agent"));
     expect(existsSync(result.targetPath)).toBe(false);
     expect(Object.values(result.dependencies).every((version) => version !== "latest")).toBe(true);
@@ -92,7 +92,7 @@ describe("initializer absolute tarball entrypoint", () => {
       .filter(([name]) => name.startsWith("@pactmark/"))
       .map(([, version]) => version);
     expect(frameworkVersions.length).toBeGreaterThan(0);
-    expect(new Set(frameworkVersions)).toEqual(new Set(["0.1.2"]));
+    expect(new Set(frameworkVersions)).toEqual(new Set(["0.2.0"]));
     expect(JSON.stringify(manifest)).not.toMatch(/(?:workspace:|latest)/u);
     expect(manifest.scripts.doctor).toBe("pactmark doctor --profile local");
   });

@@ -40,7 +40,7 @@ describe("CLI", () => {
 
     const version = output();
     expect(await runCli(["--version"], { io: version.io })).toBe(0);
-    expect(version.out()).toBe("0.1.2\n");
+    expect(version.out()).toBe("0.2.0\n");
   });
 
   it("emits stable JSON for a complete no-prompt dry run", async () => {
@@ -77,7 +77,7 @@ describe("CLI", () => {
       created: false,
       targetPath: path.join(cwd, "json-agent"),
     });
-    expect(result.dependencies["@pactmark/ai-sdk"]).toBe("0.1.2");
+    expect(result.dependencies["@pactmark/ai-sdk"]).toBe("0.2.0");
     expect(await readdir(cwd)).toEqual([]);
   });
 
