@@ -34,12 +34,8 @@ jobs:
         run: npm install --global pnpm@11.18.0
       - name: Install frozen dependency graph
         run: pnpm install --frozen-lockfile
-      - name: Bootstrap digest-pinned sandbox base image
-        run: pnpm bootstrap:sandbox-container-base
-      - name: Bootstrap digest-pinned Executor self-host image
-        run: pnpm bootstrap:executor-sh-image
-      - name: Run canonical local gate
-        run: pnpm verify
+      - name: Run deterministic CI gate
+        run: pnpm verify:ci
 
   node-24-host-matrix:
     name: Node 24 host matrix (${{ matrix.os }})

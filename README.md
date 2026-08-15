@@ -72,7 +72,7 @@ concerned with what happens around that invocation:
 | Where do provider and tool credentials live? | Behind host-owned credential ports; resolved values never enter model context or ordinary evidence.         |
 | What happens after a crash?                  | Rebuild from append-only run truth; reconcile an uncertain external effect through its registered strategy. |
 | What did the run actually produce?           | Content-addressed artifacts linked to declared verifier results.                                            |
-| What may another system trust?               | A bounded `EvidenceRecord` whose claims do not exceed recorded events and verification.                     |
+| What may another system trust?               | A bounded, self-attested `EvidenceRecord`; portable authenticity additionally requires a host signature.    |
 
 ## Start in 60 seconds
 
@@ -275,10 +275,12 @@ are the supported release lines.
 ```sh
 corepack enable
 pnpm install --frozen-lockfile
-pnpm verify
+pnpm check
 ```
 
-`pnpm verify` is a material gate: formatting, lint, strict types, builds, unit
+Use `pnpm check` for the normal edit loop, `pnpm verify:ci` for the deterministic
+pull-request surface, and `pnpm verify` before a release. The release aggregate is a material gate:
+formatting, lint, strict types, builds, unit
 and integration suites, packed consumers, portability, examples, PostgreSQL,
 crash/replay behavior, OCI and platform contracts, API reports, dependency
 boundaries, security audits, SBOM, documentation, and release dry-run. Live
@@ -287,6 +289,10 @@ separate authorized gates.
 
 For a smaller loop, use the package's focused test and typecheck commands. See
 [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
+Public failures use the legacy `KAF_*` v0.1 wire-code namespace. It remains stable for consumer
+compatibility and does not name a separate product; clients must treat each complete code as an
+opaque identifier.
 
 ## Community contract
 

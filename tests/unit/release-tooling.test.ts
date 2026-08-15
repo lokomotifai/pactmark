@@ -397,19 +397,19 @@ describe("machine-readable verify manifest", () => {
     expect(() => {
       verifyGateScripts(manifest, {
         ...scripts,
-        verify: scripts.verify?.replace("pnpm lint && ", "") ?? "",
+        "verify:release": scripts["verify:release"]?.replace("pnpm lint && ", "") ?? "",
       });
-    }).toThrow("KAF_VERIFY_GATE_NOT_IN_AGGREGATE:verify:lint");
+    }).toThrow("KAF_VERIFY_GATE_NOT_IN_AGGREGATE:verify:release:lint");
     const missing = { ...scripts };
     delete missing["test:sandbox-contract"];
     expect(() => {
       verifyGateScripts(manifest, missing);
     }).toThrow("KAF_VERIFY_SCRIPT_MISSING:test:sandbox-contract");
     const duplicated = structuredClone(verifyManifestJson) as JsonRecord;
-    (recordObject(recordObject(duplicated.aggregates).verify) as unknown as unknown[]).push(
-      "audit:licenses",
-    );
-    scripts.verify = `${scripts.verify ?? ""} && pnpm audit:licenses`;
+    (
+      recordObject(recordObject(duplicated.aggregates)["verify:release"]) as unknown as unknown[]
+    ).push("audit:licenses");
+    scripts["verify:release"] = `${scripts["verify:release"] ?? ""} && pnpm audit:licenses`;
     expect(() => {
       verifyGateScripts(parseVerifyGateManifest(duplicated), scripts);
     }).toThrow("KAF_VERIFY_GATE_OWNERSHIP_DUPLICATE:audit:licenses");
