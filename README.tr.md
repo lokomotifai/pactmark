@@ -97,11 +97,17 @@ Oluşturulan proje bilinçli olarak ephemeral local profile kullanır: in-memory
 state, deterministic model fixture ve güvenilen in-process execution. Bu bir
 öğrenme/test yoludur; production template’i gibi sunulmaz.
 
-Eksiksiz ve typed örnek için
+Tek tool’lu, yönetişimli bir agent yaklaşık otuz satıra sığar
+([`examples/quickstart-agent`](examples/quickstart-agent/), anahtar gerektirmeden
+çalışır). Tool’lar sağlayıcıya yalnızca şema olarak tanıtılır; her öneri
+dispatch öncesi host tarafından yeniden doğrulanır ve policy’den geçer. Facade
+varsayılanları yetkiyi asla genişletmez: okumalar R1’e varsayılanır, yazma R2 ve
+açık policy kuralı ister, varsayılan policy geri kalan her şeyi reddeder.
+Eksiksiz açık form için
 [`examples/minimal-tool-agent/src/example.ts`](examples/minimal-tool-agent/src/example.ts)
-dosyasına bakın. Kaynak; tool ve agent tanımının yanında model güvenlik/kaynak
-profillerini, authority issuer’ı, `WorkOrder`’ı, purpose ve data class’ı,
-istenen capability’leri, bütçeleri ve command identity’yi açıkça tanımlar.
+dosyasına bakın: model güvenlik/kaynak profilleri, authority issuer, `WorkOrder`,
+purpose ve data class, istenen capability’ler, bütçeler ve command identity
+orada açıkça tanımlıdır.
 
 ## Ürün sınırı run’dır
 

@@ -3695,6 +3695,37 @@ export const ModelAdapterRegistrationSchema: z.ZodObject<{
 }, z.core.$strict>;
 
 // @public (undocumented)
+export interface ModelAgentContext {
+    // (undocumented)
+    readonly agent: Readonly<{
+        id: string;
+        version: string;
+        agentDefinitionDigest: Digest;
+    }>;
+    // (undocumented)
+    readonly instructions: InstructionBundle;
+    // (undocumented)
+    readonly output: Readonly<{
+        schemaId: string;
+        jsonSchema: JsonValue;
+    }>;
+    // (undocumented)
+    readonly tools: readonly ModelAgentContextTool[];
+}
+
+// @public
+export interface ModelAgentContextTool {
+    // (undocumented)
+    readonly description: string;
+    // (undocumented)
+    readonly id: string;
+    // (undocumented)
+    readonly inputJsonSchema: JsonValue;
+    // (undocumented)
+    readonly toolRegistrationDigest: Digest;
+}
+
+// @public (undocumented)
 export type ModelCallBinding = z.infer<typeof ModelCallBindingSchema>;
 
 // @public (undocumented)

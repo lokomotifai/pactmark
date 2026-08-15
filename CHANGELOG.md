@@ -7,6 +7,36 @@ Changesets to prepare release notes and coordinated package versions.
 
 ## Unreleased
 
+### Added
+
+- `@pactmark/ai-sdk` now advertises an agent's tools to AI SDK v7 providers as
+  schema-only definitions and maps provider tool calls to governed `tool_call`
+  proposals; the host still revalidates every proposed input and target before
+  policy and dispatch. Omitted model profiles compile to explicit
+  `unreviewed-local-preview` claims.
+- `@pactmark/agent` accepts raw Zod schemas, string instructions, a default
+  deny-everything R0/R1 policy, and default verifiers; `createLocalRuntime`
+  gains an optional local authority issuer and a `run()` convenience for the
+  ephemeral profile. Defaulted definitions produce byte-identical registration
+  digests to their explicit equivalents.
+- Facade `defineTool` supports governed R2 write operations dispatched through
+  deterministic previews, one-use capability grants, bound authorization, and
+  the effect ledger; R3+ still requires kernel-level composition.
+- `examples/quickstart-agent` demonstrates the ~30-line agent surface with a
+  provider-shaped deterministic model and one governed R2 write.
+
+### Changed
+
+- The `@pactmark/ai-sdk` exact `ai@7.0.48` guard became a tested-range guard
+  (`>=7.0.48 <8`); the installed version is recorded in the adapter
+  registration digest.
+
+### Fixed
+
+- `validateEffectExecution` no longer rejects kind-`none` effect strategies:
+  the canonical acknowledgement comparison omits an absent operation key
+  instead of serializing undefined.
+
 ## 0.2.0 - 2026-08-15
 
 ### Changed

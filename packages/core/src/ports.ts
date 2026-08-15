@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AgentDefinition, CompensationRunDefinition } from "./agent.js";
+import type { AgentDefinition, CompensationRunDefinition, InstructionBundle } from "./agent.js";
 import type { Artifact } from "./artifacts.js";
 import type { AuthorityContext } from "./authority.js";
 import type { InputSubmissionRecord, ContextSnapshot, ProtectedValueRef } from "./context.js";
@@ -178,6 +178,25 @@ export interface RunLeaseStore {
   ): Promise<RunLease | undefined>;
   renew(lease: RunLease, ttlMs: number): Promise<RunLease>;
   release(lease: RunLease): Promise<void>;
+}
+
+/**
+ * Compile-only advertisement of one agent's governed surface to a model
+ * adapter. Tool entries carry schemas and identifiers only — never executable
+ * callbacks — so an adapter can describe tools to a provider while proposal
+ * validation, policy, and dispatch stay host-owned.
+ */
+export interface ModelAgentContextTool {
+  readonly id: string;
+  readonly description: string;
+  readonly toolRegistrationDigest: Digest;
+  readonly inputJsonSchema: JsonValue;
+}
+export interface ModelAgentContext {
+  readonly agent: Readonly<{ id: string; version: string; agentDefinitionDigest: Digest }>;
+  readonly instructions: InstructionBundle;
+  readonly tools: readonly ModelAgentContextTool[];
+  readonly output: Readonly<{ schemaId: string; jsonSchema: JsonValue }>;
 }
 
 /** Compile-only boundary: model callbacks and provider objects are deliberately adapter-owned and never serialized. */

@@ -1057,3 +1057,438 @@ describe("explicit production composition", () => {
     ).toMatchObject({ effectReconciliation: true, compensation: true });
   });
 });
+
+describe("facade defaults", () => {
+  const explicitSecurity = {
+    riskClass: "R1" as const,
+    dataClasses: ["public" as const],
+    reversibility: "not_applicable" as const,
+    requiredScopes: ["catalog:read"],
+    egress: { mode: "none" as const },
+    networkEnforcement: "declared_ok" as const,
+    maxCallsPerRun: 3,
+    timeoutMs: 10_000,
+  };
+  const rawToolInput = z.object({ query: z.string() }).strict();
+  const rawToolOutput = z.object({ result: z.string() }).strict();
+
+  function sugarTool() {
+    return defineTool({
+      id: "catalog.lookup@1",
+      description: "Read one catalog item.",
+      input: rawToolInput,
+      output: rawToolOutput,
+      security: { requiredScopes: ["catalog:read"] },
+      operation: {
+        kind: "read",
+        execute: ({ query }) => Promise.resolve({ result: query }),
+      },
+    });
+  }
+
+  function explicitTool() {
+    return defineTool({
+      id: "catalog.lookup@1",
+      implementationVersion: "1.0.0",
+      description: "Read one catalog item.",
+      input: defineSchema({
+        id: "catalog.lookup@1.input",
+        semanticRevision: "1",
+        schema: rawToolInput,
+      }),
+      output: defineSchema({
+        id: "catalog.lookup@1.output",
+        semanticRevision: "1",
+        schema: rawToolOutput,
+      }),
+      security: explicitSecurity,
+      resources: (_value, context) => [
+        {
+          kind: "tenant",
+          value: context.tenantId,
+          normalizationVersion: "pactmark.policy-normalization@1",
+        },
+      ],
+      operation: {
+        kind: "read",
+        execute: ({ query }) => Promise.resolve({ result: query }),
+      },
+    });
+  }
+
+  it("compiles defaulted tools and agents to byte-identical registration digests", () => {
+    const sugared = sugarTool();
+    const explicit = explicitTool();
+    expect(sugared.registration.toolRegistrationDigest).toBe(
+      explicit.registration.toolRegistrationDigest,
+    );
+    expect(sugared.registration).toEqual(explicit.registration);
+
+    const rawAgentInput = z.object({ topic: z.string().min(1) }).strict();
+    const rawAgentOutput = z.object({ title: z.string(), body: z.string() }).strict();
+    const model = modelDefinition(() => ({ type: "final", value: { title: "t", body: "b" } }));
+    const sugaredAgent = defineAgent({
+      id: "defaults-agent",
+      version: "0.1.0",
+      input: rawAgentInput,
+      instructions: "Answer with a bounded brief.",
+      model,
+      tools: { lookup: sugared },
+      output: rawAgentOutput,
+    });
+    const explicitAgent = defineAgent({
+      id: "defaults-agent",
+      version: "0.1.0",
+      description: "defaults-agent",
+      input: defineSchema({
+        id: "defaults-agent.input",
+        semanticRevision: "1",
+        schema: rawAgentInput,
+      }),
+      instructions: defineInstructions({ text: "Answer with a bounded brief." }),
+      model,
+      tools: { lookup: explicit },
+      policy: definePolicy({
+        id: "defaults-agent.default-policy",
+        implementationVersion: "1.0.0",
+        default: "deny",
+        rules: [
+          { riskClass: "R0", decision: "allow_with_grant" },
+          { riskClass: "R1", decision: "allow_with_grant" },
+        ],
+      }),
+      output: defineSchema({
+        id: "defaults-agent.output",
+        semanticRevision: "1",
+        schema: rawAgentOutput,
+      }),
+      verifiers: ["schema@1"],
+    });
+    expect(sugaredAgent.agentDefinitionDigest).toBe(explicitAgent.agentDefinitionDigest);
+  });
+
+  it("refuses an R2+ tool under the default policy at composition time", () => {
+    const writeShaped = defineTool({
+      id: "records.update@1",
+      description: "Shaped like a consequential tool.",
+      input: rawToolInput,
+      output: rawToolOutput,
+      security: { requiredScopes: ["records:write"], riskClass: "R2" },
+      operation: {
+        kind: "read",
+        execute: ({ query }) => Promise.resolve({ result: query }),
+      },
+    });
+    expect(() =>
+      defineAgent({
+        id: "ungoverned-agent",
+        version: "0.1.0",
+        input: rawToolInput,
+        instructions: "Try to compose without a policy.",
+        model: modelDefinition(() => ({ type: "final", value: { result: "x" } })),
+        tools: { writeShaped },
+        output: rawToolOutput,
+      }),
+    ).toThrow(/default agent policy grants only R0\/R1/u);
+  });
+
+  it("runs an agent end to end through run() with derived capabilities", async () => {
+    const lookup = sugarTool();
+    const agent = defineAgent({
+      id: "run-helper-agent",
+      version: "0.1.0",
+      input: z.object({ topic: z.string().min(1) }).strict(),
+      instructions: "Use the catalog, then summarize.",
+      model: modelDefinition((invocation) =>
+        invocation === 1
+          ? {
+              type: "tool_call",
+              value: {
+                toolRegistrationDigest: lookup.registration.toolRegistrationDigest,
+                input: { query: "Pactmark" },
+                targetDigest: digestCanonicalJson({ query: "Pactmark" }),
+              },
+            }
+          : { type: "final", value: { title: "Result", body: "Pactmark" } },
+      ),
+      tools: { lookup },
+      output: z.object({ title: z.string(), body: z.string() }).strict(),
+    });
+    const runtime = createLocalRuntime({ agents: [agent] });
+    const result = await runtime.run(agent, { input: { topic: "Pactmark" } });
+    expect(result.status).toBe("completed");
+    expect(result.output).toEqual({ title: "Result", body: "Pactmark" });
+    expect(result.events.map((event) => event.eventType)).toContain("ToolCallCompleted");
+    expect(result.evidence).toBeDefined();
+    expect(result.artifacts).toHaveLength(1);
+  });
+
+  it("fails closed in run() when the budget is exhausted", async () => {
+    const lookup = sugarTool();
+    const agent = defineAgent({
+      id: "run-budget-agent",
+      version: "0.1.0",
+      input: z.object({ topic: z.string().min(1) }).strict(),
+      instructions: "Use the catalog, then summarize.",
+      model: modelDefinition((invocation) =>
+        invocation === 1
+          ? {
+              type: "tool_call",
+              value: {
+                toolRegistrationDigest: lookup.registration.toolRegistrationDigest,
+                input: { query: "Pactmark" },
+                targetDigest: digestCanonicalJson({ query: "Pactmark" }),
+              },
+            }
+          : { type: "final", value: { title: "Result", body: "Pactmark" } },
+      ),
+      tools: { lookup },
+      output: z.object({ title: z.string(), body: z.string() }).strict(),
+    });
+    const runtime = createLocalRuntime({ agents: [agent] });
+    const result = await runtime.run(agent, {
+      input: { topic: "Pactmark" },
+      budget: { maxTurns: 4, maxModelCalls: 1, maxToolCalls: 4, maxActiveExecutionMs: 30_000 },
+    });
+    expect(result.status).toBe("failed");
+    expect(result.output).toBeUndefined();
+  });
+
+  it("requires explicit authority in run() when an external issuer is supplied", async () => {
+    const external = createLocalAuthorityIssuer();
+    const agent = defineAgent({
+      id: "external-issuer-agent",
+      version: "0.1.0",
+      input: z.object({ topic: z.string().min(1) }).strict(),
+      instructions: "Answer directly.",
+      model: modelDefinition(() => ({ type: "final", value: { title: "t", body: "b" } })),
+      output: z.object({ title: z.string(), body: z.string() }).strict(),
+    });
+    const runtime = createLocalRuntime({ agents: [agent], authorityIssuer: external.issuer });
+    await expect(runtime.run(agent, { input: { topic: "Pactmark" } })).rejects.toThrow(
+      /requires options\.authority/u,
+    );
+    const authority = external.issue({
+      principal: { type: "user", id: "external-user" },
+      tenant: { id: "local" },
+    });
+    const result = await runtime.run(agent, { input: { topic: "Pactmark" }, authority });
+    expect(result.status).toBe("completed");
+  });
+});
+
+describe("facade write tools", () => {
+  const writeInput = z.object({ key: z.string().min(1), value: z.string().min(1) }).strict();
+  const writeOutput = z.object({ key: z.string(), stored: z.boolean() }).strict();
+
+  function writeTool(store: Map<string, string>) {
+    return defineTool({
+      id: "records.update@1",
+      description: "Persist one bounded record.",
+      input: writeInput,
+      output: writeOutput,
+      security: { requiredScopes: ["records:write"], riskClass: "R2" },
+      operation: {
+        kind: "write",
+        reversibility: "irreversible",
+        materialConsequence: "Writes one record into the in-memory fixture store.",
+        execute: ({ key, value }) => {
+          store.set(key, value);
+          return Promise.resolve({ key, stored: true });
+        },
+      },
+    });
+  }
+
+  function writeAgent(store: Map<string, string>, id: string) {
+    const update = writeTool(store);
+    return defineAgent({
+      id,
+      version: "0.1.0",
+      input: z.object({ key: z.string().min(1) }).strict(),
+      instructions: "Persist the record, then summarize.",
+      model: modelDefinition((invocation) =>
+        invocation === 1
+          ? {
+              type: "tool_call",
+              value: {
+                toolRegistrationDigest: update.registration.toolRegistrationDigest,
+                input: { key: "alpha", value: "one" },
+                targetDigest: digestCanonicalJson({ key: "alpha", value: "one" }),
+              },
+            }
+          : { type: "final", value: { title: "Stored", body: "alpha" } },
+      ),
+      tools: { update },
+      policy: definePolicy({
+        id: `${id}.policy`,
+        implementationVersion: "1.0.0",
+        default: "deny",
+        rules: [{ riskClass: "R2", decision: "allow_with_grant" }],
+      }),
+      output: z.object({ title: z.string(), body: z.string() }).strict(),
+    });
+  }
+
+  it("rejects unsound write declarations at composition time", () => {
+    const operation = {
+      kind: "write" as const,
+      reversibility: "irreversible" as const,
+      execute: ({ key }: { key: string; value: string }) => Promise.resolve({ key, stored: true }),
+    };
+    expect(() =>
+      defineTool({
+        id: "records.update@1",
+        description: "Missing risk class.",
+        input: writeInput,
+        output: writeOutput,
+        security: { requiredScopes: ["records:write"] },
+        operation,
+      }),
+    ).toThrow(/must declare its risk class/u);
+    expect(() =>
+      defineTool({
+        id: "records.update@1",
+        description: "Above the facade ceiling.",
+        input: writeInput,
+        output: writeOutput,
+        security: { requiredScopes: ["records:write"], riskClass: "R3" },
+        operation,
+      }),
+    ).toThrow(/risk class R2 only/u);
+    expect(() =>
+      defineTool({
+        id: "records.update@1",
+        description: "Contradictory reversibility.",
+        input: writeInput,
+        output: writeOutput,
+        security: {
+          requiredScopes: ["records:write"],
+          riskClass: "R2",
+          reversibility: "compensatable",
+        },
+        operation,
+      }),
+    ).toThrow(/must match operation.reversibility/u);
+  });
+
+  it("dispatches an R2 write through the governed effect path", async () => {
+    const store = new Map<string, string>();
+    const agent = writeAgent(store, "write-agent");
+    const runtime = createLocalRuntime({ agents: [agent] });
+    expect(runtime.getCapabilities().effectReconciliation).toBe(true);
+    const result = await runtime.run(agent, { input: { key: "alpha" } });
+    expect(result.status).toBe("completed");
+    expect(result.output).toEqual({ title: "Stored", body: "alpha" });
+    expect(store.get("alpha")).toBe("one");
+    const eventTypes = result.events.map((event) => event.eventType);
+    expect(eventTypes).toEqual(
+      expect.arrayContaining([
+        "EffectPrepared",
+        "EffectDispatched",
+        "EffectAcknowledged",
+        "ToolCallCompleted",
+        "RunCompleted",
+      ]),
+    );
+    expect(result.evidence).toBeDefined();
+  });
+
+  it("keeps effect reconciliation off when no write tool is composed", () => {
+    const readOnly = defineAgent({
+      id: "read-only-agent",
+      version: "0.1.0",
+      input: z.object({ topic: z.string().min(1) }).strict(),
+      instructions: "Answer directly.",
+      model: modelDefinition(() => ({ type: "final", value: { title: "t", body: "b" } })),
+      output: z.object({ title: z.string(), body: z.string() }).strict(),
+    });
+    const runtime = createLocalRuntime({ agents: [readOnly] });
+    expect(runtime.getCapabilities().effectReconciliation).toBe(false);
+  });
+
+  it("denies a write proposal whose risk class has no policy rule", async () => {
+    const store = new Map<string, string>();
+    const update = writeTool(store);
+    const agent = defineAgent({
+      id: "write-denied-agent",
+      version: "0.1.0",
+      input: z.object({ key: z.string().min(1) }).strict(),
+      instructions: "Persist the record, then summarize.",
+      model: modelDefinition(() => ({
+        type: "tool_call",
+        value: {
+          toolRegistrationDigest: update.registration.toolRegistrationDigest,
+          input: { key: "alpha", value: "one" },
+          targetDigest: digestCanonicalJson({ key: "alpha", value: "one" }),
+        },
+      })),
+      tools: { update },
+      policy: definePolicy({
+        id: "write-denied-agent.policy",
+        implementationVersion: "1.0.0",
+        default: "deny",
+        rules: [{ riskClass: "R1", decision: "allow_with_grant" }],
+      }),
+      output: z.object({ title: z.string(), body: z.string() }).strict(),
+    });
+    const runtime = createLocalRuntime({ agents: [agent] });
+    const result = await runtime.run(agent, { input: { key: "alpha" } });
+    expect(result.status).toBe("failed");
+    expect(store.size).toBe(0);
+  });
+
+  it("serves an already acknowledged effect result without re-dispatching", async () => {
+    const store = new Map<string, string>();
+    let writes = 0;
+    const update = defineTool({
+      id: "records.update@1",
+      description: "Persist one bounded record.",
+      input: writeInput,
+      output: writeOutput,
+      security: { requiredScopes: ["records:write"], riskClass: "R2", maxCallsPerRun: 2 },
+      operation: {
+        kind: "write",
+        reversibility: "irreversible",
+        execute: ({ key, value }) => {
+          writes += 1;
+          store.set(key, value);
+          return Promise.resolve({ key, stored: true });
+        },
+      },
+    });
+    // The model proposes the same write twice; the kernel's effect key
+    // dedupes the second dispatch and serves the acknowledged result.
+    const agent = defineAgent({
+      id: "write-replay-agent",
+      version: "0.1.0",
+      input: z.object({ key: z.string().min(1) }).strict(),
+      instructions: "Persist the record, then summarize.",
+      model: modelDefinition((invocation) =>
+        invocation <= 2
+          ? {
+              type: "tool_call",
+              value: {
+                toolRegistrationDigest: update.registration.toolRegistrationDigest,
+                input: { key: "alpha", value: "one" },
+                targetDigest: digestCanonicalJson({ key: "alpha", value: "one" }),
+              },
+            }
+          : { type: "final", value: { title: "Stored", body: "alpha" } },
+      ),
+      tools: { update },
+      policy: definePolicy({
+        id: "write-replay-agent.policy",
+        implementationVersion: "1.0.0",
+        default: "deny",
+        rules: [{ riskClass: "R2", decision: "allow_with_grant" }],
+      }),
+      output: z.object({ title: z.string(), body: z.string() }).strict(),
+    });
+    const runtime = createLocalRuntime({ agents: [agent] });
+    const result = await runtime.run(agent, { input: { key: "alpha" } });
+    expect(result.status).toBe("completed");
+    expect(writes).toBe(2);
+    expect(store.get("alpha")).toBe("one");
+  });
+});
