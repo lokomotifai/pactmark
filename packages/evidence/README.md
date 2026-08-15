@@ -10,6 +10,6 @@ The package is provider-neutral. Verification proves only the declared verifier/
 
 An `EvidenceRecord` digest proves internal byte-level consistency inside one trust domain; it is self-attested and does not prove who produced the record. Hosts that need portable authenticity can use `createEvidenceAttestation` and `verifyEvidenceAttestation` with a host-owned Ed25519 or P-256 signing boundary. Key custody, rotation, revocation, and verifier trust remain host responsibilities.
 
-Version `0.2.0` is public on npm with verified registry bytes and provenance. This
-release status does not establish durable evidence storage or expand the
-verification claims above.
+Version `0.2.0` is a verified release candidate. Protected publication and
+independent registry-byte verification remain pending; this status does not
+establish durable evidence storage or expand the verification claims above.

@@ -17,7 +17,7 @@
   <a href="https://github.com/lokomotifai/pactmark/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/ci.yml?branch=main&amp;style=flat-square&amp;label=CI"></a>
   <a href="https://github.com/lokomotifai/pactmark/actions/workflows/security.yml"><img alt="Security baseline" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/security.yml?branch=main&amp;style=flat-square&amp;label=security"></a>
   <a href="https://www.npmjs.com/package/@pactmark/agent"><img alt="npm version" src="https://img.shields.io/npm/v/%40pactmark%2Fagent?style=flat-square&amp;label=npm&amp;color=D11F26"></a>
-  <a href="https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0"><img alt="Release provenance" src="https://img.shields.io/badge/release-provenance-verified-D11F26?style=flat-square"></a>
+  <a href="docs/releases/v0.2-readiness.md"><img alt="v0.2.0 release candidate" src="https://img.shields.io/badge/release-v0.2.0%20candidate-D11F26?style=flat-square"></a>
   <a href="LICENSE"><img alt="Apache-2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-3B3F46?style=flat-square"></a>
 </p>
 
@@ -50,11 +50,11 @@ Pactmark is an evidence-native framework for agents that perform bounded work
 under explicit authority. It is for systems where “the model returned something
 plausible” is not an acceptable definition of success.
 
-Version **0.2.0** is a public early release. All 19 npm packages were published
-through token-free trusted publishing with package provenance, then fetched
-anonymously and matched against the immutable release checksums. That is
-supply-chain evidence for those package bytes—not a claim that every Pactmark
-deployment is production-ready or secure.
+Version **0.2.0** is a verified release candidate. Its 19 package manifests and
+packed consumers have passed local and hosted gates; protected publication,
+anonymous registry-byte verification, and the immutable GitHub Release remain
+pending in the release record. The current public npm version remains available
+through the npm badge above.
 
 ## The difference in one picture
 
@@ -258,14 +258,15 @@ a long-lived npm token in the repository.
 - Release candidates run `pnpm verify` before publication.
 - All packages are packed and inspected as independent consumer artifacts.
 - Candidate tarballs are reproduced and compared before acceptance.
-- The release contains SHA-256 checksums, source/release manifests, a CycloneDX
-  SBOM, npm provenance, and GitHub attestations.
-- The public v0.2.0 tarballs were fetched anonymously and matched to the frozen
-  release manifest.
+- The frozen candidate contains SHA-256 checksums, source/release manifests, and
+  a CycloneDX SBOM; protected publication adds npm provenance and GitHub
+  attestations.
+- Anonymous v0.2.0 registry-byte verification is a required post-publication
+  gate and is not complete yet.
 
-Inspect the immutable [v0.2.0 release](https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0)
-or read the [release evidence](docs/releases/v0.2-readiness.md). Provenance tells
-you where an artifact came from; it does not certify the artifact's behavior.
+Read the [v0.2.0 release evidence](docs/releases/v0.2-readiness.md) for the exact
+state of each gate. Provenance tells you where an artifact came from; it does
+not certify the artifact's behavior.
 
 ## Develop the repository
 

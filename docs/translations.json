@@ -7,7 +7,7 @@
       "turkish": "getting-started/first-agent.md",
       "requiredTerms": ["AgentDefinition", "WorkOrder", "RunCompleted"],
       "requiredHeadings": [
-        "Yayımlanmış sürüm yolu",
+        "Güncel yayımlanmış sürüm yolu",
         "Agent kaynağı",
         "Yerel candidate doğrulaması",
         "Kurtarma"
