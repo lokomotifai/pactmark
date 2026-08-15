@@ -17,7 +17,7 @@
   <a href="https://github.com/lokomotifai/pactmark/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/ci.yml?branch=main&amp;style=flat-square&amp;label=CI"></a>
   <a href="https://github.com/lokomotifai/pactmark/actions/workflows/security.yml"><img alt="Güvenlik temel hattı" src="https://img.shields.io/github/actions/workflow/status/lokomotifai/pactmark/security.yml?branch=main&amp;style=flat-square&amp;label=security"></a>
   <a href="https://www.npmjs.com/package/@pactmark/agent"><img alt="npm sürümü" src="https://img.shields.io/npm/v/%40pactmark%2Fagent?style=flat-square&amp;label=npm&amp;color=D11F26"></a>
-  <a href="https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0"><img alt="Release provenance" src="https://img.shields.io/badge/release-provenance-verified-D11F26?style=flat-square"></a>
+  <a href="docs/releases/v0.2-readiness.md"><img alt="v0.2.0 release candidate" src="https://img.shields.io/badge/release-v0.2.0%20candidate-D11F26?style=flat-square"></a>
   <a href="LICENSE"><img alt="Apache-2.0 lisansı" src="https://img.shields.io/badge/license-Apache--2.0-3B3F46?style=flat-square"></a>
 </p>
 
@@ -49,12 +49,10 @@ Pactmark, açık yetki altında sınırlandırılmış işler yapan agent’lar 
 kanıt-yerel bir framework’tür. “Model makul bir şey döndürdü” ifadesinin başarı
 tanımı olamayacağı sistemler için tasarlanmıştır.
 
-**0.2.0**, public bir erken sürümdür. 19 npm paketinin tamamı uzun ömürlü npm
-token’ı kullanılmadan trusted publishing ve package provenance ile yayımlandı;
-ardından anonim olarak indirilen paketler immutable release checksum’larıyla
-karşılaştırıldı. Bu, ilgili package byte’larının tedarik zinciri kanıtıdır;
-Pactmark kullanan her deployment’ın production-ready veya güvenli olduğu iddiası
-değildir.
+**0.2.0**, doğrulanmış bir release candidate’tır. 19 package manifest’i ve packed
+consumer’ı local ve hosted kapılardan geçti; korumalı publication, anonim registry
+byte doğrulaması ve immutable GitHub Release, release kaydında henüz bekliyor.
+Güncel public npm sürümüne yukarıdaki npm badge’i üzerinden ulaşılabilir.
 
 ## Tek görselde temel fark
 
@@ -223,14 +221,14 @@ bilinçli olarak bir feature checklist’inden daha muhafazakârdır.
 - Release candidate `pnpm verify` kapısından geçer.
 - Paketler bağımsız consumer artifact’leri olarak pack edilir ve incelenir.
 - Candidate tarball’lar tekrar üretilerek karşılaştırılır.
-- Release; SHA-256 checksum, source/release manifest, CycloneDX SBOM, npm
-  provenance ve GitHub attestation içerir.
-- Public v0.2.0 tarball’ları anonim indirildi ve frozen release manifest ile
-  eşleştirildi.
+- Frozen candidate; SHA-256 checksum, source/release manifest ve CycloneDX SBOM
+  içerir; korumalı publication npm provenance ve GitHub attestation ekler.
+- Anonim v0.2.0 registry-byte doğrulaması zorunlu bir post-publication kapısıdır
+  ve henüz tamamlanmamıştır.
 
-Immutable [v0.2.0 release](https://github.com/lokomotifai/pactmark/releases/tag/v0.2.0)
-ve [release kanıtı](docs/releases/v0.2-readiness.md) incelenebilir. Provenance bir
-artifact’in nereden geldiğini gösterir; davranışını sertifikalandırmaz.
+[v0.2.0 release kanıtı](docs/releases/v0.2-readiness.md), her kapının kesin
+durumunu gösterir. Provenance bir artifact’in nereden geldiğini gösterir;
+davranışını sertifikalandırmaz.
 
 ## Repository’yi geliştir
 

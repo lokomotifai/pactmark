@@ -13,8 +13,8 @@ hero:
       variant: minimal
 ---
 
-> Compatibility: Pactmark 0.2.x. 0.2.0 sürümü, doğrulanmış registry byte'ları
-> ve paket başına provenance ile npm'de public olarak yayımlanmıştır.
+> Compatibility: Pactmark 0.2.x candidate. Korumalı v0.2.0 publication ve bağımsız
+> registry-byte doğrulaması henüz beklemektedir.
 
 Pactmark, doğrulanmış bir `WorkOrder`'ı sınırlandırılmış run, yönetilen tool etkileri,
 doğrulanmış `Artifact` ve `EvidenceRecord` akışına dönüştürür. Policy, grant,

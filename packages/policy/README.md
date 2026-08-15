@@ -59,6 +59,7 @@ pnpm --filter @pactmark/policy build
 
 ## Release state
 
-Version `0.2.0` is public on npm with verified registry bytes and provenance. The
-process-local implementations above remain development references, not production
-durability or isolation.
+Version `0.2.0` is a verified release candidate. Protected publication and
+independent registry-byte verification remain pending. The process-local
+implementations above remain development references, not production durability
+or isolation.

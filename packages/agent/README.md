@@ -13,6 +13,6 @@ or provider fallback.
 Optional model-provider, Postgres, platform, MCP, and OpenTelemetry adapters are
 not re-exported or installed by this package.
 
-Version `0.2.0` is public on npm with verified registry bytes and provenance. This
-release status does not change the explicit runtime and production limitations
-above.
+Version `0.2.0` is a verified release candidate. Protected publication and
+independent registry-byte verification remain pending; this status does not
+change the explicit runtime and production limitations above.
