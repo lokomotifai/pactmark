@@ -98,40 +98,48 @@ The generated project deliberately uses the ephemeral local profile: in-memory
 state, a deterministic model fixture, and trusted in-process execution. It is a
 learning and test path, not a production template disguised as one.
 
-For the complete typed example, read
-[`examples/minimal-tool-agent/src/example.ts`](examples/minimal-tool-agent/src/example.ts).
-Its essential shape is:
+A governed agent with one tool fits in about thirty lines
+([`examples/quickstart-agent`](examples/quickstart-agent/), runnable offline):
 
 ```ts
 const lookup = defineTool({
   id: "catalog.lookup@1",
-  input: toolInput,
-  output: toolOutput,
-  security: {
-    riskClass: "R1",
-    requiredScopes: ["catalog:read"],
-    egress: { mode: "none" },
-    maxCallsPerRun: 1,
+  description: "Read one item from the embedded catalog.",
+  input: z.object({ sku: z.string().min(1) }).strict(),
+  output: z.object({ sku: z.string(), name: z.string(), available: z.boolean() }).strict(),
+  security: { requiredScopes: ["catalog:read"] },
+  operation: {
+    kind: "read",
+    execute: ({ sku }) =>
+      Promise.resolve({ sku, name: "Portable notebook", available: sku === "P-100" }),
   },
-  operation: { kind: "read", execute: lookupFixture },
 });
 
-const agent = defineAgent({
-  id: "catalog-agent",
+const catalogAgent = defineAgent({
+  id: "quickstart-catalog-agent",
   version: "0.1.0",
-  input,
-  instructions,
-  model,
+  input: z.object({ sku: z.string().min(1) }).strict(),
+  instructions: "Check the catalog with the lookup tool, then answer with the output JSON.",
+  model: fromAISDK(model()),
   tools: { lookup },
-  policy: definePolicy({ default: "deny", rules }),
-  output,
-  verifiers: ["schema@1"],
+  output: z.object({ summary: z.string() }).strict(),
+});
+
+const runtime = createLocalRuntime({ agents: [catalogAgent] });
+const result = await runtime.run(catalogAgent, {
+  goal: "Check availability of SKU P-100.",
+  input: { sku: "P-100" },
 });
 ```
 
-The omitted setup is not optional magic: the runnable source also declares the
-model's security/resource profiles, authority issuer, `WorkOrder`, purpose,
-data class, requested capabilities, budgets, and command identity.
+`model()` is any AI SDK v7 model instance — the example ships a deterministic
+provider-shaped fixture so it runs without a key. Tools reach the provider as
+schema-only advertisements; every proposal is revalidated and policed by the
+host before dispatch. Facade defaults never widen authority: reads default to
+risk class R1, a write must declare R2 plus an explicit policy rule, and the
+default policy denies everything else. The fully explicit form — profiles,
+authority, `WorkOrder`, budgets, and command identity spelled out — is
+[`examples/minimal-tool-agent/src/example.ts`](examples/minimal-tool-agent/src/example.ts).
 
 ## The run is the product boundary
 

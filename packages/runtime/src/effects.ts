@@ -217,9 +217,12 @@ export function validateEffectExecution(input: {
   const result = input.strategy.validateOutput(execution.result);
   const resultDigest = digestCanonicalJson(result);
   const acknowledgement = EffectAcknowledgementSchema.parse(execution.acknowledgement);
+  // Strategies of kind "none" carry no operation key; the canonical
+  // comparison must omit the absent key on both sides instead of
+  // serializing undefined, which the canonical encoder rejects.
   const expected = {
     effectKey: input.effectKey,
-    operationKey: input.operationKey,
+    ...(input.operationKey === undefined ? {} : { operationKey: input.operationKey }),
     toolRegistrationDigest: input.registration.toolRegistrationDigest,
     strategyRegistrationDigest: input.registration.effectStrategyRegistrationDigest,
     normalizedTargetDigest: input.normalizedTargetDigest,
@@ -228,7 +231,9 @@ export function validateEffectExecution(input: {
   };
   const actual = {
     effectKey: acknowledgement.effectKey,
-    operationKey: acknowledgement.operationKey,
+    ...(acknowledgement.operationKey === undefined
+      ? {}
+      : { operationKey: acknowledgement.operationKey }),
     toolRegistrationDigest: acknowledgement.toolRegistrationDigest,
     strategyRegistrationDigest: acknowledgement.strategyRegistrationDigest,
     normalizedTargetDigest: acknowledgement.normalizedTargetDigest,

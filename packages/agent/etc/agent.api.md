@@ -26,6 +26,8 @@ import { InputSubmissionStore } from '@pactmark/core';
 import { InstructionBundle } from '@pactmark/core';
 import { JsonValue } from '@pactmark/core';
 import { KillSwitchRegistry } from '@pactmark/policy';
+import { ModelAgentContext } from '@pactmark/core';
+import { ModelAgentContextTool } from '@pactmark/core';
 import { ModelDriver } from '@pactmark/core';
 import { ModelResourceProfile } from '@pactmark/core';
 import { ModelSecurityProfile } from '@pactmark/core';
@@ -41,6 +43,7 @@ import { Tenant } from '@pactmark/core';
 import { ToolExecutionContext } from '@pactmark/core';
 import { ToolRegistrationContract } from '@pactmark/core';
 import { ToolSecurity } from '@pactmark/core';
+import { WorkBudget } from '@pactmark/core';
 import { WorkOrderRequest } from '@pactmark/core';
 import { z } from 'zod';
 
@@ -52,6 +55,7 @@ export { CommandContext }
 
 // @public (undocumented)
 export interface CompiledModelDefinition {
+    readonly bindAgentContext?: (context: ModelAgentContext) => ModelDriver;
     // (undocumented)
     readonly credentialMode?: "ambient_preview" | "host_bound";
     // (undocumented)
@@ -81,8 +85,7 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
 export interface CreateLocalRuntimeInput {
     // (undocumented)
     readonly agents: readonly DefinedAgent[];
-    // (undocumented)
-    readonly authorityIssuer: AuthorityIssuer;
+    readonly authorityIssuer?: AuthorityIssuer;
     // (undocumented)
     readonly killSwitches?: KillSwitchRegistry;
 }
@@ -113,25 +116,24 @@ export function defineAgent<const I extends z.ZodType, const O extends z.ZodType
 // @public (undocumented)
 export interface DefineAgentInput<I extends z.ZodType, O extends z.ZodType> {
     // (undocumented)
-    readonly description: string;
+    readonly description?: string;
     // (undocumented)
     readonly id: string;
     // (undocumented)
-    readonly input: DefinedSchema<I>;
+    readonly input: SchemaInput<I>;
     // (undocumented)
-    readonly instructions: InstructionBundle;
+    readonly instructions: InstructionBundle | string;
     // (undocumented)
     readonly model: CompiledModelDefinition;
     // (undocumented)
-    readonly output: DefinedSchema<O>;
-    // (undocumented)
-    readonly policy: DefinedPolicy;
+    readonly output: SchemaInput<O>;
+    readonly policy?: DefinedPolicy;
     // (undocumented)
     readonly requiredRuntimeCapabilities?: readonly string[];
     // (undocumented)
     readonly tools?: Readonly<Record<string, DefinedTool>>;
     // (undocumented)
-    readonly verifiers: readonly string[];
+    readonly verifiers?: readonly string[];
     // (undocumented)
     readonly version: string;
 }
@@ -215,24 +217,40 @@ export interface DefineToolInput<I extends z.ZodType, O extends z.ZodType> {
     // (undocumented)
     readonly id: string;
     // (undocumented)
-    readonly implementationVersion: string;
+    readonly implementationVersion?: string;
     // (undocumented)
-    readonly input: DefinedSchema<I>;
+    readonly input: SchemaInput<I>;
     // (undocumented)
-    readonly operation: Readonly<{
-        kind: "read";
-        execute(input: z.output<I>, context: ToolExecutionContext): Promise<z.input<O>>;
-    }>;
+    readonly operation: DefineToolReadOperation<I, O> | DefineToolWriteOperation<I, O>;
     // (undocumented)
-    readonly output: DefinedSchema<O>;
-    readonly resources: (input: z.output<I>, context: Readonly<{
+    readonly output: SchemaInput<O>;
+    readonly resources?: (input: z.output<I>, context: Readonly<{
         tenantId: string;
         purposeCode: string;
         dataClass: ToolSecurity["dataClasses"][number];
     }>) => readonly ResourceScope[];
     // (undocumented)
-    readonly security: Omit<ToolSecurity, "schemaVersion">;
+    readonly security: DefineToolSecurityInput;
 }
+
+// @public (undocumented)
+export type DefineToolReadOperation<I extends z.ZodType, O extends z.ZodType> = Readonly<{
+    kind: "read";
+    execute(input: z.output<I>, context: ToolExecutionContext): Promise<z.input<O>>;
+}>;
+
+// @public
+export type DefineToolSecurityInput = Readonly<Partial<Omit<ToolSecurity, "schemaVersion" | "requiredScopes">> & {
+    requiredScopes: ToolSecurity["requiredScopes"];
+}>;
+
+// @public
+export type DefineToolWriteOperation<I extends z.ZodType, O extends z.ZodType> = Readonly<{
+    kind: "write";
+    reversibility: "compensatable" | "irreversible";
+    materialConsequence?: string;
+    execute(input: z.output<I>, context: ToolExecutionContext): Promise<z.input<O>>;
+}>;
 
 // @public
 export function evaluateRuntimeReadiness(input: EvaluateRuntimeReadinessInput): RuntimeReadinessReport;
@@ -292,10 +310,52 @@ export interface LocalAuthorityIssuerOptions {
 }
 
 // @public (undocumented)
+export interface LocalRunOptions {
+    readonly authority?: AuthorityContext;
+    // (undocumented)
+    readonly budget?: WorkBudget;
+    // (undocumented)
+    readonly goal?: string;
+    // (undocumented)
+    readonly input: JsonValue;
+    // (undocumented)
+    readonly principalId?: string;
+    // (undocumented)
+    readonly signal?: AbortSignal;
+    // (undocumented)
+    readonly tenantId?: string;
+}
+
+// @public (undocumented)
+export interface LocalRunResult {
+    // (undocumented)
+    readonly artifacts: readonly Readonly<{
+        artifact: Artifact;
+        content: Uint8Array;
+    }>[];
+    // (undocumented)
+    readonly events: readonly RunEvent[];
+    // (undocumented)
+    readonly evidence: EvidenceRecord | undefined;
+    readonly output: JsonValue | undefined;
+    // (undocumented)
+    readonly projection: RunProjection;
+    // (undocumented)
+    readonly runId: string;
+    // (undocumented)
+    readonly status: RunProjection["status"];
+}
+
+// @public (undocumented)
 export interface LocalRuntimeFacade extends RuntimeFacade {
+    run(agent: AgentDefinition, options: LocalRunOptions): Promise<LocalRunResult>;
     // (undocumented)
     wait(authority: AuthorityContext, runId: string): Promise<RunProjection>;
 }
+
+export { ModelAgentContext }
+
+export { ModelAgentContextTool }
 
 export { ModelResourceProfile }
 
@@ -377,6 +437,9 @@ export interface RuntimeFacade {
 }
 
 export { RuntimeReadinessReport }
+
+// @public
+export type SchemaInput<S extends z.ZodType> = DefinedSchema<S> | S;
 
 export { WorkOrderRequest }
 

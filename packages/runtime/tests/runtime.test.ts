@@ -1426,6 +1426,20 @@ describe("runtime effect validation", () => {
     signal: new AbortController().signal,
   };
 
+  it("accepts an acknowledgement without an operation key, as kind-none strategies produce", () => {
+    const strategy = nativeEffectStrategy(vi.fn(async () => Promise.resolve()));
+    const execution = acknowledgedExecution(context);
+    expect(
+      validateEffectExecution({
+        execution,
+        strategy,
+        registration: writeTool,
+        effectKey: context.effectKey,
+        normalizedTargetDigest: effectTargetDigest,
+      }),
+    ).toMatchObject({ result: execution.result });
+  });
+
   it("rejects acknowledgement binding drift and a forged proof digest", () => {
     const strategy = nativeEffectStrategy(vi.fn(async () => Promise.resolve()));
     const operationKey = "operation:effect-key-1";

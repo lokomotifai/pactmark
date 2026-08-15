@@ -1,8 +1,11 @@
 import {
+  JsonValueSchema,
   KafError,
   RuntimeCapabilitiesSchema,
   VerificationResultSchema,
+  createCommandContext,
   createCommandId as createCoreCommandId,
+  createWorkOrderRequest,
   digestBytes,
   digestCanonicalJson,
   parseJsonStrict,
@@ -29,6 +32,7 @@ import {
   type ToolCallResolver,
   type ToolExecutionContext,
   type VerificationResult,
+  type WorkBudget,
   type VerifierRegistry as CoreVerifierRegistry,
   type WorkOrderRequest,
 } from "@pactmark/core";
@@ -44,12 +48,22 @@ import {
   type DeterministicPolicyConfig,
   type KillSwitchRegistry,
 } from "@pactmark/policy";
-import { createRuntime as createKernelRuntime, type RuntimeKernelConfig } from "@pactmark/runtime";
+import {
+  createRuntime as createKernelRuntime,
+  effectProofDigest,
+  type RuntimeEffectAuthorizationResolver,
+  type RuntimeEffectServices,
+  type RuntimeExecutableEffectStrategy,
+  type RuntimeKernelConfig,
+} from "@pactmark/runtime";
 import { createMemoryStoreSuite } from "@pactmark/store-memory";
 
-import { randomBytes } from "./authority.js";
+import { createLocalAuthorityIssuer, randomBytes } from "./authority.js";
 import {
+  agentModelContext,
+  facadeEffectTarget,
   getAgentRuntimeMetadata,
+  getToolEffectDefinition,
   getToolRuntimeDefinition,
   requiredCapabilitiesForAgents,
   type DefinedAgent,
@@ -231,11 +245,20 @@ function createPolicyEngine(
           reasonCode: "KAF_POLICY_PREVIEW_REQUIRED" as const,
         });
       }
+      // Write effects bind their preview to a facade target derived from the
+      // exact tool registration and validated arguments; reads keep the
+      // resource-derived preflight digest.
+      const normalizedTargetDigest =
+        input.tool.effectStrategyKind === "read"
+          ? preflight.normalizedTargetDigest
+          : digestCanonicalJson(
+              facadeEffectTarget(input.tool.toolRegistrationDigest, input.argumentsDigest),
+            );
       return Promise.resolve({
         decision: "allow_with_grant" as const,
         reasonCode: "KAF_POLICY_ALLOWED" as const,
         normalizedResources: preflight.normalizedResources,
-        normalizedTargetDigest: preflight.normalizedTargetDigest,
+        normalizedTargetDigest,
       });
     },
   });
@@ -398,7 +421,158 @@ function createEvidenceBuilder(
   });
 }
 
-function createToolComposition(agents: readonly DefinedAgent[]) {
+function createFacadeWriteStrategy(
+  tool: ReturnType<typeof getAgentRuntimeMetadata>["tools"][number],
+  broker: EgressBroker,
+  now: () => string,
+): RuntimeExecutableEffectStrategy {
+  const effect = getToolEffectDefinition(tool);
+  if (effect === undefined) throw new TypeError("KAF_TOOL_NOT_COMPILED_BY_FACADE");
+  const registration = tool.registration;
+  const buildPreview = (value: JsonValue) => {
+    const argumentsDigest = digestCanonicalJson(value);
+    const material = {
+      schemaVersion: "1" as const,
+      normalizedTarget: facadeEffectTarget(registration.toolRegistrationDigest, argumentsDigest),
+      operationClass: `${registration.id}.write`,
+      contentDigest: argumentsDigest,
+      reversibility: effect.reversibility,
+      materialConsequence: effect.materialConsequence,
+    };
+    return { ...material, previewDigest: digestCanonicalJson(material) };
+  };
+  const strategy: RuntimeExecutableEffectStrategy = {
+    kind: "none",
+    registrationDigest: registration.effectStrategyRegistrationDigest,
+    previewRegistrationDigest: effect.previewRegistrationDigest,
+    preview: (value: JsonValue) => Promise.resolve(buildPreview(value)),
+    validateOutput: (result: unknown) => JsonValueSchema.parse(tool.output.parse(result)),
+    async dispatch(value, context) {
+      const executionContext: ToolExecutionContext = {
+        signal: context.signal,
+        run: {
+          tenantId: context.tenantId,
+          runId: context.runId,
+          stepId: context.stepId,
+          purposeCode: "service_delivery",
+          dataClass: "public",
+        },
+        egress: broker.bind({
+          tenantId: "local",
+          runId: "local-in-process",
+          toolRegistrationDigest: registration.toolRegistrationDigest,
+        }),
+        artifacts: {
+          write: () => Promise.reject(new KafError("KAF_RUNTIME_CAPABILITY_MISSING")),
+        },
+      };
+      const result = await effect.execute(value, executionContext);
+      const acknowledgementMaterial = {
+        schemaVersion: "1" as const,
+        acknowledgementId: context.effectId,
+        proofKind: "successful_response" as const,
+        effectKey: context.effectKey,
+        toolRegistrationDigest: registration.toolRegistrationDigest,
+        strategyRegistrationDigest: registration.effectStrategyRegistrationDigest,
+        normalizedTargetDigest: context.normalizedTargetDigest,
+        resultSchemaDigest: registration.outputSchemaDigest,
+        resultDigest: digestCanonicalJson(result),
+        safeReceiptMetadata: { executor: "pactmark.local-in-process" },
+        acknowledgedAt: now(),
+      };
+      return {
+        schemaVersion: "1" as const,
+        result,
+        acknowledgement: {
+          ...acknowledgementMaterial,
+          proofDigest: effectProofDigest(acknowledgementMaterial),
+        },
+      };
+    },
+  };
+  return Object.freeze(strategy);
+}
+
+/**
+ * Development-only authority for the ephemeral local profile: each governed
+ * effect receives a one-use capability grant and a reservation bound to the
+ * exact effect key. Production hosts own real grant and approval issuance.
+ */
+function createLocalEffectAuthorization(
+  stores: ReturnType<typeof createMemoryStoreSuite>,
+  now: () => string,
+): RuntimeEffectAuthorizationResolver {
+  const issuedTimings = new Map<string, Readonly<{ issuedAt: string; expiresAt: string }>>();
+  const resolver: RuntimeEffectAuthorizationResolver = {
+    async resolve(request) {
+      const grantId = `grant-effect-${request.effectId}`;
+      const existing = issuedTimings.get(grantId);
+      const issuedAt = existing?.issuedAt ?? now();
+      const timing = existing ?? {
+        issuedAt,
+        expiresAt: new Date(Date.parse(issuedAt) + 5 * 60_000).toISOString(),
+      };
+      issuedTimings.set(grantId, timing);
+      await stores.capabilityGrantStore.issue({
+        schemaVersion: "1",
+        id: grantId,
+        issuerId: "pactmark.local-runtime",
+        principal: request.workOrder.principal,
+        tenant: request.workOrder.tenant,
+        workOrderId: request.workOrder.id,
+        workOrderBindingDigest: request.workOrder.workOrderBindingDigest,
+        executionDefinition: request.workOrder.executionDefinition,
+        executionDefinitionDigest: request.workOrder.executionDefinitionDigest,
+        capability: request.registration.id,
+        action: "write",
+        toolId: request.registration.id,
+        toolVersion: request.registration.implementationVersion,
+        toolRegistrationDigest: request.registration.toolRegistrationDigest,
+        normalizedResources: [
+          {
+            kind: "tenant",
+            value: request.workOrder.tenant.id,
+            normalizationVersion: "pactmark.policy-normalization@1",
+          },
+        ],
+        purpose: request.workOrder.purpose,
+        policyRegistrationDigest: request.policyRegistrationDigest,
+        maximumUses: 1,
+        issuedAt: timing.issuedAt,
+        expiresAt: timing.expiresAt,
+      });
+      return {
+        schemaVersion: "1",
+        authorizationReservationId: `authorization-${request.effectId}`,
+        authorizationKey: request.authorizationKey,
+        tenantId: request.workOrder.tenant.id,
+        runId: request.projection.runId,
+        stepId: request.stepId,
+        toolCallId: request.toolCallId,
+        effectKey: request.effectKey,
+        workOrderBindingDigest: request.workOrder.workOrderBindingDigest,
+        executionDefinition: request.workOrder.executionDefinition,
+        executionDefinitionDigest: request.workOrder.executionDefinitionDigest,
+        toolId: request.registration.id,
+        toolVersion: request.registration.implementationVersion,
+        toolRegistrationDigest: request.registration.toolRegistrationDigest,
+        policyRegistrationDigest: request.policyRegistrationDigest,
+        argumentsDigest: request.argumentsDigest,
+        normalizedTargetDigest: request.normalizedTargetDigest,
+        grantId,
+        secretRefIds: [],
+        purposeCode: request.workOrder.purpose.code,
+        purposeRegistryVersion: request.workOrder.purpose.registryVersion,
+        state: "reserved",
+        createdAt: timing.issuedAt,
+        expiresAt: timing.expiresAt,
+      };
+    },
+  };
+  return Object.freeze(resolver);
+}
+
+function createToolComposition(agents: readonly DefinedAgent[], now: () => string) {
   const tools = new Map<string, ReturnType<typeof getAgentRuntimeMetadata>["tools"][number]>();
   for (const agent of agents) {
     for (const tool of getAgentRuntimeMetadata(agent).tools) {
@@ -433,31 +607,42 @@ function createToolComposition(agents: readonly DefinedAgent[]) {
             egressToolDigests.has(binding.toolRegistrationDigest),
           fetch: globalThis.fetch.bind(globalThis),
         });
-  const declared: DeclaredTool[] = [...tools.values()].map((tool) => ({
-    registration: tool.registration,
-    async execute(input: JsonValue, signal: AbortSignal): Promise<JsonValue> {
-      const runtimeDefinition = getToolRuntimeDefinition(tool);
-      const context: ToolExecutionContext = {
-        signal,
-        run: {
-          tenantId: "local",
-          runId: "local-in-process",
-          stepId: "local-in-process",
-          purposeCode: "service_delivery",
-          dataClass: "public",
-        },
-        egress: broker.bind({
-          tenantId: "local",
-          runId: "local-in-process",
-          toolRegistrationDigest: tool.registration.toolRegistrationDigest,
-        }),
-        artifacts: {
-          write: () => Promise.reject(new KafError("KAF_RUNTIME_CAPABILITY_MISSING")),
-        },
-      };
-      return runtimeDefinition.execute(input, context);
-    },
-  }));
+  const strategies = new Map<string, RuntimeExecutableEffectStrategy>();
+  for (const tool of tools.values()) {
+    if (getToolEffectDefinition(tool) !== undefined) {
+      strategies.set(
+        tool.registration.toolRegistrationDigest,
+        createFacadeWriteStrategy(tool, broker, now),
+      );
+    }
+  }
+  const declared: DeclaredTool[] = [...tools.values()]
+    .filter((tool) => getToolEffectDefinition(tool) === undefined)
+    .map((tool) => ({
+      registration: tool.registration,
+      async execute(input: JsonValue, signal: AbortSignal): Promise<JsonValue> {
+        const runtimeDefinition = getToolRuntimeDefinition(tool);
+        const context: ToolExecutionContext = {
+          signal,
+          run: {
+            tenantId: "local",
+            runId: "local-in-process",
+            stepId: "local-in-process",
+            purposeCode: "service_delivery",
+            dataClass: "public",
+          },
+          egress: broker.bind({
+            tenantId: "local",
+            runId: "local-in-process",
+            toolRegistrationDigest: tool.registration.toolRegistrationDigest,
+          }),
+          artifacts: {
+            write: () => Promise.reject(new KafError("KAF_RUNTIME_CAPABILITY_MISSING")),
+          },
+        };
+        return runtimeDefinition.execute(input, context);
+      },
+    }));
   const resolver: ToolCallResolver = Object.freeze({
     resolve({
       workOrder,
@@ -483,15 +668,17 @@ function createToolComposition(agents: readonly DefinedAgent[]) {
     executor: createDeclaredToolExecutor(declared),
     resolver,
     broker,
+    strategies,
   };
 }
 
 function dispatchingModel(agents: readonly DefinedAgent[]) {
   const models = new Map(
-    agents.map((agent) => [
-      agent.agentDefinitionDigest,
-      getAgentRuntimeMetadata(agent).model.driver,
-    ]),
+    agents.map((agent) => {
+      const model = getAgentRuntimeMetadata(agent).model;
+      const driver = model.bindAgentContext?.(agentModelContext(agent)) ?? model.driver;
+      return [agent.agentDefinitionDigest, driver] as const;
+    }),
   );
   return Object.freeze({
     capabilities: LOCAL_CAPABILITIES,
@@ -587,27 +774,86 @@ export interface RuntimeFacade {
   evaluateReadiness(input: Readonly<{ profile: RuntimeReadinessProfile }>): RuntimeReadinessReport;
 }
 
+export interface LocalRunOptions {
+  readonly input: JsonValue;
+  readonly goal?: string;
+  readonly tenantId?: string;
+  readonly principalId?: string;
+  readonly budget?: WorkBudget;
+  /** Required when createLocalRuntime received an external authority issuer. */
+  readonly authority?: AuthorityContext;
+  readonly signal?: AbortSignal;
+}
+
+export interface LocalRunResult {
+  readonly runId: string;
+  readonly status: RunProjection["status"];
+  /** Parsed final artifact content when the run completed; undefined otherwise. */
+  readonly output: JsonValue | undefined;
+  readonly projection: RunProjection;
+  readonly events: readonly RunEvent[];
+  readonly artifacts: readonly Readonly<{ artifact: Artifact; content: Uint8Array }>[];
+  readonly evidence: EvidenceRecord | undefined;
+}
+
 export interface LocalRuntimeFacade extends RuntimeFacade {
   wait(authority: AuthorityContext, runId: string): Promise<RunProjection>;
+  /**
+   * Ephemeral-profile convenience: issues local authority and builds the
+   * WorkOrder with conservative defaults (purpose service_delivery, data
+   * class public, session retention, assist modes, low risk context, and
+   * requested capabilities equal to the agent's declared tool scopes). The
+   * production path keeps every one of these explicit.
+   */
+  run(agent: AgentDefinition, options: LocalRunOptions): Promise<LocalRunResult>;
 }
 
 export interface CreateLocalRuntimeInput {
   readonly agents: readonly DefinedAgent[];
-  readonly authorityIssuer: AuthorityIssuer;
+  /** Defaults to a development-only local authority issuer. */
+  readonly authorityIssuer?: AuthorityIssuer;
   readonly killSwitches?: KillSwitchRegistry;
 }
 
+const DEFAULT_LOCAL_RUN_BUDGET: WorkBudget = Object.freeze({
+  maxTurns: 8,
+  maxModelCalls: 8,
+  maxToolCalls: 8,
+  maxActiveExecutionMs: 60_000,
+});
+
 export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntimeFacade {
   if (input.agents.length === 0) throw new TypeError("At least one compiled agent is required");
+  const localAuthority =
+    input.authorityIssuer === undefined ? createLocalAuthorityIssuer() : undefined;
+  const authorityIssuer =
+    input.authorityIssuer ?? (localAuthority as NonNullable<typeof localAuthority>).issuer;
   const localClock = clock();
   const ids = idGenerator();
   const contextProtector = processLocalContextProtector(ids);
-  const stores = createMemoryStoreSuite({ now: localClock.now });
+  const stores = createMemoryStoreSuite({ now: localClock.now, dataProtector: contextProtector });
   const records = new Map<string, EvidenceRecord>();
-  const toolComposition = createToolComposition(input.agents);
+  const toolComposition = createToolComposition(input.agents, localClock.now);
   const requiredCapabilities = requiredCapabilitiesForAgents(input.agents);
+  const effectServices: RuntimeEffectServices | undefined =
+    toolComposition.strategies.size === 0
+      ? undefined
+      : {
+          store: stores.effectLedger,
+          strategies: {
+            resolve: (digest: string) => toolComposition.strategies.get(digest),
+          },
+          authorization: createLocalEffectAuthorization(stores, localClock.now),
+        };
+  const capabilities: RuntimeCapabilities = Object.freeze({
+    ...LOCAL_CAPABILITIES,
+    effectReconciliation: effectServices !== undefined,
+  });
   const kernel = createKernelRuntime({
-    authorityIssuer: input.authorityIssuer,
+    authorityIssuer,
+    ...(effectServices === undefined
+      ? {}
+      : { effectServices, effectResultProtector: contextProtector }),
     agentRegistry: new FacadeAgentRegistry(input.agents),
     purposeRegistry: {
       version: "general@1",
@@ -669,11 +915,11 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
       command === undefined
         ? kernel.cancel(authority, runId, reasonOrCommand as CommandContext)
         : kernel.cancel(authority, runId, cancellationReason(reasonOrCommand), command),
-    getCapabilities: () => LOCAL_CAPABILITIES,
+    getCapabilities: () => capabilities,
     evaluateReadiness: ({ profile }) =>
       evaluateRuntimeReadiness({
         profile,
-        capabilities: LOCAL_CAPABILITIES,
+        capabilities,
         requiredCapabilities,
         evaluatedAt: localClock.now(),
       }),
@@ -694,6 +940,80 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
     async wait(authority, runId) {
       await executions.get(runId);
       return kernel.getRun(authority, runId);
+    },
+    async run(agent, options) {
+      const metadata = getAgentRuntimeMetadata(agent);
+      const tenantId = options.tenantId ?? "local";
+      const authority =
+        options.authority ??
+        localAuthority?.issue({
+          principal: { type: "user", id: options.principalId ?? "local-user" },
+          tenant: { id: tenantId },
+        });
+      if (authority === undefined) {
+        throw new TypeError(
+          "run() requires options.authority when createLocalRuntime received an external authority issuer",
+        );
+      }
+      const requestedCapabilities = [
+        ...new Set(metadata.tools.flatMap((tool) => tool.security.requiredScopes)),
+      ].sort();
+      const request = createWorkOrderRequest({
+        agent: { id: agent.id, version: agent.version },
+        goal: options.goal ?? `Run agent ${agent.id}`,
+        input: options.input,
+        context: {
+          roleFamily: "development",
+          workflowId: `${agent.id}.local-run`,
+          riskClass: "low",
+        },
+        workMode: "assist",
+        autonomyMode: "assist",
+        decisionOwner: { mode: "requesting_principal" },
+        purpose: { code: "service_delivery", registryVersion: "general@1" },
+        dataClass: "public",
+        retention: { mode: "session" },
+        requestedCapabilities,
+        resourceScopeCeiling: [
+          {
+            kind: "tenant",
+            value: tenantId,
+            normalizationVersion: "pactmark.policy-normalization@1",
+          },
+        ],
+        budget: options.budget ?? DEFAULT_LOCAL_RUN_BUDGET,
+      });
+      const command = createCommandContext({
+        commandId: createCommandId(),
+        operation: "run.start",
+        payload: request,
+      });
+      const { runId } = await facade.start(
+        authority,
+        agent,
+        request,
+        command,
+        options.signal === undefined ? undefined : { signal: options.signal },
+      );
+      const projection = await facade.wait(authority, runId);
+      const events: RunEvent[] = [];
+      for await (const event of kernel.events(authority, runId)) events.push(event);
+      const artifacts = await facade.getArtifacts(authority, runId);
+      const evidence = await facade.getEvidence(authority, runId);
+      let output: JsonValue | undefined;
+      const finalArtifact = artifacts.at(-1);
+      if (projection.status === "completed" && finalArtifact !== undefined) {
+        output = parseJsonStrict(new TextDecoder().decode(finalArtifact.content));
+      }
+      return Object.freeze({
+        runId,
+        status: projection.status,
+        output,
+        projection,
+        events,
+        artifacts,
+        evidence,
+      });
     },
   };
   return Object.freeze(facade);

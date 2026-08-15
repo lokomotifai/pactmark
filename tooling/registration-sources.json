@@ -63,11 +63,11 @@
     },
     {
       "path": "packages/ai-sdk/src/index.ts",
-      "digest": "sha256:a525dd160b08c7dad60936ec2504891670aee8ba41decb913b5b9c710b25ce5d"
+      "digest": "sha256:198bafca489696a793c01faa3aa9cdf6639804e766b143bbb94c74a4e60ffb88"
     },
     {
       "path": "packages/agent/src/definitions.ts",
-      "digest": "sha256:43a82727333b6dd33b33f5335831c216b975700e99a42eaf6415ec965b321e92"
+      "digest": "sha256:0913c5b649d83e04409590770b2bbe1d71822c5142b0110fde9008068028c2b5"
     },
     {
       "path": "packages/agent/src/readiness.ts",

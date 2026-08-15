@@ -8,6 +8,8 @@ export {
   type AuthorityContext,
   type CommandContext,
   type DefinedSchema,
+  type ModelAgentContext,
+  type ModelAgentContextTool,
   type ModelResourceProfile,
   type ModelSecurityProfile,
   type RuntimeCapabilities,
@@ -33,8 +35,12 @@ export {
   type DefinedTool,
   type DefinePolicyInput,
   type DefineToolInput,
+  type DefineToolReadOperation,
+  type DefineToolSecurityInput,
+  type DefineToolWriteOperation,
   type InferAgentInput,
   type InferAgentOutput,
+  type SchemaInput,
 } from "./definitions.js";
 export { evaluateRuntimeReadiness, type EvaluateRuntimeReadinessInput } from "./readiness.js";
 export {
@@ -43,6 +49,8 @@ export {
   createRuntime,
   type CreateLocalRuntimeInput,
   type CreateRuntimeInput,
+  type LocalRunOptions,
+  type LocalRunResult,
   type LocalRuntimeFacade,
   type RuntimeFacade,
 } from "./runtime.js";
