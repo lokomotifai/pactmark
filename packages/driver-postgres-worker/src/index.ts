@@ -430,6 +430,7 @@ function defaultSleep(milliseconds: number, signal: AbortSignal): Promise<void> 
 export type { DurableWakeupRequest };
 export {
   DurablePostgresWorkerQueue,
+  type DurablePostgresWorkerQueueOptions,
   type WorkerPostgresClient,
   type WorkerPostgresDatabase,
   type WorkerSqlResult,

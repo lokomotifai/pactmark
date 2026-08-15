@@ -83,7 +83,16 @@ function schemaValidator(
       typeof properties !== "object" ||
       properties === null ||
       Array.isArray(properties));
-  const unsafeOutput = direction === "output" && typeof schema["type"] !== "string";
+  const unsafeOutput =
+    direction === "output" &&
+    (typeof schema["type"] !== "string" ||
+      (schema["type"] === "object" &&
+        (schema["additionalProperties"] !== false ||
+          typeof properties !== "object" ||
+          properties === null ||
+          Array.isArray(properties))) ||
+      (schema["type"] === "array" &&
+        (typeof schema["items"] !== "object" || schema["items"] === null)));
   if (serialized.length > 65_536 || unsafeInput || unsafeOutput) {
     throw new ExecutorAdapterError(
       "KAF_EXECUTOR_SCHEMA_UNSAFE",

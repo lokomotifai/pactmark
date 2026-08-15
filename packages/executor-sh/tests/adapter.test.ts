@@ -326,6 +326,11 @@ describe("production-guarded Executor read adapter", () => {
         toolPin({ inputSchema: {} }),
       ]),
     ).toThrow(expect.objectContaining({ code: "KAF_EXECUTOR_SCHEMA_UNSAFE" }));
+    expect(() =>
+      create(new FakeExecutorConnection(() => Promise.resolve(null)), [
+        toolPin({ outputSchema: { type: "object" } }),
+      ]),
+    ).toThrow(expect.objectContaining({ code: "KAF_EXECUTOR_SCHEMA_UNSAFE" }));
   });
 
   it("validates the pinned upstream input schema before calling Executor", async () => {

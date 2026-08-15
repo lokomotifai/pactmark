@@ -64,6 +64,12 @@ describe("declared in-process boundaries", () => {
         },
       ]),
     ).toThrow("KAF_REGISTRATION_SAME_VERSION_DRIFT");
+    expect(() =>
+      createDeclaredToolExecutor([
+        { registration, execute: () => Promise.resolve("first") },
+        { registration, execute: () => Promise.resolve("second") },
+      ]),
+    ).toThrow("KAF_REGISTRATION_SAME_VERSION_DRIFT");
     const controller = new AbortController();
     controller.abort(new Error("cancelled"));
     await expect(
@@ -109,6 +115,8 @@ describe("declared in-process boundaries", () => {
     const broker = createDeclaredAllowlistEgressBroker({
       allowedOrigins: ["https://example.com"],
       allowedMethods: ["GET"],
+      authorizeBinding: (binding) =>
+        binding.tenantId === "tenant" && binding.toolRegistrationDigest === digest,
       fetch,
     });
     const client = broker.bind({
@@ -125,6 +133,11 @@ describe("declared in-process boundaries", () => {
     await expect(client.fetch("https://example.com/data", { method: "POST" })).rejects.toThrow(
       "KAF_EGRESS_DENIED",
     );
+    await expect(
+      broker
+        .bind({ tenantId: "other", runId: "run", toolRegistrationDigest: digest })
+        .fetch("https://example.com/data"),
+    ).rejects.toThrow("KAF_EGRESS_DENIED");
     expect(() => createDeclaredAllowlistEgressBroker({ allowedOrigins: [], fetch })).toThrow(
       "KAF_EGRESS_ALLOWLIST_EMPTY",
     );
@@ -157,6 +170,7 @@ describe("declared in-process boundaries", () => {
     const developmentBroker = createDeclaredAllowlistEgressBroker({
       allowedOrigins: ["http://127.0.0.1:8787"],
       allowLoopbackHttpForDevelopment: true,
+      authorizeBinding: () => true,
       fetch,
     });
     await expect(
@@ -213,6 +227,7 @@ describe("published conformance contracts", () => {
     let transports = 0;
     const broker = createDeclaredAllowlistEgressBroker({
       allowedOrigins: ["https://allowed.example"],
+      authorizeBinding: (binding) => binding.tenantId === "tenant-a",
       fetch: () => {
         transports += 1;
         return Promise.resolve(new Response(null, { status: 204 }));

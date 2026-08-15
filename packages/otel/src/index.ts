@@ -65,8 +65,16 @@ export function createMetadataTelemetrySink(options: MetadataTelemetryOptions): 
   if (options.deploymentSalt.length < 16) {
     throw new TypeError("KAF_TELEMETRY_DEPLOYMENT_SALT_INVALID");
   }
-  const identifiers = new Set(options.allowedIdentifierKeys ?? defaultIdentifiers);
-  const counters = new Set(options.allowedCounterKeys ?? defaultCounters);
+  const identifiers = new Set(
+    options.allowedIdentifierKeys === undefined
+      ? defaultIdentifiers
+      : options.allowedIdentifierKeys.filter((key) => defaultIdentifiers.has(key)),
+  );
+  const counters = new Set(
+    options.allowedCounterKeys === undefined
+      ? defaultCounters
+      : options.allowedCounterKeys.filter((key) => defaultCounters.has(key)),
+  );
   return Object.freeze({
     emit(record: Parameters<TelemetrySink["emit"]>[0]): void {
       if (!Number.isFinite(record.durationMs) || record.durationMs < 0) {

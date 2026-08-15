@@ -21,11 +21,20 @@ const request: DurableWakeupRequest = {
   payload: {},
 };
 
+function createQueue(database: WorkerPostgresDatabase): DurablePostgresWorkerQueue {
+  return new DurablePostgresWorkerQueue(database, { allowedTenants: ["tenant-1"] });
+}
+
 describe("DurablePostgresWorkerQueue SQL contract", () => {
+  it("requires an explicit non-empty tenant allowlist", () => {
+    const database = new QueueDatabaseDouble();
+    expect(() => new DurablePostgresWorkerQueue(database, { allowedTenants: [] })).toThrow();
+  });
+
   it("lets two workers claim one row once with SKIP LOCKED and database time", async () => {
     const database = new QueueDatabaseDouble();
-    const first = new DurablePostgresWorkerQueue(database);
-    const second = new DurablePostgresWorkerQueue(database);
+    const first = createQueue(database);
+    const second = createQueue(database);
     const claims = (
       await Promise.all([
         first.claim({ holderId: "worker-1", now, limit: 1, leaseTtlMs: 30_000 }),
@@ -42,13 +51,14 @@ describe("DurablePostgresWorkerQueue SQL contract", () => {
       claimedAt: now,
     });
     expect(database.statements.join("\n")).toContain("FOR UPDATE OF w SKIP LOCKED");
+    expect(database.statements.join("\n")).toContain("tenant_id = ANY");
     expect(database.statements.join("\n")).toContain("clock_timestamp()");
     expect(database.statements.filter((statement) => statement === "COMMIT")).toHaveLength(2);
   });
 
   it("renews and completes only the exact receipt/request/work-order/lease/fence binding", async () => {
     const database = new QueueDatabaseDouble();
-    const queue = new DurablePostgresWorkerQueue(database);
+    const queue = createQueue(database);
     const [claimed] = await queue.claim({
       holderId: "worker-1",
       now,
@@ -74,7 +84,7 @@ describe("DurablePostgresWorkerQueue SQL contract", () => {
 
   it("recovers one stale claim and rejects the stale completion after a fenced retry", async () => {
     const database = new QueueDatabaseDouble();
-    const first = new DurablePostgresWorkerQueue(database);
+    const first = createQueue(database);
     const [stale] = await first.claim({
       holderId: "worker-1",
       now,
@@ -85,10 +95,10 @@ describe("DurablePostgresWorkerQueue SQL contract", () => {
     database.expireClaim();
     const recovered = await Promise.all([
       first.recoverStale(later),
-      new DurablePostgresWorkerQueue(database).recoverStale(later),
+      createQueue(database).recoverStale(later),
     ]);
     expect(recovered.reduce((sum, value) => sum + value, 0)).toBe(1);
-    const freshQueue = new DurablePostgresWorkerQueue(database);
+    const freshQueue = createQueue(database);
     const [fresh] = await freshQueue.claim({
       holderId: "worker-2",
       now: later,

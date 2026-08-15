@@ -74,6 +74,7 @@ describe("policy canonicalization", () => {
     expect(canonicalizeUrl("HTTPS://Example.COM:443/api?z=2&a=1")).toBe(
       "https://example.com/api?a=1&z=2",
     );
+    expect(canonicalizeUrl("https://example.com/%61/%7Euser")).toBe("https://example.com/a/~user");
     expect(canonicalizeUrl("https://[2001:4860:4860::8888]/")).toBe(
       "https://[2001:4860:4860::8888]/",
     );
@@ -91,6 +92,7 @@ describe("policy canonicalization", () => {
     expect(() => canonicalizeHost("bad host:wat")).toThrow(/ambiguous/u);
     expect(() => canonicalizeHost("example.com:")).toThrow(/components/u);
     expect(() => canonicalizeHost("example..com")).toThrow(/ambiguous/u);
+    expect(() => canonicalizeUrl("https://ele..?")).toThrow(/ambiguous/u);
     expect(() => canonicalizeHost("user@example.com")).toThrow(/components/u);
     expect(() => canonicalizeUrl("not a url")).toThrow(/invalid/u);
     expect(() => canonicalizeUrl("https://example.com/path#fragment")).toThrow(/fragments/u);

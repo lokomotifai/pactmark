@@ -15,6 +15,10 @@ import {
   type VerificationResult,
 } from "@pactmark/core";
 
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 import { verifyVerificationExceptionDigest } from "./exceptions.js";
 import type { VerifierReferenceIdentity } from "./verifiers.js";
 
@@ -263,7 +267,7 @@ export function buildEvidenceRecord(input: BuildEvidenceInput): EvidenceRecord {
     ...input.material,
     artifactRefs: artifacts
       .map(({ artifactId, artifactDigest }) => ({ artifactId, artifactDigest }))
-      .sort((left, right) => left.artifactId.localeCompare(right.artifactId)),
+      .sort((left, right) => compareCodeUnits(left.artifactId, right.artifactId)),
     eventRefs: events
       .map(({ eventId, sequence }) => ({ eventId, sequence }))
       .sort((left, right) => left.sequence - right.sequence),
@@ -272,7 +276,7 @@ export function buildEvidenceRecord(input: BuildEvidenceInput): EvidenceRecord {
         approvalId: approval.id,
         approvalDigest: digestCanonicalJson(approval.binding),
       }))
-      .sort((left, right) => left.approvalId.localeCompare(right.approvalId)),
+      .sort((left, right) => compareCodeUnits(left.approvalId, right.approvalId)),
     verificationRefs: verifications
       .map(
         ({
@@ -299,7 +303,7 @@ export function buildEvidenceRecord(input: BuildEvidenceInput): EvidenceRecord {
           rubricDigest,
         }),
       )
-      .sort((left, right) => left.verificationId.localeCompare(right.verificationId)),
+      .sort((left, right) => compareCodeUnits(left.verificationId, right.verificationId)),
     verificationExceptionRefs: verificationExceptions
       .map(
         ({
@@ -320,7 +324,7 @@ export function buildEvidenceRecord(input: BuildEvidenceInput): EvidenceRecord {
           rubricDigest,
         }),
       )
-      .sort((left, right) => left.exceptionId.localeCompare(right.exceptionId)),
+      .sort((left, right) => compareCodeUnits(left.exceptionId, right.exceptionId)),
   };
   return EvidenceRecordSchema.parse({
     ...recordWithoutDigest,

@@ -1,4 +1,5 @@
 import { streamText, type LanguageModel } from "ai";
+import aiPackage from "ai/package.json" with { type: "json" };
 
 import {
   JsonValueSchema,
@@ -16,6 +17,10 @@ import {
 } from "@pactmark/core";
 
 const AI_SDK_VERSION = "7.0.48";
+
+if (aiPackage.version !== AI_SDK_VERSION) {
+  throw new KafError("KAF_MODEL_ADAPTER_MISMATCH");
+}
 
 const previewCapabilities: RuntimeCapabilities = Object.freeze({
   schemaVersion: "1",
@@ -72,7 +77,10 @@ function enforceProfileBinding(
   profile: ModelSecurityProfile,
 ): void {
   if (
-    !identity.provider.toLowerCase().includes(profile.provider.toLowerCase()) ||
+    !(
+      identity.provider.toLowerCase() === profile.provider.toLowerCase() ||
+      identity.provider.toLowerCase().startsWith(`${profile.provider.toLowerCase()}.`)
+    ) ||
     identity.modelId !== profile.model
   ) {
     throw new KafError("KAF_MODEL_ADAPTER_MISMATCH");

@@ -412,6 +412,9 @@ function createToolComposition(agents: readonly DefinedAgent[]) {
   const egressTools = [...tools.values()].filter(
     (tool) => tool.security.egress.mode === "allowlist",
   );
+  const egressToolDigests = new Set(
+    egressTools.map((tool) => tool.registration.toolRegistrationDigest),
+  );
   const broker =
     egressTools.length === 0
       ? createDenyAllEgressBroker()
@@ -424,6 +427,10 @@ function createToolComposition(agents: readonly DefinedAgent[]) {
             if (tool.security.egress.mode !== "allowlist") return [];
             return tool.security.egress.methods;
           }),
+          authorizeBinding: (binding) =>
+            binding.tenantId === "local" &&
+            binding.runId === "local-in-process" &&
+            egressToolDigests.has(binding.toolRegistrationDigest),
           fetch: globalThis.fetch.bind(globalThis),
         });
   const declared: DeclaredTool[] = [...tools.values()].map((tool) => ({

@@ -70,25 +70,29 @@ describe("explicit migrations", () => {
     );
   });
 
-  it("upgrades an empty 008 ledger through migrations 009 and 010 exactly once", async () => {
+  it("upgrades an empty 008 ledger through migrations 009, 010, and 011 exactly once", async () => {
     const database = new MigrationDatabase();
-    const migrations = POSTGRES_MIGRATIONS.slice(-3);
+    const migrations = POSTGRES_MIGRATIONS.slice(-4);
     const manager = new PostgresMigrationManager(database, migrations);
     await manager.migrate("008");
     await expect(manager.status()).resolves.toEqual({
       currentVersion: "008",
-      pending: ["009", "010"],
+      pending: ["009", "010", "011"],
     });
     await manager.migrate();
     await manager.migrate();
-    await expect(manager.status()).resolves.toEqual({ currentVersion: "010", pending: [] });
+    await expect(manager.status()).resolves.toEqual({ currentVersion: "011", pending: [] });
     const effectResultMigration = migrations[1]!;
     const protectedReferenceMigration = migrations[2]!;
+    const rowLevelSecurityMigration = migrations[3]!;
     expect(
       database.statements.filter((statement) => statement === effectResultMigration.up[0]),
     ).toHaveLength(1);
     expect(
       database.statements.filter((statement) => statement === protectedReferenceMigration.up[0]),
+    ).toHaveLength(1);
+    expect(
+      database.statements.filter((statement) => statement === rowLevelSecurityMigration.up[0]),
     ).toHaveLength(1);
     expect(effectResultMigration.up[0]).not.toMatch(/(?:^|\n)\s*(?:ALTER|DROP|DELETE|UPDATE)\s/iu);
   });

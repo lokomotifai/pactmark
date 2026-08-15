@@ -51,6 +51,10 @@ function key(kind: KillSwitchTargetKind, digest: Digest): string {
   return `${kind}:${digest}`;
 }
 
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 /**
  * A portable in-process registry. Durable hosts persist and distribute the
  * versioned snapshot, then re-check it before every model/tool/effect boundary.
@@ -97,7 +101,8 @@ export function createKillSwitchRegistry(initial?: KillSwitchSnapshot): KillSwit
         schemaVersion: "1",
         version,
         entries: [...active.values()].sort((left, right) =>
-          key(left.targetKind, left.targetDigest).localeCompare(
+          compareCodeUnits(
+            key(left.targetKind, left.targetDigest),
             key(right.targetKind, right.targetDigest),
           ),
         ),
