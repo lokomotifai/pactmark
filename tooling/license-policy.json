@@ -22,7 +22,12 @@
     "(WTFPL OR MIT)",
     "WTFPL OR ISC"
   ],
-  "allowedPackageExpressions": {},
+  "allowedPackageExpressions": {
+    "rc@1.2.8": {
+      "expression": "(BSD-2-Clause OR MIT OR Apache-2.0)",
+      "reason": "Reviewed transitive Jazzer.js configuration dependency; every offered license is already accepted by this policy, and the package ships the corresponding BSD, MIT, and Apache-2.0 license texts."
+    }
+  },
   "allowedPackageFamilies": [
     {
       "identityPattern": "^@img/sharp-libvips-(?:darwin-(?:arm64|x64)|linux-(?:arm|arm64|ppc64|riscv64|s390x|x64)|linuxmusl-(?:arm64|x64))@1\\.3\\.(?:1|2)$",

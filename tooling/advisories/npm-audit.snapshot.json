@@ -4,9 +4,9 @@
     "kind": "upstream-export",
     "url": "https://registry.npmjs.org/-/npm/v1/security/audits",
     "databaseVersion": "npm-audit-report-pnpm-v11",
-    "retrievedAt": "2026-08-14T21:57:16.153Z"
+    "retrievedAt": "2026-08-15T10:00:50.591Z"
   },
-  "lockfileDigest": "sha256:ee83828f806b8e674f536e94dca21db35d13f467612b8d658d66222caf890c47",
+  "lockfileDigest": "sha256:bd410a4878db82b0ee72e7c3e69738f03361dc0dd9003538b666d0e135fd068f",
   "advisories": [],
-  "canonicalDigest": "sha256:538602a84b14c79794dff9ad4bf3b6952fbea1e23cb608721acde990a13409f4"
+  "canonicalDigest": "sha256:b938815892d008c94ded9e7baf7d25ecfc58e08b27892a4235fc23b14d4d2a53"
 }

@@ -10,22 +10,19 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  attestations: write
 
 concurrency:
   group: release-0.1.2
   cancel-in-progress: false
 
 jobs:
-  candidate:
-    name: Build, attest, and publish v0.1.2
+  build-candidate:
+    name: Build and freeze v0.1.2 candidate
     if: >-
       github.repository == 'lokomotifai/pactmark' &&
       github.ref == 'refs/heads/main' &&
       inputs.confirmation == 'publish-pactmark-0.1.2'
     runs-on: ubuntu-latest
-    environment: release
     steps:
       # actions/checkout v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -58,6 +55,53 @@ jobs:
           PACTMARK_RELEASE_ENVIRONMENT: release
           PACTMARK_RELEASE_RUNNER: github-hosted
       - name: Verify exact candidate checksums
+        working-directory: .artifacts/release-dry-run
+        run: sha256sum --check SHA256SUMS
+      - name: Upload immutable release candidate
+        # actions/upload-artifact v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pactmark-v0.1.2-release-${{ github.sha }}
+          path: .artifacts/release-dry-run
+          if-no-files-found: error
+          include-hidden-files: true
+          compression-level: 0
+          retention-days: 14
+
+  publish:
+    name: Attest and publish frozen v0.1.2 candidate
+    needs: build-candidate
+    if: >-
+      github.repository == 'lokomotifai/pactmark' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.confirmation == 'publish-pactmark-0.1.2'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # actions/setup-node v7.0.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.18.1
+          package-manager-cache: false
+      - name: Install pinned publication tools
+        run: npm install --global npm@11.18.0 pnpm@11.18.0
+      - name: Install frozen dependency graph
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Download candidate built by the unprivileged job
+        # actions/download-artifact v6
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+        with:
+          name: pactmark-v0.1.2-release-${{ github.sha }}
+          path: .artifacts/release-dry-run
+      - name: Verify downloaded candidate checksums
         working-directory: .artifacts/release-dry-run
         run: sha256sum --check SHA256SUMS
       - name: Generate GitHub build provenance
@@ -94,12 +138,12 @@ jobs:
         env:
           PACTMARK_RELEASE_ENVIRONMENT: release
           PACTMARK_RELEASE_RUNNER: github-hosted
-      - name: Upload frozen candidate
+      - name: Upload attestation bundles
         # actions/upload-artifact v4
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: pactmark-v0.1.2-release-${{ github.sha }}
-          path: .artifacts/release-dry-run
+          name: pactmark-v0.1.2-attestations-${{ github.sha }}
+          path: .artifacts/release-dry-run/attestations
           if-no-files-found: error
           include-hidden-files: true
           compression-level: 0

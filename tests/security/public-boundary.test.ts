@@ -49,7 +49,7 @@ describe("public repository boundary", () => {
       "sharp@0.35.3",
       "workerd@1.20260730.1",
     ]);
-    expect(allowBuilds).toContain("sharp: set this to true or false");
+    expect(allowBuilds).not.toContain("set this to true or false");
   });
 
   it("does not execute a denied malicious postinstall canary", () => {
@@ -124,6 +124,6 @@ describe("public repository boundary", () => {
     );
     expect(releaseWorkflow).toContain("npm install --global npm@11.18.0 pnpm@11.18.0");
     expect(releaseWorkflow).not.toContain("npm@latest");
-    expect(releaseWorkflow.match(/npm install --global/gu)).toHaveLength(1);
+    expect(releaseWorkflow.match(/npm install --global/gu)).toHaveLength(2);
   });
 });

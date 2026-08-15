@@ -1,0 +1,41 @@
+header:
+  schema-version: 2.2.0
+  last-updated: "2026-08-15"
+  last-reviewed: "2026-08-15"
+  url: https://raw.githubusercontent.com/lokomotifai/pactmark/main/SECURITY-INSIGHTS.yml
+  comment: Evidence-native TypeScript agent framework; this file is not a certification.
+project:
+  name: Pactmark
+  administrators:
+    - name: Pactmark maintainers
+      affiliation: Lokomotif AI
+  repositories:
+    - name: pactmark
+      url: https://github.com/lokomotifai/pactmark
+      comment: Canonical source repository.
+  vulnerability-reporting:
+    reports-accepted: true
+    bug-bounty-available: false
+    policy: https://github.com/lokomotifai/pactmark/blob/main/SECURITY.md
+  documentation:
+    detailed-guide: https://pactmark-docs.lokomotif.ai
+    code-of-conduct: https://github.com/lokomotifai/pactmark/blob/main/CODE_OF_CONDUCT.md
+repository:
+  url: https://github.com/lokomotifai/pactmark
+  status: active
+  accepts-change-request: true
+  accepts-automated-change-request: true
+  core-team:
+    - name: Pactmark maintainers
+      affiliation: Lokomotif AI
+  license:
+    url: https://github.com/lokomotifai/pactmark/blob/main/LICENSE
+    expression: Apache-2.0
+  documentation:
+    contributing-guide: https://github.com/lokomotifai/pactmark/blob/main/CONTRIBUTING.md
+    security-policy: https://github.com/lokomotifai/pactmark/blob/main/SECURITY.md
+    governance: https://github.com/lokomotifai/pactmark/blob/main/GOVERNANCE.md
+  security:
+    assessments:
+      self:
+        comment: Static review and executable repository gates; no certification or penetration-test claim.
