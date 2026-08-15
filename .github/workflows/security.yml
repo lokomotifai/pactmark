@@ -22,12 +22,12 @@ jobs:
         with:
           node-version: 24.18.1
           package-manager-cache: false
-      # pnpm/action-setup v6.0.10
+      # pnpm/setup v2.0.2
       - name: Install pinned pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           version: 11.18.0
-          run_install: false
+          install: false
       - name: Install frozen dependency graph
         run: pnpm install --frozen-lockfile
       - name: Bootstrap digest-pinned sandbox base image
