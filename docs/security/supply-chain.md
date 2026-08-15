@@ -3,7 +3,7 @@ title: Supply chain
 description: Build deterministic candidates and separate local evidence from publication.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 The pinned pnpm lockfile is dependency authority. Lifecycle scripts are denied by
 default and reviewed exceptions are versioned. Offline advisory and license gates,

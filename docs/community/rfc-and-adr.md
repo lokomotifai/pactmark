@@ -3,7 +3,7 @@ title: RFC and ADR process
 description: Record consequential product and architecture decisions before implementation drift.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Use an RFC for a change that needs community exploration: new public capability,
 provider or platform contract, wire format, governance process, or significant

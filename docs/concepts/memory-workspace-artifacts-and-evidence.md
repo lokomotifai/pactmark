@@ -3,7 +3,7 @@ title: Memory, workspace, artifacts, and evidence
 description: Distinguish operational context from deliverables and bounded claims.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Memory and `ContextStore` data support execution and resume. They are not an audit
 log and may contain only admitted, purpose-bound context. Workspaces are capabilities

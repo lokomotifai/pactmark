@@ -41,5 +41,5 @@ The exact container fixture, API-key and OAuth PKCE paths, cross-tenant denial, 
 telemetry and network denials, six public GET operations, and independent Node.js 22/24 tarball
 consumers have executable gates in `tooling/executor-sh`.
 
-This package is private and is not part of the frozen v0.1 public package set. It must not be
+This package is private and is not part of the frozen v0.2 public package set. It must not be
 published or represented as general Pactmark production-isolation evidence.

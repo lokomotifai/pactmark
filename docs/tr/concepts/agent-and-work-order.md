@@ -3,7 +3,7 @@ title: Agent ve WorkOrder
 description: Tekrar kullanılabilir agent tanımını yetkilendirilmiş iş kabulünden ayırın.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## AgentDefinition
 

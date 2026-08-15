@@ -3,7 +3,7 @@ title: HTTP and OpenAPI reference
 description: Expose authenticated JSON commands, SSE progress, and readiness contracts.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 `@pactmark/http` implements Web-standard handlers for start, resume, inspect, events,
 input, decisions, cancellation, health, and readiness. Host authentication resolves

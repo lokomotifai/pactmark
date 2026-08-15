@@ -3,7 +3,7 @@ title: Katkı yolu
 description: DCO, test, review ve kanıt kapılarıyla Pactmark'a katkı verin.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## Katkı akışı
 

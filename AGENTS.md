@@ -1,6 +1,6 @@
 # Pactmark repository guidance
 
-This file is the durable engineering contract for Codex and contributors. Release evidence and remaining gates are recorded in [docs/releases/v0.1-readiness.md](./docs/releases/v0.1-readiness.md).
+This file is the durable engineering contract for Codex and contributors. Current release evidence and remaining gates are recorded in [docs/releases/v0.2-readiness.md](./docs/releases/v0.2-readiness.md); the v0.1 record remains historical evidence.
 
 ## Product and language
 

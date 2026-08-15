@@ -3,7 +3,7 @@ title: Vercel deployment
 description: Wire the Pactmark Next adapter while keeping durable state outside an invocation.
 ---
 
-> Compatibility: Pactmark 0.1.x. Local adapter evidence is available; no live
+> Compatibility: Pactmark 0.2.x. Local adapter evidence is available; no live
 > Pactmark Vercel deployment has been verified.
 
 ## Architecture

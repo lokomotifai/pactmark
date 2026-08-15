@@ -3,7 +3,7 @@ title: Node ve OCI container
 description: Node adapter'ını geliştirme veya dayanıklı Postgres profiliyle çalıştırın.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## BUGÜN
 

@@ -3,7 +3,7 @@ title: Responsibility matrix
 description: Separate Pactmark controls from host, operator, provider, and application duties.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 | Area       | Pactmark provides                        | Operator or application owns                                      |
 | ---------- | ---------------------------------------- | ----------------------------------------------------------------- |

@@ -3,7 +3,7 @@ title: Streaming and clients
 description: Consume bounded SSE progress with replay and authenticated inspection.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 The HTTP adapter exposes typed JSON commands and SSE events. Clients retain the last
 sequence and reconnect from that point; the store replays persisted events before

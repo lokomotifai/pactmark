@@ -3,7 +3,7 @@ title: Architecture and data flow
 description: Trace authority, model export, effects, storage, artifacts, and evidence.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 1. The host authenticates a principal and validates a `WorkOrder`.
 2. Policy and admission reserve authority and budgets before mutation or export.

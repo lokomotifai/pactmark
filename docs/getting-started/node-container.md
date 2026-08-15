@@ -3,7 +3,7 @@ title: Node and OCI container
 description: Run the Node adapter directly or in the bounded reference container.
 ---
 
-> Compatibility: Pactmark 0.1.x. The reference image is locally build-compatible,
+> Compatibility: Pactmark 0.2.x. The reference image is locally build-compatible,
 > not published or production-certified.
 
 `@pactmark/node` bridges the Web handler to `node:http`, exposes health/readiness,

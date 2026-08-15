@@ -3,7 +3,7 @@ title: Agent Lab pattern submission
 description: Submit reusable agent patterns with bounded evidence and maturity claims.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 A Komünite Agent Lab submission includes the exact agent, tool, policy, verifier,
 schema, model-profile, and environment identities; representative work orders;

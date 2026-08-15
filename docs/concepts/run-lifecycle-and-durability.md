@@ -3,7 +3,7 @@ title: Run lifecycle and durability
 description: Understand append-only run truth, projections, suspension, and safe resume.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Validated commands append versioned `RunEvent` records. A projection is a rebuildable
 cache, not the source of truth. Runs move through accepted, running, waiting,

@@ -3,7 +3,7 @@ title: IT production readiness checklist
 description: Record owners and evidence for identity, data, durability, recovery, and operations.
 ---
 
-> Compatibility: Pactmark 0.1.x. A checked box is an operator decision backed by
+> Compatibility: Pactmark 0.2.x. A checked box is an operator decision backed by
 > environment-specific evidence, not a Pactmark certification.
 
 ## Identity and tenancy

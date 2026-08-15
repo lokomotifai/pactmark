@@ -3,7 +3,7 @@ title: Kararlar ve insan yetkisi
 description: İnsan kararını exact etki ve tek kullanımlık kanıta bağlayın.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## İnsan kararı
 

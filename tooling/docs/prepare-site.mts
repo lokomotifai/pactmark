@@ -122,7 +122,7 @@ const llms = [
   "# Pactmark documentation",
   "",
   `Compatibility: ${manifest.compatibility}`,
-  "Publication status: Pactmark 0.1.2 is public on npm with verified registry bytes and per-package provenance.",
+  "Publication status: Pactmark 0.2.0 is public on npm with verified registry bytes and per-package provenance.",
   "",
   ...llmsPages.map(
     ({ language, title, description, path }) =>

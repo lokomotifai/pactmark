@@ -3,7 +3,7 @@ title: Authentication and tenancy
 description: Bind every command and storage access to authenticated tenant authority.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 HTTP adapters receive an injected authenticator. The host maps verified credentials
 to principal, tenant, authentication strength, roles, and purpose; user input cannot

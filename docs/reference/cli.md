@@ -3,7 +3,7 @@ title: CLI reference
 description: Use stable machine-readable commands for runs, inspection, evidence, and operations.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 The `pactmark` binary is owned by `@pactmark/cli`. It provides run, inspect, doctor,
 eval, evidence, migrate, reconciliation, and compensation surfaces through injected

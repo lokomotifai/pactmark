@@ -3,7 +3,7 @@ title: Güvenlik modeli
 description: Yetkiyi model context'inin dışında tutun ve belirsizlikte kapalı kalın.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 ## Güvenlik modeli
 

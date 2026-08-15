@@ -3,7 +3,7 @@ title: Sandbox boundary
 description: Understand why the reference container is a test fixture, not production isolation.
 ---
 
-> Compatibility: Pactmark 0.1.x. Status: **unsafe reference fixture**.
+> Compatibility: Pactmark 0.2.x. Status: **unsafe reference fixture**.
 
 The container conformance fixture uses a non-root user, no network, read-only root,
 tmpfs workspace, no mounts or Docker socket, dropped capabilities, no-new-privileges,

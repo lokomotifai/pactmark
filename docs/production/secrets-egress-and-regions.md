@@ -3,7 +3,7 @@ title: Secrets, egress, and regions
 description: Keep credentials out of model context and constrain every network destination.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Store secrets in a host-managed secret system. Pactmark issues opaque, short-lived,
 purpose-bound `SecretRef` values only after authority and policy succeed. The target

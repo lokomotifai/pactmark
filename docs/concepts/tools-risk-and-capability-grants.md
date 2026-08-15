@@ -3,7 +3,7 @@ title: Tools, risk, and capability grants
 description: Keep tool exposure and execution behind default-deny policy.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 `ToolSecurity` classifies risk, scope, effect strategy, egress, credential mode, and
 resource bounds. Unknown or unsupported metadata fails closed. Normalized schemas

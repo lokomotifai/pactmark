@@ -3,7 +3,7 @@ title: MCP integration
 description: Treat MCP servers and discovered metadata as untrusted adapter input.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 `@pactmark/mcp` supports tested stdio and Streamable HTTP transports. Host
 configuration pins server identity, protocol capabilities, schemas, transport

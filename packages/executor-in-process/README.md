@@ -4,5 +4,5 @@ This package executes only host-declared tool callbacks and provides deny-all or
 
 Use a separately isolated host adapter that passes Pactmark's enforced executor/egress conformance suite before advertising `networkPolicy: "enforced"`.
 
-Version `0.1.2` is public on npm with verified registry bytes and provenance. The
+Version `0.2.0` is public on npm with verified registry bytes and provenance. The
 package remains an unsafe local executor and does not provide production isolation.

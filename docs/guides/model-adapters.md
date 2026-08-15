@@ -3,7 +3,7 @@ title: Model adapters
 description: Integrate providers without transferring authority to model code.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 A model adapter normalizes streamed content, tool requests, finish reasons, usage,
 and retry classification. Registration binds provider, model factory, security and

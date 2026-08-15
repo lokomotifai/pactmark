@@ -3,7 +3,7 @@ title: Incident recovery
 description: Contain authority, preserve append-only evidence, and reconcile uncertain effects.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 First contain access: revoke credentials and grants, activate digest kill switches,
 stop workers or egress where required, and preserve tenant boundaries. Do not delete

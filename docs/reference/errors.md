@@ -3,7 +3,7 @@ title: Error reference
 description: Handle stable KAF codes without parsing human-readable messages.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 Pactmark failures expose stable `KAF_*` codes for schema, authority, tenant, policy,
 grant, approval, budget, credential, effect, storage, migration, readiness, and

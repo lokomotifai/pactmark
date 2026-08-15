@@ -3,7 +3,7 @@ title: Security model
 description: Enforce default-deny authority outside model context and fail closed on uncertainty.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 The model is never authority. Authentication, tenant binding, policy, grants,
 approvals, budgets, schema validation, credentials, egress, verification, and effect

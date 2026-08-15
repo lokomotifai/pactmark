@@ -3,7 +3,7 @@ title: Verification and evals
 description: Bind deterministic checks and model-assisted evals to exact artifacts.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 A `Verifier` returns a versioned `VerificationResult` for an exact artifact digest.
 Deterministic schema, checksum, policy, and custom checks run without a model key.

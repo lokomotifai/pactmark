@@ -3,7 +3,7 @@ title: Terminoloji
 description: Türkçe dokümanlarda kullanılan kanonik Pactmark terimleri.
 ---
 
-> Compatibility: Pactmark 0.1.x.
+> Compatibility: Pactmark 0.2.x.
 
 API adları çevrilmez. Açıklayıcı Türkçe karşılık ilk kullanımda verilebilir.
 

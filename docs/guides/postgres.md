@@ -3,7 +3,7 @@ title: PostgreSQL durable profile
 description: Configure tenant-scoped event truth, protected context, and fenced workers.
 ---
 
-> Compatibility: Pactmark 0.1.x. Local evidence uses disposable PostgreSQL 17.
+> Compatibility: Pactmark 0.2.x. Local evidence uses disposable PostgreSQL 17.
 
 Apply ordered migrations with the Pactmark migration manager, use a least-privilege
 role, and require hostname-verified TLS. Every storage path includes tenant identity.
