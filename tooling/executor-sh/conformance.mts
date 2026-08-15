@@ -908,7 +908,7 @@ export async function runExecutorContainerConformance(): Promise<ExecutorContain
     await runDocker(["network", "create", "--internal", network]);
     for (const dataDirectory of allDataDirectories) {
       await mkdir(dataDirectory);
-      await chmod(dataDirectory, 0o777);
+      await chmod(dataDirectory, 0o770);
     }
     const tenantA = await startTenant({
       id,

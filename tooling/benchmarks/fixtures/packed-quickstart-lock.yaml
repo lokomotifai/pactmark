@@ -55,6 +55,13 @@ packages:
     version: 0.1.2
     engines: { node: ^22.14.0 || ^24.0.0 }
 
+  "@pactmark/policy@file:tarballs/pactmark-policy-0.1.2.tgz":
+    resolution:
+      integrity: __PACTMARK_POLICY_INTEGRITY__
+      tarball: file:tarballs/pactmark-policy-0.1.2.tgz
+    version: 0.1.2
+    engines: { node: ^22.14.0 || ^24.0.0 }
+
   "@pactmark/runtime@file:tarballs/pactmark-runtime-0.1.2.tgz":
     resolution:
       integrity: __PACTMARK_RUNTIME_INTEGRITY__
@@ -79,6 +86,7 @@ snapshots:
       "@pactmark/core": file:tarballs/pactmark-core-0.1.2.tgz
       "@pactmark/evidence": file:tarballs/pactmark-evidence-0.1.2.tgz
       "@pactmark/executor-in-process": file:tarballs/pactmark-executor-in-process-0.1.2.tgz
+      "@pactmark/policy": file:tarballs/pactmark-policy-0.1.2.tgz
       "@pactmark/runtime": file:tarballs/pactmark-runtime-0.1.2.tgz
       "@pactmark/store-memory": file:tarballs/pactmark-store-memory-0.1.2.tgz
       zod: 4.4.3
@@ -95,6 +103,11 @@ snapshots:
   "@pactmark/executor-in-process@file:tarballs/pactmark-executor-in-process-0.1.2.tgz":
     dependencies:
       "@pactmark/core": file:tarballs/pactmark-core-0.1.2.tgz
+
+  "@pactmark/policy@file:tarballs/pactmark-policy-0.1.2.tgz":
+    dependencies:
+      "@pactmark/core": file:tarballs/pactmark-core-0.1.2.tgz
+      zod: 4.4.3
 
   "@pactmark/runtime@file:tarballs/pactmark-runtime-0.1.2.tgz":
     dependencies:

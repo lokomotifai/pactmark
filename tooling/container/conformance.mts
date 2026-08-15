@@ -15,6 +15,7 @@ const pnpmCliPath = join(repositoryRoot, "node_modules", "pnpm", "bin", "pnpm.mj
 const runtimeStage = `FROM node:24.18.1-alpine AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV PACTMARK_BIND_HOST=0.0.0.0
 WORKDIR /app
 COPY --from=build --chown=node:node /product ./
 USER node
@@ -221,7 +222,13 @@ function workOrder(): Readonly<Record<string, unknown>> {
     dataClass: "public",
     retention: { mode: "session" },
     requestedCapabilities: ["fixture:read"],
-    resourceScopeCeiling: [],
+    resourceScopeCeiling: [
+      {
+        kind: "tenant",
+        value: "node-quickstart",
+        normalizationVersion: "pactmark.policy-normalization@1",
+      },
+    ],
     budget: { maxTurns: 4, maxModelCalls: 4, maxToolCalls: 1, maxActiveExecutionMs: 10_000 },
   });
 }

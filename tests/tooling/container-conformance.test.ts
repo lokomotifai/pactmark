@@ -45,7 +45,12 @@ class DockerDouble implements CommandRunner {
     }
     if (operation === "inspect" && third === "{{json .Config.Env}}") {
       return Promise.resolve({
-        stdout: JSON.stringify(["NODE_ENV=production", "PORT=3000", "PATH=/usr/local/bin"]),
+        stdout: JSON.stringify([
+          "NODE_ENV=production",
+          "PORT=3000",
+          "PACTMARK_BIND_HOST=0.0.0.0",
+          "PATH=/usr/local/bin",
+        ]),
         stderr: "",
       });
     }
@@ -110,6 +115,11 @@ describe("OCI conformance runner", () => {
     expect(
       containerConformanceInternals.hasCanonicalRuntimeStage(
         dockerfile.replace("USER node", "USER root"),
+      ),
+    ).toBe(false);
+    expect(
+      containerConformanceInternals.hasCanonicalRuntimeStage(
+        dockerfile.replace("PACTMARK_BIND_HOST=0.0.0.0", "PACTMARK_BIND_HOST=127.0.0.1"),
       ),
     ).toBe(false);
   });
