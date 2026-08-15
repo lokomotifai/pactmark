@@ -122,7 +122,7 @@ const llms = [
   "# Pactmark documentation",
   "",
   `Compatibility: ${manifest.compatibility}`,
-  "Publication status: Pactmark 0.2.0 is a verified candidate; protected publication and independent registry-byte verification are pending.",
+  "Publication status: Pactmark 0.2.0 is public; all 19 registry tarballs and per-package SLSA provenance records were independently verified against the frozen release.",
   "",
   ...llmsPages.map(
     ({ language, title, description, path }) =>
