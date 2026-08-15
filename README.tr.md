@@ -197,7 +197,7 @@ provider, database, platform adapter veya telemetry paketlerini re-export etmez.
 Pactmark genel amaçlı chat SDK’sı, no-code builder, swarm orchestrator, hosted
 control plane veya production arbitrary-code sandbox değildir. Güvenilen
 in-process executor bir isolation boundary değildir. Production-shaped host
-değerlendirmeden önce [güvenlik modelini](docs/tr/security/security-model.md)
+değerlendirmeden önce [güvenlik modelini](https://pactmark-docs.lokomotif.ai/tr/security/security-model)
 okuyun.
 
 ## Runtime ve platform durumu

@@ -9,7 +9,6 @@ export default tseslint.config(
       "**/coverage/**",
       "**/.artifacts/**",
       "**/.next/**",
-      "**/.astro/**",
       "**/.wrangler/**",
       "apps/cloudflare-worker/worker-configuration.d.ts",
       "briefs/**",
@@ -40,15 +39,6 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         project: "./apps/nextjs-vercel/tsconfig.eslint.json",
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-  },
-  {
-    files: ["apps/docs/**/*.{ts,mts,tsx}"],
-    languageOptions: {
-      parserOptions: {
-        project: "./apps/docs/tsconfig.json",
         tsconfigRootDir: import.meta.dirname,
       },
     },

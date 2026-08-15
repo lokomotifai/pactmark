@@ -228,7 +228,7 @@ Pactmark is designed around several non-negotiable boundaries:
 Pactmark is **not** a generic chat SDK, no-code builder, swarm orchestrator,
 hosted control plane, or production arbitrary-code sandbox. Its trusted
 in-process executor is explicitly not an isolation boundary. Read the
-[security model](docs/security/security-model.md)
+[security model](https://pactmark-docs.lokomotif.ai/security/security-model)
 before evaluating a production-shaped host.
 
 ## Runtime and platform status
@@ -322,12 +322,12 @@ all meaningful.
 
 ## Documentation and examples
 
-- [Documentation home](docs/index.md)
-- [Türkçe dokümantasyon](docs/tr/index.md)
-- [Build your first agent](docs/getting-started/first-agent.md)
-- [Concepts: agent and WorkOrder](docs/concepts/agent-and-work-order.md)
-- [Concepts: tools, risk, and grants](docs/concepts/tools-risk-and-capability-grants.md)
-- [Run lifecycle and durability](docs/concepts/run-lifecycle-and-durability.md)
+- [Documentation home](https://pactmark-docs.lokomotif.ai)
+- [Türkçe dokümantasyon](https://pactmark-docs.lokomotif.ai/tr)
+- [Build your first agent](https://pactmark-docs.lokomotif.ai/getting-started/first-agent)
+- [Concepts and architecture](https://pactmark-docs.lokomotif.ai/concepts/architecture)
+- [Tools and effects](https://pactmark-docs.lokomotif.ai/concepts/tools-and-effects)
+- [Run lifecycle](https://pactmark-docs.lokomotif.ai/concepts/run-lifecycle)
 - [Approval agent](examples/approval-agent/) — a simulated outbound effect with
   a real approval boundary and no live provider.
 - [Node quickstart](apps/node-quickstart/) — HTTP/SSE and lifecycle behavior.

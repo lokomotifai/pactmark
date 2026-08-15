@@ -1,6 +1,6 @@
 # ADR-0007: Toolchain and version baseline
 
-- Status: Accepted
+- Status: Accepted; repository documentation-tooling section superseded 2026-08-15
 - Date: 2026-08-03
 - Decision owners: Pactmark maintainers
 
@@ -54,8 +54,6 @@ bytes; this table records the accepted selection and compatibility intent.
 | Bundle budget                     | `size-limit`                   | `13.0.3`       |
 | Small-library budget preset       | `@size-limit/preset-small-lib` | `13.0.3`       |
 | Supported-runtime Node typings    | `@types/node`                  | `22.20.1`      |
-| Static documentation engine       | `astro`                        | `7.1.6`        |
-| Documentation theme               | `@astrojs/starlight`           | `0.41.6`       |
 | MCP adapter SDK                   | `@modelcontextprotocol/sdk`    | `1.30.0`       |
 | Optional model adapter SDK        | `ai`                           | `7.0.48`       |
 | Direct Vite pin when materialized | `vite`                         | `8.2.0`        |
@@ -83,7 +81,6 @@ of npm 11.5.1 on Node.js 22.14.0 that was documented on the snapshot date. The
 protected release job must still re-check the official floor and supported OIDC
 command scope immediately before a public release.
 
-Astro Starlight 0.41.6 requires Astro `^7.0.2`; Astro 7.1.6 satisfies it.
 Coverage and Vitest remain on the same exact version. Global Node typings use
 the Node 22 line to prevent accidental Node 26 API use; a Node-24-only app may
 use separately isolated `@types/node@24.13.3` when justified.
@@ -129,6 +126,10 @@ clean Next production build is a regression gate for those overrides.
 - Release jobs pin Node.js and npm independently instead of assuming the npm
   bundled with an arbitrary runner image is suitable.
 - Experimental integrations are isolated, labeled, and removable.
+- Public product documentation is maintained in the separate
+  `lokomotifai/pactmark-documentation` repository and published at
+  `https://pactmark-docs.lokomotif.ai`; this repository no longer carries a
+  static documentation application or its build dependencies.
 
 ## Primary references
 
