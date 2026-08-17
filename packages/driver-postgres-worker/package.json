@@ -36,8 +36,8 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@types/pg": "8.20.0",
-    "pg": "8.22.0",
+    "@types/pg": "8.21.0",
+    "pg": "8.23.0",
     "tsdown": "0.22.14",
     "typescript": "6.0.3",
     "vitest": "4.1.10",
