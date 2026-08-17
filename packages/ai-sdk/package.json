@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@pactmark/agent": "workspace:*",
-    "@types/node": "22.20.1",
+    "@types/node": "26.2.0",
     "ai": "7.0.48",
     "tsdown": "0.22.14",
     "typescript": "6.0.3",
