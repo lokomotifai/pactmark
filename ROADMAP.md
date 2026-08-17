@@ -4,11 +4,16 @@ Pactmark's roadmap is a statement of direction, not a delivery promise. It is
 kept outcome-oriented so contributors can shape the implementation through
 issues and proposals.
 
-## Now — make the v0.1 contract easy to adopt
+## Now — make the v0.2 contract easy to adopt
 
-- Turn first-run examples into dependable contributor and evaluator paths.
-- Collect real integration feedback on `WorkOrder`, policy, effect, artifact,
-  verification, and evidence contracts without weakening their boundaries.
+- Release and document the facade work already on `main`—raw schemas, string
+  instructions, a default deny-everything local policy, `runtime.run(...)`, and
+  governed R2 writes—without letting any default widen authority.
+- Collect real integration feedback on the provider tool loop from hosts running
+  their own AI SDK providers, and on the `WorkOrder`, policy, effect, artifact,
+  verification, and evidence contracts, without weakening their boundaries.
+- Turn first-run examples into dependable contributor and evaluator paths whose
+  stated boundary stays narrower than their executable evidence.
 - Improve API navigation, error-code guidance, English/Turkish parity, and
   accessibility testing.
 - Grow a review culture around well-scoped `good first issue` and `help wanted`

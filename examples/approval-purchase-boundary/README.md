@@ -1,10 +1,12 @@
 # Approval-bound purchase boundary
 
-The current public facade supports read tools only and does not expose decision
-challenge, approval, write-effect, or reconciliation commands. This executable
-example therefore demonstrates the honest boundary: it creates an exact R4
-policy identity and deterministic purchase preview, then refuses dispatch with
-`KAF_EXAMPLE_APPROVAL_SURFACE_UNAVAILABLE`. No purchase or external write occurs.
+The public facade supports governed R2 write tools, but R3+ compensation and
+approval machinery still requires kernel-level composition, and no public
+decision challenge, approval, or reconciliation command is exposed. This
+executable example therefore demonstrates the honest boundary: it creates an
+exact R4 policy identity and deterministic purchase preview, then refuses
+dispatch with `KAF_EXAMPLE_APPROVAL_SURFACE_UNAVAILABLE`. No purchase or
+external write occurs.
 
 ```sh
 pnpm --filter pactmark-example-approval-purchase test

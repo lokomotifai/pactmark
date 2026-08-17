@@ -50,11 +50,17 @@ Pactmark is an evidence-native framework for agents that perform bounded work
 under explicit authority. It is for systems where “the model returned something
 plausible” is not an acceptable definition of success.
 
-Version **0.2.0** is publicly available across all 19 packages. The protected OIDC
-workflow, anonymous registry verification, and immutable GitHub Release establish
-that every registry-served tarball matches the frozen release manifest and carries
-npm SLSA provenance. These supply-chain results do not imply production deployment
-readiness or certify the framework's security.
+Version **0.2.0** is publicly available: 18 `@pactmark/*` packages and the
+unscoped `create-pactmark` initializer. The private `@pactmark/executor-sh`
+workspace remains at 0.1.0 and is excluded from public release artifacts. The
+protected OIDC workflow, anonymous registry verification, and immutable GitHub
+Release establish that every registry-served tarball matches the frozen release
+manifest and carries npm SLSA provenance. These supply-chain results do not imply
+production deployment readiness or certify the framework's security.
+
+`main` carries work that is not in 0.2.0 yet. [CHANGELOG.md](CHANGELOG.md)
+separates released behavior from unreleased behavior; this README marks the
+difference wherever it affects a documented path.
 
 ## The difference in one picture
 
@@ -100,6 +106,12 @@ learning and test path, not a production template disguised as one.
 
 A governed agent with one tool fits in about thirty lines
 ([`examples/quickstart-agent`](examples/quickstart-agent/), runnable offline):
+
+> **Unreleased surface.** Raw Zod schemas, string instructions, the default local
+> policy, and `runtime.run(...)` live on `main` and are not part of published
+> 0.2.0. On 0.2.0, compose the explicit form in
+> [`examples/minimal-tool-agent/src/example.ts`](examples/minimal-tool-agent/src/example.ts)
+> instead.
 
 ```ts
 const lookup = defineTool({
@@ -321,6 +333,7 @@ count.
 | [Security](SECURITY.md)               | Supported versions, private reporting, response targets, safe harbor, and security boundaries.                |
 | [Support](SUPPORT.md)                 | Correct help route, useful reproduction data, and the project's support boundary.                             |
 | [Roadmap](ROADMAP.md)                 | Current direction and the capabilities Pactmark intentionally does not promise.                               |
+| [Changelog](CHANGELOG.md)             | What each released version changed, and which behavior is still unreleased on `main`.                         |
 | [Name and logo policy](TRADEMARKS.md) | Fair community use without implying endorsement or official status.                                           |
 
 Commits require [DCO 1.1](https://developercertificate.org/) sign-off. The
@@ -336,8 +349,26 @@ all meaningful.
 - [Concepts and architecture](https://pactmark-docs.lokomotif.ai/concepts/architecture)
 - [Tools and effects](https://pactmark-docs.lokomotif.ai/concepts/tools-and-effects)
 - [Run lifecycle](https://pactmark-docs.lokomotif.ai/concepts/run-lifecycle)
-- [Approval agent](examples/approval-agent/) — a simulated outbound effect with
-  a real approval boundary and no live provider.
+
+### Executable examples
+
+Every example runs offline against deterministic fixtures and needs no model key.
+Each one states its own boundary; none is a production template.
+
+| Example                                                                | What it demonstrates                                                                                                                     |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| [`quickstart-agent`](examples/quickstart-agent/)                       | The shortest governed agent: default local policy, one R1 read, one governed R2 write. Uses the unreleased `main` facade.                |
+| [`minimal-tool-agent`](examples/minimal-tool-agent/)                   | The explicit composition published 0.2.0 supports: profiles, authority, `WorkOrder`, budgets, ordered events, artifact, evidence export. |
+| [`approval-agent`](examples/approval-agent/)                           | A simulated outbound effect behind a real approval boundary; the decision challenge never reaches command output.                        |
+| [`approval-purchase-boundary`](examples/approval-purchase-boundary/)   | An exact R4 purchase preview that fails closed because the public decision and approval commands are not exposed.                        |
+| [`delegated-incident-boundary`](examples/delegated-incident-boundary/) | Worker delegation bound to one run, scheduler receipt, lease, and fencing token; a newer fence invalidates the older delegation.         |
+| [`evidence-document-pipeline`](examples/evidence-document-pipeline/)   | Content-addressed document bytes, exact-byte and citation-shape verification, and a claim-bounded `EvidenceRecord` export.               |
+| [`portable-agent`](examples/portable-agent/)                           | One unchanged agent implementation called through Node, Vercel, and Cloudflare-shaped entrypoints.                                       |
+| [`research-evidence-agent`](examples/research-evidence-agent/)         | A deterministic source fixture turned into a verified artifact and an `EvidenceRecord`.                                                  |
+| [`workspace-agent`](examples/workspace-agent/)                         | A bounded virtual filesystem: allowlisted roots, path and symlink denial, command/output/time limits, cancellation, and redaction.       |
+
+### Host fixtures
+
 - [Node quickstart](apps/node-quickstart/) — HTTP/SSE and lifecycle behavior.
 - [Next.js/Vercel fixture](apps/nextjs-vercel/) — auth, routes, and UI boundary.
 - [Cloudflare Worker fixture](apps/cloudflare-worker/) — experimental ephemeral
