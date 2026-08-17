@@ -49,11 +49,17 @@ Pactmark, açık yetki altında sınırlandırılmış işler yapan agent’lar 
 kanıt-yerel bir framework’tür. “Model makul bir şey döndürdü” ifadesinin başarı
 tanımı olamayacağı sistemler için tasarlanmıştır.
 
-**0.2.0**, 19 package’ın tamamında public olarak yayımlanmıştır. Korumalı OIDC
+**0.2.0** public olarak yayımlanmıştır: 18 `@pactmark/*` package’ı ve scope’suz
+`create-pactmark` initializer’ı. Private `@pactmark/executor-sh` workspace’i 0.1.0
+sürümünde kalır ve public release artifact’lerine dâhil edilmez. Korumalı OIDC
 workflow’u, anonim registry doğrulaması ve immutable GitHub Release; registry’nin
 sunduğu her tarball’ın frozen release manifest’iyle eşleştiğini ve npm SLSA
 provenance taşıdığını doğrular. Bu tedarik zinciri sonuçları production deployment
 hazırlığı veya framework güvenliği sertifikası değildir.
+
+`main` dalı 0.2.0’da bulunmayan işleri de taşır. [CHANGELOG.md](CHANGELOG.md)
+yayımlanmış davranışı yayımlanmamış davranıştan ayırır; bu README de farkı,
+belgelenmiş bir yolu etkilediği her yerde işaretler.
 
 ## Tek görselde temel fark
 
@@ -99,15 +105,55 @@ state, deterministic model fixture ve güvenilen in-process execution. Bu bir
 
 Tek tool’lu, yönetişimli bir agent yaklaşık otuz satıra sığar
 ([`examples/quickstart-agent`](examples/quickstart-agent/), anahtar gerektirmeden
-çalışır). Tool’lar sağlayıcıya yalnızca şema olarak tanıtılır; her öneri
-dispatch öncesi host tarafından yeniden doğrulanır ve policy’den geçer. Facade
-varsayılanları yetkiyi asla genişletmez: okumalar R1’e varsayılanır, yazma R2 ve
-açık policy kuralı ister, varsayılan policy geri kalan her şeyi reddeder.
-Eksiksiz açık form için
+çalışır):
+
+> **Henüz yayımlanmamış yüzey.** Ham Zod şemaları, string `instructions`,
+> varsayılan local policy ve `runtime.run(...)` `main` dalındadır ve yayımlanmış
+> 0.2.0’ın parçası değildir. 0.2.0 üzerinde bunun yerine
+> [`examples/minimal-tool-agent/src/example.ts`](examples/minimal-tool-agent/src/example.ts)
+> içindeki açık formu kullanın.
+
+```ts
+const lookup = defineTool({
+  id: "catalog.lookup@1",
+  description: "Read one item from the embedded catalog.",
+  input: z.object({ sku: z.string().min(1) }).strict(),
+  output: z.object({ sku: z.string(), name: z.string(), available: z.boolean() }).strict(),
+  security: { requiredScopes: ["catalog:read"] },
+  operation: {
+    kind: "read",
+    execute: ({ sku }) =>
+      Promise.resolve({ sku, name: "Portable notebook", available: sku === "P-100" }),
+  },
+});
+
+const catalogAgent = defineAgent({
+  id: "quickstart-catalog-agent",
+  version: "0.1.0",
+  input: z.object({ sku: z.string().min(1) }).strict(),
+  instructions: "Check the catalog with the lookup tool, then answer with the output JSON.",
+  model: fromAISDK(model()),
+  tools: { lookup },
+  output: z.object({ summary: z.string() }).strict(),
+});
+
+const runtime = createLocalRuntime({ agents: [catalogAgent] });
+const result = await runtime.run(catalogAgent, {
+  goal: "Check availability of SKU P-100.",
+  input: { sku: "P-100" },
+});
+```
+
+`model()` herhangi bir AI SDK v7 model örneğidir; örnek, anahtarsız çalışabilsin
+diye provider biçimli deterministic bir fixture ile gelir. Tool’lar sağlayıcıya
+yalnızca şema olarak tanıtılır; her öneri dispatch öncesi host tarafından yeniden
+doğrulanır ve policy’den geçer. Facade varsayılanları yetkiyi asla genişletmez:
+okumalar R1’e varsayılanır, yazma R2 ve açık policy kuralı ister, varsayılan
+policy geri kalan her şeyi reddeder. Eksiksiz açık formda —model güvenlik/kaynak
+profilleri, authority issuer, `WorkOrder`, purpose ve data class, istenen
+capability’ler, bütçeler ve command identity— her şey
 [`examples/minimal-tool-agent/src/example.ts`](examples/minimal-tool-agent/src/example.ts)
-dosyasına bakın: model güvenlik/kaynak profilleri, authority issuer, `WorkOrder`,
-purpose ve data class, istenen capability’ler, bütçeler ve command identity
-orada açıkça tanımlıdır.
+içinde açıkça tanımlıdır.
 
 ## Ürün sınırı run’dır
 
@@ -280,11 +326,46 @@ sayısıyla otomatik yetki yoktur.
 | [Security](SECURITY.md)                  | Desteklenen sürümler, private reporting, hedef response süreleri, safe harbor ve güvenlik sınırları.        |
 | [Support](SUPPORT.md)                    | Doğru yardım yolu, gerekli reproduction bilgisi ve support sınırı.                                          |
 | [Roadmap](ROADMAP.md)                    | Güncel yön ve Pactmark’ın bilinçli olarak vaat etmediği capability’ler.                                     |
+| [Changelog](CHANGELOG.md)                | Her sürümün neyi değiştirdiği ve hangi davranışın `main`’de hâlâ yayımlanmamış olduğu.                      |
 | [İsim ve logo politikası](TRADEMARKS.md) | Endorsement veya resmîlik izlenimi vermeden adil topluluk kullanımı.                                        |
 
 Commit’lerde [DCO 1.1](https://developercertificate.org/) sign-off gerekir; CLA
 kullanılmaz. Code, documentation, translation, review, triage, test design ve
 community care katkılarının tümü değerlidir.
+
+## Dokümantasyon ve örnekler
+
+- [Dokümantasyon ana sayfası](https://pactmark-docs.lokomotif.ai/tr)
+- [English documentation](https://pactmark-docs.lokomotif.ai)
+- [İlk agent’ını oluştur](https://pactmark-docs.lokomotif.ai/tr/getting-started/first-agent)
+- [Kavramlar ve mimari](https://pactmark-docs.lokomotif.ai/tr/concepts/architecture)
+- [Tool’lar ve effect’ler](https://pactmark-docs.lokomotif.ai/tr/concepts/tools-and-effects)
+- [Run yaşam döngüsü](https://pactmark-docs.lokomotif.ai/tr/concepts/run-lifecycle)
+
+### Çalıştırılabilir örnekler
+
+Her örnek deterministic fixture’larla çevrimdışı çalışır ve model anahtarı
+istemez. Her biri kendi sınırını açıkça yazar; hiçbiri production template’i
+değildir.
+
+| Örnek                                                                  | Neyi gösterir                                                                                                                          |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [`quickstart-agent`](examples/quickstart-agent/)                       | En kısa yönetişimli agent: varsayılan local policy, bir R1 read, bir governed R2 write. Yayımlanmamış `main` facade’ini kullanır.      |
+| [`minimal-tool-agent`](examples/minimal-tool-agent/)                   | Yayımlanmış 0.2.0’ın desteklediği açık kompozisyon: profiller, authority, `WorkOrder`, bütçeler, sıralı event’ler, artifact, evidence. |
+| [`approval-agent`](examples/approval-agent/)                           | Gerçek bir approval sınırının arkasındaki simüle dışa dönük effect; decision challenge komut çıktısına asla girmez.                    |
+| [`approval-purchase-boundary`](examples/approval-purchase-boundary/)   | Public decision ve approval komutları açık olmadığı için fail-closed davranan exact R4 satın alma preview’ı.                           |
+| [`delegated-incident-boundary`](examples/delegated-incident-boundary/) | Tek run, scheduler receipt, lease ve fencing token’a bağlanmış worker delegasyonu; yeni fence eskisini geçersiz kılar.                 |
+| [`evidence-document-pipeline`](examples/evidence-document-pipeline/)   | İçerik adresli doküman byte’ları, exact-byte ve citation-shape doğrulaması, claim sınırlı `EvidenceRecord` export’u.                   |
+| [`portable-agent`](examples/portable-agent/)                           | Değişmeyen tek bir agent implementasyonunun Node, Vercel ve Cloudflare biçimli entrypoint’lerden çağrılması.                           |
+| [`research-evidence-agent`](examples/research-evidence-agent/)         | Deterministic bir kaynak fixture’ının doğrulanmış artifact’e ve `EvidenceRecord`’a dönüştürülmesi.                                     |
+| [`workspace-agent`](examples/workspace-agent/)                         | Sınırlı sanal dosya sistemi: allowlist’li kökler, path ve symlink reddi, komut/çıktı/süre limitleri, cancellation ve redaction.        |
+
+### Host fixture’ları
+
+- [Node quickstart](apps/node-quickstart/) — HTTP/SSE ve lifecycle davranışı.
+- [Next.js/Vercel fixture](apps/nextjs-vercel/) — auth, route’lar ve UI sınırı.
+- [Cloudflare Worker fixture](apps/cloudflare-worker/) — deneysel ephemeral edge
+  profili ve dürüst readiness raporu.
 
 ## Lisans
 
