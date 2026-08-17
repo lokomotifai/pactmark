@@ -109,7 +109,7 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Download candidate built by the unprivileged job
         # actions/download-artifact v6
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: pactmark-v0.2.0-release-${{ github.sha }}
           path: .artifacts/release-dry-run
