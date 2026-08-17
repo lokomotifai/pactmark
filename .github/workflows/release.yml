@@ -119,13 +119,13 @@ jobs:
       - name: Generate GitHub build provenance
         id: provenance
         # actions/attest v4
-        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-checksums: .artifacts/release-dry-run/SHA256SUMS
       - name: Generate GitHub SBOM attestation
         id: sbom
         # actions/attest v4
-        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-path: .artifacts/release-dry-run/tarballs/*.tgz
           sbom-path: .artifacts/release-dry-run/pactmark-release.cdx.json
