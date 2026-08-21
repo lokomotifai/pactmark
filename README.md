@@ -338,7 +338,7 @@ count.
 | [Name and logo policy](TRADEMARKS.md)   | Fair community use without implying endorsement or official status.                                                    |
 
 Commits require [DCO 1.1](https://developercertificate.org/) sign-off. Additive
-CLA Version 1.0 applies only to Contributions merged on or after September 15,
+CLA Version 1.0 applies only to Contributions merged on or after August 21,
 2026 at 00:00 UTC; it does not apply retroactively and does not change the
 Apache-2.0 license. Contributions of code, documentation, translation, review,
 triage, test design, and community care are all meaningful.

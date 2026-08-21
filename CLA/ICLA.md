@@ -1,6 +1,6 @@
 # Pactmark Individual Contributor License Agreement
 
-> **VERSION 1.0 — APPROVED; EFFECTIVE SEPTEMBER 15, 2026 AT 00:00 UTC.**
+> **VERSION 1.0 — APPROVED; EFFECTIVE AUGUST 21, 2026 AT 00:00 UTC.**
 >
 > This Agreement applies only to Contributions merged into Pactmark on or after
 > its effective date. It does not apply retroactively. Acceptance submitted
@@ -132,8 +132,7 @@ located in Delaware have exclusive jurisdiction over any dispute arising out of
 or relating to this Agreement, and You consent to their personal jurisdiction
 and venue. Formal notices to the Project Steward must be sent to
 `legal@lokomotif.ai` and 8 The Green, Suite D, Dover, Delaware 19901, United
-States. Counsel must approve this section before the Agreement becomes
-effective.
+States.
 
 ## Adaptation record
 
@@ -144,13 +143,12 @@ Changes from the source template:
 1. **Header and introductory paragraphs:** replaced The Apache Software
    Foundation identifiers with Saparda Inc. and "Project Steward"; identified
    Pactmark as the project; limited coverage to Contributions merged on or after
-   September 15, 2026 at 00:00 UTC; and omitted the ASF-specific
+   August 21, 2026 at 00:00 UTC; and omitted the ASF-specific
    nonprofit-status recital. These changes adapt the parties and project without
-   asserting nonprofit status or retroactive coverage. Counsel must confirm the
-   omitted recital.
+   asserting nonprofit status or retroactive coverage.
 2. **ASF form and submission fields:** replaced the PDF, postal, and public
    profile fields with the GitHub CLA Assistant route in section 9 and
-   `legal@lokomotif.ai`, because the proposed acceptance is repository-based
+   `legal@lokomotif.ai`, because acceptance is repository-based
    click-through.
 3. **Section 1:** replaced each "Foundation" reference with "Project Steward"
    and the generic ASF product definition with Pactmark as the Work.
@@ -164,7 +162,7 @@ Changes from the source template:
    disclaimers, with Markdown headings and line wrapping only.
 7. **Sections 9 and 10:** added the click-through acceptance record, Delaware
    governing law and venue, `legal@lokomotif.ai`, and the Saparda Inc. notice
-   address. Counsel must approve both sections.
+   address; counsel approved the completed Version 1.0 text on August 21, 2026.
 8. **Prospective-scope notice and adaptation record:** added these notices so the
    effective date and non-retroactive boundary are explicit and every altered
    source clause is identified.

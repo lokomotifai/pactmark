@@ -331,7 +331,7 @@ sayısıyla otomatik yetki yoktur.
 | [İsim ve logo politikası](TRADEMARKS.md) | Endorsement veya resmîlik izlenimi vermeden adil topluluk kullanımı.                                                               |
 
 Commit’lerde [DCO 1.1](https://developercertificate.org/) sign-off gerekir.
-DCO’ya ek CLA Version 1.0 yalnızca 15 Eylül 2026 00:00 UTC’de veya sonrasında
+DCO’ya ek CLA Version 1.0 yalnızca 21 Ağustos 2026 00:00 UTC’de veya sonrasında
 merge edilen Contribution’lara uygulanır; geriye yürümez ve Apache-2.0 lisansını
 değiştirmez. Bağlayıcı CLA dili İngilizcedir; bu Türkçe açıklama yalnızca
 bilgilendirme amaçlıdır. Code, documentation, translation, review, triage, test

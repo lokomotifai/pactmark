@@ -10,7 +10,7 @@ package README. Create a focused change, preserve package boundaries, add determ
 tests, run the smallest gate, and add a Changeset for user-visible behavior.
 
 Commits require DCO sign-off. Additive CLA Version 1.0 applies only to
-Contributions merged on or after September 15, 2026 at 00:00 UTC; from that
+Contributions merged on or after August 21, 2026 at 00:00 UTC; from that
 time, non-allowlisted commit authors must also complete the CLA check. It does
 not apply retroactively. Security reports do not use public issues. Maintainer
 review owns public API, persisted schemas, policy/effect boundaries,

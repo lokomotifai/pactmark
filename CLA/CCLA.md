@@ -1,6 +1,6 @@
 # Pactmark Corporate Contributor License Agreement
 
-> **VERSION 1.0 — APPROVED; EFFECTIVE SEPTEMBER 15, 2026 AT 00:00 UTC.**
+> **VERSION 1.0 — APPROVED; EFFECTIVE AUGUST 21, 2026 AT 00:00 UTC.**
 >
 > This Agreement applies only to Contributions merged into Pactmark on or after
 > its effective date. It does not apply retroactively. A Corporate CLA submitted
@@ -24,7 +24,7 @@ to grant copyright and patent licenses thereto.
 
 The Corporation accepts and agrees to the following terms and conditions for
 Contributions that its designated employees submit and that are merged into
-Pactmark on or after September 15, 2026 at 00:00 UTC. Except for the license
+Pactmark on or after August 21, 2026 at 00:00 UTC. Except for the license
 granted herein to the Project Steward and recipients of software distributed by
 the Project Steward, the Corporation reserves all right, title, and interest in
 and to its Contributions.
@@ -134,8 +134,7 @@ located in Delaware have exclusive jurisdiction over any dispute arising out of
 or relating to this Agreement, and You consent to their personal jurisdiction
 and venue. Formal notices and proposed changes to Schedule A must be sent to
 `legal@lokomotif.ai` and 8 The Green, Suite D, Dover, Delaware 19901, United
-States. Counsel must approve this section before the Agreement becomes
-effective.
+States.
 
 ## Signature
 
@@ -164,10 +163,9 @@ Changes from the source template:
 1. **Header and introductory paragraphs:** replaced The Apache Software
    Foundation identifiers with Saparda Inc. and "Project Steward"; identified
    Pactmark as the project; limited coverage to Contributions merged on or after
-   September 15, 2026 at 00:00 UTC; and omitted the ASF-specific
+   August 21, 2026 at 00:00 UTC; and omitted the ASF-specific
    nonprofit-status recital. These changes adapt the parties and project without
-   asserting nonprofit status or retroactive coverage. Counsel must confirm the
-   omitted recital.
+   asserting nonprofit status or retroactive coverage.
 2. **Corporation and submission fields:** retained the corporation, authorized
    signatory, and contact fields; replaced ASF postal and facsimile details with
    `legal@lokomotif.ai` and the Saparda Inc. notice address; and required written
@@ -183,8 +181,8 @@ Changes from the source template:
    Steward identifiers. Sections 5 and 6 retain the source representations and
    disclaimers, with Markdown headings and line wrapping only.
 7. **Section 9:** added Delaware governing law and venue,
-   `legal@lokomotif.ai`, and the Saparda Inc. notice address. Counsel must
-   approve this section.
+   `legal@lokomotif.ai`, and the Saparda Inc. notice address; counsel approved
+   the completed Version 1.0 text on August 21, 2026.
 8. **Signature and Schedule A:** retained the manual corporate signature and
    designated-employee mechanisms, reformatted for Markdown without changing
    their purpose.

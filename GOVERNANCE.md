@@ -144,8 +144,8 @@ minimum necessary action and a later public accountability record.
 ### Contribution terms and licensing
 
 Every commit remains subject to DCO 1.1 sign-off. The Contributor License
-Agreement is additive. Version 1.0 was approved by counsel on August 21, 2026 and
-takes effect on September 15, 2026 at 00:00 UTC. It covers only Contributions
+Agreement is additive. Version 1.0 was approved by counsel and took effect on
+August 21, 2026 at 00:00 UTC. It covers only Contributions
 merged on or after that date and does not retroactively alter earlier
 contributions.
 

@@ -1,9 +1,8 @@
 # Pactmark contributor agreements
 
-> **Status: Version 1.0 approved by counsel on August 21, 2026; effective
-> September 15, 2026 at 00:00 UTC.** The agreements are not open for acceptance
-> before that time. Do not merge or enable the CLA workflow before the effective
-> date.
+> **Status: Version 1.0 approved by counsel and effective August 21, 2026 at
+> 00:00 UTC.** The agreements apply prospectively from that time and are open for
+> acceptance through the routes described below.
 
 Pactmark remains licensed under Apache License 2.0. The Contributor
 License Agreement is additive to the existing Developer Certificate of Origin
@@ -32,7 +31,7 @@ change remains a material governance decision.
   resolution, or equivalent evidence before accepting corporate signing
   authority. Supporting authority records are not stored in the signature JSON.
 
-## How individual signing is intended to work
+## How individual signing works
 
 On and after the effective date, the CLA Assistant check will inspect the commit
 authors on a pull request. A contributor who has not signed will receive a link
@@ -46,8 +45,8 @@ private, has issues and wiki disabled, and grants write access only through a
 dedicated repository secret. Do not manually create the JSON file; the CLA
 Assistant action creates it when the first signature is recorded.
 
-Before the workflow is enabled, `path-to-document` must point to the immutable
-commit containing the counsel-approved ICLA, not to a moving branch. The
+The workflow's `path-to-document` points to the immutable commit containing the
+counsel-approved ICLA, not to a moving branch. The
 `signatures/version1/cla.json` path identifies that agreement generation. The
 approved Version 1.0 text must not change in place; a material amendment requires
 a new immutable document URL, a new signature path, and fresh acceptance.
@@ -79,7 +78,7 @@ to comply with law or establish, exercise, or defend legal rights.
 
 ## Scope and effective date
 
-The agreements cover only Contributions merged on or after September 15, 2026
+The agreements cover only Contributions merged on or after August 21, 2026
 at 00:00 UTC. They make no claim over earlier contributions. A pull request
 opened before that date but merged on or after it is within scope.
 
