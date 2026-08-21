@@ -1,17 +1,17 @@
 # Pactmark contributor agreements
 
-> **Status: draft, pending final legal review.** The agreements in this directory
-> are not open for signature and have no legal effect. Do not enable or merge the
-> CLA workflow until counsel approves the final documents and the project publicly
-> announces September 15, 2026 at 00:00 UTC as the effective date.
+> **Status: Version 1.0 approved by counsel on August 21, 2026; effective
+> September 15, 2026 at 00:00 UTC.** The agreements are not open for acceptance
+> before that time. Do not merge or enable the CLA workflow before the effective
+> date.
 
-Pactmark remains licensed under Apache License 2.0. The proposed Contributor
+Pactmark remains licensed under Apache License 2.0. The Contributor
 License Agreement is additive to the existing Developer Certificate of Origin
 1.1 sign-off; it does not replace DCO and does not change the project's license
 today. Contributors retain copyright in their work and grant the licenses stated
 in the applicable agreement.
 
-The purpose of the proposed CLA is to make the rights attached to future
+The purpose of the CLA is to make the rights attached to future
 contributions explicit and preserve the option to relicense or dual-license in
 the future. It is not a commitment to exercise that option. Any future licensing
 change remains a material governance decision.
@@ -34,10 +34,10 @@ change remains a material governance decision.
 
 ## How individual signing is intended to work
 
-After the draft is approved and becomes effective, the CLA Assistant check will
-inspect the commit authors on a pull request. A contributor who has not signed
-will receive a link to `ICLA.md` and an exact acceptance statement to post from
-their GitHub account. The acceptance metadata will be written to
+On and after the effective date, the CLA Assistant check will inspect the commit
+authors on a pull request. A contributor who has not signed will receive a link
+to `ICLA.md` and an exact acceptance statement to post from their GitHub
+account. The acceptance metadata will be written to
 `lokomotifai/pactmark-cla-signatures` at
 `signatures/version1/cla.json`.
 
@@ -79,10 +79,9 @@ to comply with law or establish, exercise, or defend legal rights.
 
 ## Scope and effective date
 
-The proposed agreements cover only Contributions merged on or after September
-15, 2026 at 00:00 UTC. They make no claim over earlier contributions. A pull
-request opened before that date but merged on or after it is within the proposed
-scope.
+The agreements cover only Contributions merged on or after September 15, 2026
+at 00:00 UTC. They make no claim over earlier contributions. A pull request
+opened before that date but merged on or after it is within scope.
 
 Existing DCO requirements continue for every commit. A passing CLA check does
 not replace authorship review, DCO sign-off, third-party attribution, tests, or

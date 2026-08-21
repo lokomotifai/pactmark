@@ -320,7 +320,7 @@ sayısıyla otomatik yetki yoktur.
 | Dosya                                    | Projenin taahhüdü                                                                                                                  |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | [Contributing](CONTRIBUTING.md)          | Tekrarlanabilir setup, review standardı, eklemeli DCO/CLA koşulları, AI-assisted contribution politikası ve acceptance kriterleri. |
-| [Contributor agreements](CLA/README.md)  | Taslak CLA durumu, geriye yürümeyen kapsam, imza yolu ve hukuk incelemesi sınırı.                                                  |
+| [Contributor agreements](CLA/README.md)  | Onaylı CLA sürümü, ileriye dönük kapsam, imza yolu ve imza kaydı sınırı.                                                           |
 | [Governance](GOVERNANCE.md)              | Roller, karar sınıfları, public RFC/ADR yolu, conflict, maintainer geçişi ve founder-led sınırlar.                                 |
 | [Maintainers](MAINTAINERS.md)            | İsimler, scope’lar, hassas capability’ler ve doğrulanmış contact route’ları.                                                       |
 | [Code of Conduct](CODE_OF_CONDUCT.md)    | Katılım standardı, private reporting, conflict ve ölçülü yaptırım basamakları.                                                     |
@@ -331,12 +331,11 @@ sayısıyla otomatik yetki yoktur.
 | [İsim ve logo politikası](TRADEMARKS.md) | Endorsement veya resmîlik izlenimi vermeden adil topluluk kullanımı.                                                               |
 
 Commit’lerde [DCO 1.1](https://developercertificate.org/) sign-off gerekir.
-Gelecekteki katkılar için DCO’ya ek bir Contributor License Agreement
-hazırlanmaktadır; metin hukuk incelemesi bekleyen bir taslaktır, geriye yürümez
-ve bugün Apache-2.0 lisansını değiştirmez. Bağlayıcı CLA dili İngilizcedir; bu
-Türkçe açıklama yalnızca bilgilendirme amaçlıdır. Code, documentation,
-translation, review, triage, test design ve community care katkılarının tümü
-değerlidir.
+DCO’ya ek CLA Version 1.0 yalnızca 15 Eylül 2026 00:00 UTC’de veya sonrasında
+merge edilen Contribution’lara uygulanır; geriye yürümez ve Apache-2.0 lisansını
+değiştirmez. Bağlayıcı CLA dili İngilizcedir; bu Türkçe açıklama yalnızca
+bilgilendirme amaçlıdır. Code, documentation, translation, review, triage, test
+design ve community care katkılarının tümü değerlidir.
 
 ## Dokümantasyon ve örnekler
 

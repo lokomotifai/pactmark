@@ -327,7 +327,7 @@ count.
 | Document                                | What it commits the project to                                                                                         |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | [Contributing](CONTRIBUTING.md)         | Reproducible setup, review standard, additive DCO/CLA terms, AI-assisted contribution policy, and acceptance criteria. |
-| [Contributor agreements](CLA/README.md) | Draft CLA status, non-retroactive scope, signing route, and legal-review boundary.                                     |
+| [Contributor agreements](CLA/README.md) | Approved CLA version, prospective scope, signing route, and signature-record boundary.                                 |
 | [Governance](GOVERNANCE.md)             | Roles, decision classes, public RFC/ADR path, conflicts, maintainer transitions, and founder-led limitations.          |
 | [Maintainers](MAINTAINERS.md)           | Named people, scopes, sensitive capabilities, and verified contact routes.                                             |
 | [Code of Conduct](CODE_OF_CONDUCT.md)   | Participation standards, private reporting, conflicts, and a proportionate response ladder.                            |
@@ -337,12 +337,11 @@ count.
 | [Changelog](CHANGELOG.md)               | What each released version changed, and which behavior is still unreleased on `main`.                                  |
 | [Name and logo policy](TRADEMARKS.md)   | Fair community use without implying endorsement or official status.                                                    |
 
-Commits require [DCO 1.1](https://developercertificate.org/) sign-off. An
-additive Contributor License Agreement is being prepared for future
-contributions; it remains a draft pending legal review, does not apply
-retroactively, and does not change the Apache-2.0 license today. Contributions
-of code, documentation, translation, review, triage, test design, and community
-care are all meaningful.
+Commits require [DCO 1.1](https://developercertificate.org/) sign-off. Additive
+CLA Version 1.0 applies only to Contributions merged on or after September 15,
+2026 at 00:00 UTC; it does not apply retroactively and does not change the
+Apache-2.0 license. Contributions of code, documentation, translation, review,
+triage, test design, and community care are all meaningful.
 
 ## Documentation and examples
 

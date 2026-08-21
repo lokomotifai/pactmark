@@ -43,9 +43,11 @@ here grants no rights beyond those terms.
 - License: Apache License 2.0, as published for ASF website content.
 - Treatment: adapted only for the Pactmark entity, project, signing/contact,
   effective-date, governing-law, and notice boundaries. Each document contains
-  a clause-level adaptation record and is marked pending legal review.
+  a clause-level adaptation record; Version 1.0 was approved by counsel on
+  August 21, 2026.
 - NOTICE handling: this register and the in-document source links preserve the
-  attribution; the project `NOTICE` remains unchanged pending legal review.
+  attribution; the project `NOTICE` remains unchanged because the attribution is
+  carried here and in each adapted document.
 
 ### Pactmark logo
 

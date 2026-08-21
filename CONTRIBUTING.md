@@ -118,10 +118,10 @@ another contributor's certification.
 
 ## Contributor License Agreement
 
-Pactmark is preparing an additive Contributor License Agreement for future
-contributions. The draft agreements remain pending final legal review and are
-not effective until the project announces September 15, 2026 at 00:00 UTC as
-the effective date. They do not apply retroactively. See
+Pactmark has approved an additive Contributor License Agreement for future
+contributions. Version 1.0 takes effect on September 15, 2026 at 00:00 UTC. It
+applies only to Contributions merged on or after that time and does not apply
+retroactively. See
 [`CLA/README.md`](CLA/README.md) for status and scope.
 
 Once effective, the CLA check will ask each non-allowlisted commit author to

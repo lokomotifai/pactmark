@@ -1,13 +1,12 @@
 # Pactmark Individual Contributor License Agreement
 
-> **DRAFT — PENDING FINAL LEGAL REVIEW. DO NOT SIGN OR RELY ON THIS DOCUMENT YET.**
+> **VERSION 1.0 — APPROVED; EFFECTIVE SEPTEMBER 15, 2026 AT 00:00 UTC.**
 >
-> This draft has no legal effect until counsel approves its final text and the
-> project announces September 15, 2026 at 00:00 UTC as its effective date. If
-> approved, it will apply only to Contributions merged into Pactmark on or after
-> that date. It does not apply retroactively.
+> This Agreement applies only to Contributions merged into Pactmark on or after
+> its effective date. It does not apply retroactively. Acceptance submitted
+> before the effective date is not accepted.
 
-Version 1.0-draft, adapted from the Apache Software Foundation Individual
+Version 1.0, adapted from the Apache Software Foundation Individual
 Contributor License Agreement V2.2.
 
 Thank you for your interest in Pactmark, stewarded by Saparda Inc. (the
@@ -166,6 +165,6 @@ Changes from the source template:
 7. **Sections 9 and 10:** added the click-through acceptance record, Delaware
    governing law and venue, `legal@lokomotif.ai`, and the Saparda Inc. notice
    address. Counsel must approve both sections.
-8. **Draft warning and adaptation record:** added these non-operative notices so
-   no one mistakes the unreviewed text for an effective agreement and every
-   altered source clause is identified.
+8. **Prospective-scope notice and adaptation record:** added these notices so the
+   effective date and non-retroactive boundary are explicit and every altered
+   source clause is identified.
