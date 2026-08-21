@@ -16,10 +16,7 @@ env:
   CLA_SIGNATURE_REPOSITORY: pactmark-cla-signatures
 
 permissions:
-  actions: write
   contents: read
-  pull-requests: write
-  statuses: write
 
 jobs:
   cla:
@@ -31,6 +28,12 @@ jobs:
        (github.event.comment.body == 'recheck' ||
         github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA'))
     runs-on: ubuntu-latest
+    permissions:
+      # Required only so an accepted issue-comment signature can rerun the
+      # preceding failed CLA check for the pull request.
+      actions: write
+      contents: read
+      pull-requests: write
     steps:
       # contributor-assistant/github-action v2.6.1
       # This workflow deliberately does not check out or execute pull-request code.
