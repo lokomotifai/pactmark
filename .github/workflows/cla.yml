@@ -1,0 +1,49 @@
+name: Contributor License Agreement
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  issue_comment:
+    types:
+      - created
+
+# Change these two values if the dedicated signature repository moves.
+env:
+  CLA_SIGNATURE_ORGANIZATION: lokomotifai
+  CLA_SIGNATURE_REPOSITORY: pactmark-cla-signatures
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  cla:
+    name: Verify contributor agreement
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       (github.event.comment.body == 'recheck' ||
+        github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA'))
+    runs-on: ubuntu-latest
+    steps:
+      # contributor-assistant/github-action v2.6.1
+      # This workflow deliberately does not check out or execute pull-request code.
+      - name: Check CLA acceptance
+        uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        with:
+          path-to-document: https://github.com/lokomotifai/pactmark/blob/main/CLA/ICLA.md
+          path-to-signatures: signatures/version1/cla.json
+          branch: main
+          remote-organization-name: ${{ env.CLA_SIGNATURE_ORGANIZATION }}
+          remote-repository-name: ${{ env.CLA_SIGNATURE_REPOSITORY }}
+          allowlist: "dependabot[bot],renovate[bot],github-actions[bot],fatihguner"
+          lock-pullrequest-aftermerge: "false"

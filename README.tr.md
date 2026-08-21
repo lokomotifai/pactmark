@@ -317,21 +317,26 @@ contributor’lar açık bir scope’un sorumluluğunu almaya hazır olduğunda 
 merkezî hâle gelecek şekilde kurulmuştur; hayalî komite veya contribution
 sayısıyla otomatik yetki yoktur.
 
-| Dosya                                    | Projenin taahhüdü                                                                                           |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| [Contributing](CONTRIBUTING.md)          | Tekrarlanabilir setup, review standardı, DCO, AI-assisted contribution politikası ve acceptance kriterleri. |
-| [Governance](GOVERNANCE.md)              | Roller, karar sınıfları, public RFC/ADR yolu, conflict, maintainer geçişi ve founder-led sınırlar.          |
-| [Maintainers](MAINTAINERS.md)            | İsimler, scope’lar, hassas capability’ler ve doğrulanmış contact route’ları.                                |
-| [Code of Conduct](CODE_OF_CONDUCT.md)    | Katılım standardı, private reporting, conflict ve ölçülü yaptırım basamakları.                              |
-| [Security](SECURITY.md)                  | Desteklenen sürümler, private reporting, hedef response süreleri, safe harbor ve güvenlik sınırları.        |
-| [Support](SUPPORT.md)                    | Doğru yardım yolu, gerekli reproduction bilgisi ve support sınırı.                                          |
-| [Roadmap](ROADMAP.md)                    | Güncel yön ve Pactmark’ın bilinçli olarak vaat etmediği capability’ler.                                     |
-| [Changelog](CHANGELOG.md)                | Her sürümün neyi değiştirdiği ve hangi davranışın `main`’de hâlâ yayımlanmamış olduğu.                      |
-| [İsim ve logo politikası](TRADEMARKS.md) | Endorsement veya resmîlik izlenimi vermeden adil topluluk kullanımı.                                        |
+| Dosya                                    | Projenin taahhüdü                                                                                                                  |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [Contributing](CONTRIBUTING.md)          | Tekrarlanabilir setup, review standardı, eklemeli DCO/CLA koşulları, AI-assisted contribution politikası ve acceptance kriterleri. |
+| [Contributor agreements](CLA/README.md)  | Taslak CLA durumu, geriye yürümeyen kapsam, imza yolu ve hukuk incelemesi sınırı.                                                  |
+| [Governance](GOVERNANCE.md)              | Roller, karar sınıfları, public RFC/ADR yolu, conflict, maintainer geçişi ve founder-led sınırlar.                                 |
+| [Maintainers](MAINTAINERS.md)            | İsimler, scope’lar, hassas capability’ler ve doğrulanmış contact route’ları.                                                       |
+| [Code of Conduct](CODE_OF_CONDUCT.md)    | Katılım standardı, private reporting, conflict ve ölçülü yaptırım basamakları.                                                     |
+| [Security](SECURITY.md)                  | Desteklenen sürümler, private reporting, hedef response süreleri, safe harbor ve güvenlik sınırları.                               |
+| [Support](SUPPORT.md)                    | Doğru yardım yolu, gerekli reproduction bilgisi ve support sınırı.                                                                 |
+| [Roadmap](ROADMAP.md)                    | Güncel yön ve Pactmark’ın bilinçli olarak vaat etmediği capability’ler.                                                            |
+| [Changelog](CHANGELOG.md)                | Her sürümün neyi değiştirdiği ve hangi davranışın `main`’de hâlâ yayımlanmamış olduğu.                                             |
+| [İsim ve logo politikası](TRADEMARKS.md) | Endorsement veya resmîlik izlenimi vermeden adil topluluk kullanımı.                                                               |
 
-Commit’lerde [DCO 1.1](https://developercertificate.org/) sign-off gerekir; CLA
-kullanılmaz. Code, documentation, translation, review, triage, test design ve
-community care katkılarının tümü değerlidir.
+Commit’lerde [DCO 1.1](https://developercertificate.org/) sign-off gerekir.
+Gelecekteki katkılar için DCO’ya ek bir Contributor License Agreement
+hazırlanmaktadır; metin hukuk incelemesi bekleyen bir taslaktır, geriye yürümez
+ve bugün Apache-2.0 lisansını değiştirmez. Bağlayıcı CLA dili İngilizcedir; bu
+Türkçe açıklama yalnızca bilgilendirme amaçlıdır. Code, documentation,
+translation, review, triage, test design ve community care katkılarının tümü
+değerlidir.
 
 ## Dokümantasyon ve örnekler
 
