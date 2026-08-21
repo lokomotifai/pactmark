@@ -43,7 +43,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
-          path-to-document: https://github.com/lokomotifai/pactmark/blob/913759259d4f71cd52710128ba55b9ca3cf2fb07/CLA/ICLA.md
+          path-to-document: https://github.com/lokomotifai/pactmark/blob/42864924ae771f34758b7e8ee9624e685bc90f68/CLA/ICLA.md
           path-to-signatures: signatures/version1/cla.json
           branch: main
           remote-organization-name: ${{ env.CLA_SIGNATURE_ORGANIZATION }}
