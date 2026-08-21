@@ -42,4 +42,5 @@ command → result
 - [ ] Documentation, examples, accessibility, and required Turkish parity are updated.
 - [ ] A Changeset is included when release policy requires one, or the omission is explained above.
 - [ ] Every commit has a DCO `Signed-off-by` line (`git commit -s`).
+- [ ] If the CLA is effective for this pull request, every non-allowlisted commit author has completed the CLA check.
 - [ ] I ran the smallest relevant checks and recorded anything I could not run.

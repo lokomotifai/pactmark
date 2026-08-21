@@ -33,6 +33,22 @@ here grants no rights beyond those terms.
 - NOTICE handling: no Apache NOTICE insertion is required; the attribution is
   carried with the adapted document.
 
+### Apache Software Foundation contributor agreements
+
+- Material: the legal clause structure and text adapted in `CLA/ICLA.md` and
+  `CLA/CCLA.md`.
+- Sources: [ASF ICLA V2.2](https://www.apache.org/licenses/icla.pdf) and
+  [ASF CCLA V2.0](https://svn.apache.org/repos/infra/websites/production/www/content/licenses/proposed/ccla.pdf).
+- Upstream author: The Apache Software Foundation.
+- License: Apache License 2.0, as published for ASF website content.
+- Treatment: adapted only for the Pactmark entity, project, signing/contact,
+  effective-date, governing-law, and notice boundaries. Each document contains
+  a clause-level adaptation record; Version 1.0 was approved by counsel on
+  August 21, 2026.
+- NOTICE handling: this register and the in-document source links preserve the
+  attribution; the project `NOTICE` remains unchanged because the attribution is
+  carried here and in each adapted document.
+
 ### Pactmark logo
 
 - Material: `assets/brand/pactmark-logo.svg` and the mechanically rendered PNG.

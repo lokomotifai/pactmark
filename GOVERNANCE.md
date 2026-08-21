@@ -93,12 +93,12 @@ security or safety risk. The non-sensitive outcome is recorded publicly.
 
 The process is proportional to impact:
 
-| Decision class        | Examples                                                                                                          | Process                                                                                   | Final authority                         |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------- |
-| Routine               | Bug fixes, tests, editorial docs, internal refactors                                                              | Pull request and relevant checks                                                          | Maintainer for the affected scope       |
-| Material              | Public API or schema, package boundary, new adapter contract, compatibility promise, governance or release policy | Public proposal, alternatives, impact analysis, comment period, then an ADR when accepted | Maintainers for the affected scopes     |
-| Sensitive             | Vulnerability response, credential or release compromise, active abuse                                            | Private coordination until disclosure is safe; public record afterward                    | Assigned security or conduct responders |
-| Reversible operations | Labels, issue triage, routine automation maintenance                                                              | Public issue or pull request when useful                                                  | Delegated reviewer or maintainer        |
+| Decision class        | Examples                                                                                                                                              | Process                                                                                   | Final authority                         |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------- |
+| Routine               | Bug fixes, tests, editorial docs, internal refactors                                                                                                  | Pull request and relevant checks                                                          | Maintainer for the affected scope       |
+| Material              | Public API or schema, package boundary, new adapter contract, compatibility promise, contribution agreement, licensing, governance, or release policy | Public proposal, alternatives, impact analysis, comment period, then an ADR when accepted | Maintainers for the affected scopes     |
+| Sensitive             | Vulnerability response, credential or release compromise, active abuse                                                                                | Private coordination until disclosure is safe; public record afterward                    | Assigned security or conduct responders |
+| Reversible operations | Labels, issue triage, routine automation maintenance                                                                                                  | Public issue or pull request when useful                                                  | Delegated reviewer or maintainer        |
 
 A material proposal should use the feature-proposal issue form before code is
 written. It must cover motivation, non-goals, compatibility, authority and data
@@ -140,6 +140,19 @@ and seeks an independent reviewer. Security containment may proceed with the
 minimum necessary action and a later public accountability record.
 
 ## Releases and project assets
+
+### Contribution terms and licensing
+
+Every commit remains subject to DCO 1.1 sign-off. The Contributor License
+Agreement is additive. Version 1.0 was approved by counsel and took effect on
+August 21, 2026 at 00:00 UTC. It covers only Contributions
+merged on or after that date and does not retroactively alter earlier
+contributions.
+
+Pactmark remains Apache-2.0 licensed. A CLA preserves a future option; it does
+not itself authorize or announce a relicensing. Adopting the CLA, changing the
+project license, dual-licensing, or using CLA-granted rights for a different
+licensing model is a material decision subject to the public process above.
 
 Pactmark follows Semantic Versioning and uses Changesets. A release must come
 from the guarded repository workflow, pass the declared gates, and preserve its
