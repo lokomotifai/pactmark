@@ -1,16 +1,16 @@
 # Pactmark Individual Contributor License Agreement
 
-> **DRAFT — PENDING LEGAL REVIEW. DO NOT SIGN OR RELY ON THIS DOCUMENT YET.**
+> **DRAFT — PENDING FINAL LEGAL REVIEW. DO NOT SIGN OR RELY ON THIS DOCUMENT YET.**
 >
-> This draft has no legal effect until counsel approves it, every placeholder is
-> replaced, and the project announces `<EFFECTIVE_DATE>`. If approved, it will
-> apply only to Contributions merged into Pactmark on or after that date. It does
-> not apply retroactively.
+> This draft has no legal effect until counsel approves its final text and the
+> project announces September 15, 2026 at 00:00 UTC as its effective date. If
+> approved, it will apply only to Contributions merged into Pactmark on or after
+> that date. It does not apply retroactively.
 
 Version 1.0-draft, adapted from the Apache Software Foundation Individual
 Contributor License Agreement V2.2.
 
-Thank you for your interest in Pactmark, stewarded by `<LEGAL_ENTITY_NAME>` (the
+Thank you for your interest in Pactmark, stewarded by Saparda Inc. (the
 "Project Steward"). To clarify the intellectual-property license granted with
 Contributions from any person or entity, the Project Steward must have an
 accepted Contributor License Agreement ("CLA") from each Contributor who is not
@@ -20,8 +20,8 @@ Steward and Pactmark users. It does not change your rights to use your own
 Contributions for any other purpose.
 
 You accept and agree to the following terms and conditions for Contributions
-that you submit and that are merged into Pactmark on or after
-`<EFFECTIVE_DATE>`. Except for the license granted herein to the Project Steward
+that you submit and that are merged into Pactmark on or after September 15,
+2026 at 00:00 UTC. Except for the license granted herein to the Project Steward
 and recipients of software distributed by the Project Steward, You reserve all
 right, title, and interest in and to Your Contributions.
 
@@ -123,13 +123,18 @@ The individual signing route is the Pactmark CLA Assistant check described in
 [`CLA/README.md`](README.md). Acceptance is associated with the GitHub account
 that posts the exact acceptance statement presented by that check and is
 recorded in the designated signature repository. Questions about this Agreement
-must be sent to `<CONTACT_EMAIL>`.
+must be sent to `legal@lokomotif.ai`.
 
 ## 10. Governing Law and Notices
 
-This Agreement is governed by `<GOVERNING_LAW>`. Formal notices to the Project
-Steward must be sent to `<CONTACT_EMAIL>` and `<ENTITY_ADDRESS>`. Counsel must
-approve this section before the Agreement becomes effective.
+This Agreement is governed by the laws of the State of Delaware, United States,
+without regard to its conflict-of-laws principles. The state and federal courts
+located in Delaware have exclusive jurisdiction over any dispute arising out of
+or relating to this Agreement, and You consent to their personal jurisdiction
+and venue. Formal notices to the Project Steward must be sent to
+`legal@lokomotif.ai` and 8 The Green, Suite D, Dover, Delaware 19901, United
+States. Counsel must approve this section before the Agreement becomes
+effective.
 
 ## Adaptation record
 
@@ -138,15 +143,15 @@ Source: [Apache Software Foundation ICLA V2.2](https://www.apache.org/licenses/i
 Changes from the source template:
 
 1. **Header and introductory paragraphs:** replaced The Apache Software
-   Foundation identifiers with `<LEGAL_ENTITY_NAME>` and "Project Steward";
-   identified Pactmark as the project; limited coverage to Contributions merged
-   on or after `<EFFECTIVE_DATE>`; and omitted the ASF-specific nonprofit-status
-   recital. These changes adapt the parties and project without asserting
-   nonprofit status or retroactive coverage. Counsel must confirm the omitted
-   recital.
+   Foundation identifiers with Saparda Inc. and "Project Steward"; identified
+   Pactmark as the project; limited coverage to Contributions merged on or after
+   September 15, 2026 at 00:00 UTC; and omitted the ASF-specific
+   nonprofit-status recital. These changes adapt the parties and project without
+   asserting nonprofit status or retroactive coverage. Counsel must confirm the
+   omitted recital.
 2. **ASF form and submission fields:** replaced the PDF, postal, and public
    profile fields with the GitHub CLA Assistant route in section 9 and
-   `<CONTACT_EMAIL>`, because the proposed acceptance is repository-based
+   `legal@lokomotif.ai`, because the proposed acceptance is repository-based
    click-through.
 3. **Section 1:** replaced each "Foundation" reference with "Project Steward"
    and the generic ASF product definition with Pactmark as the Work.
@@ -158,9 +163,9 @@ Changes from the source template:
 6. **Sections 4, 7, and 8:** replaced only Foundation identifiers with Project
    Steward identifiers. Sections 5 and 6 retain the source obligations and
    disclaimers, with Markdown headings and line wrapping only.
-7. **Sections 9 and 10:** added the click-through acceptance record and the
-   project-specific `<GOVERNING_LAW>`, `<CONTACT_EMAIL>`, and
-   `<ENTITY_ADDRESS>` notice placeholders. Counsel must approve both sections.
+7. **Sections 9 and 10:** added the click-through acceptance record, Delaware
+   governing law and venue, `legal@lokomotif.ai`, and the Saparda Inc. notice
+   address. Counsel must approve both sections.
 8. **Draft warning and adaptation record:** added these non-operative notices so
    no one mistakes the unreviewed text for an effective agreement and every
    altered source clause is identified.

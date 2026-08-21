@@ -119,14 +119,14 @@ another contributor's certification.
 ## Contributor License Agreement
 
 Pactmark is preparing an additive Contributor License Agreement for future
-contributions. The draft agreements remain pending legal review and are not
-effective until the project fills every placeholder and announces
-`<EFFECTIVE_DATE>`. They do not apply retroactively. See
+contributions. The draft agreements remain pending final legal review and are
+not effective until the project announces September 15, 2026 at 00:00 UTC as
+the effective date. They do not apply retroactively. See
 [`CLA/README.md`](CLA/README.md) for status and scope.
 
 Once effective, the CLA check will ask each non-allowlisted commit author to
 accept the individual agreement on their first pull request. Contributors whose
-employer owns or controls the relevant rights must contact `<CONTACT_EMAIL>`
+employer owns or controls the relevant rights must contact `legal@lokomotif.ai`
 before contributing so signing authority and any Corporate CLA can be verified.
 
 DCO sign-off will still be required on every commit. The CLA does not change
@@ -134,7 +134,10 @@ Pactmark's Apache-2.0 license today. It is intended to make the license granted
 with future contributions explicit and preserve an option to relicense or
 dual-license later; it is not a commitment to use that option.
 
-Pactmark core versions released on or before <EFFECTIVE_DATE> will remain available under the Apache License 2.0; any different licensing model for later versions requires the public material-decision process in GOVERNANCE.md.
+Pactmark core versions released on or before September 15, 2026 at 00:00 UTC
+will remain available under the Apache License 2.0; any different licensing
+model for later versions requires the public material-decision process in
+GOVERNANCE.md.
 
 ## AI-assisted contributions
 

@@ -144,10 +144,10 @@ minimum necessary action and a later public accountability record.
 ### Contribution terms and licensing
 
 Every commit remains subject to DCO 1.1 sign-off. The proposed Contributor
-License Agreement is additive, remains pending legal review, and has no effect
-until its placeholders are filled and the project announces
-`<EFFECTIVE_DATE>`. If adopted, it covers only Contributions merged on or after
-that date and does not retroactively alter earlier contributions.
+License Agreement is additive, remains pending final legal review, and has no
+effect until the project announces September 15, 2026 at 00:00 UTC as the
+effective date. If adopted, it covers only Contributions merged on or after that
+date and does not retroactively alter earlier contributions.
 
 Pactmark remains Apache-2.0 licensed. A CLA preserves a future option; it does
 not itself authorize or announce a relicensing. Adopting the CLA, changing the
