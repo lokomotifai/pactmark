@@ -48,5 +48,6 @@ jobs:
           branch: main
           remote-organization-name: ${{ env.CLA_SIGNATURE_ORGANIZATION }}
           remote-repository-name: ${{ env.CLA_SIGNATURE_REPOSITORY }}
-          allowlist: "dependabot[bot],renovate[bot],github-actions[bot],fatihguner"
+          # Maintainer, project automation author, and dependency/update bots.
+          allowlist: "dependabot[bot],renovate[bot],github-actions[bot],fatihguner,lokomotif-git"
           lock-pullrequest-aftermerge: "false"
