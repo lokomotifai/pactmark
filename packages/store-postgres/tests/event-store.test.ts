@@ -2,11 +2,14 @@ import { digestCanonicalJson, type RunEvent } from "@pactmark/core";
 import type { QueryResultRow } from "pg";
 import { describe, expect, it } from "vitest";
 
-import { createPostgresStorageSecurityProfile } from "../src/config.js";
 import type { PostgresClient, PostgresDatabase, SqlResult } from "../src/database.js";
 import { PostgresEventStore } from "../src/event-store.js";
 import { PostgresProjectionRebuilder } from "../src/projection-rebuilder.js";
-import { planningStarted, runAccepted } from "./fixtures.js";
+import {
+  planningStarted,
+  postgresSecurityProfile as createPostgresStorageSecurityProfile,
+  runAccepted,
+} from "./fixtures.js";
 
 describe("PostgresEventStore", () => {
   it("deduplicates exact event replays and rejects changed event ID content", async () => {

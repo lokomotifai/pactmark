@@ -101,8 +101,9 @@ RunCompleted
 ```
 
 The generated project deliberately uses the ephemeral local profile: in-memory
-state, a deterministic model fixture, and trusted in-process execution. It is a
-learning and test path, not a production template disguised as one.
+state, a deterministic model fixture, and trusted in-process execution with
+`sandbox: "unsafe_local"` and `networkPolicy: "declared"`. It is a learning and
+test path, not a production template or a production-isolation claim.
 
 A governed agent with one tool fits in about thirty lines
 ([`examples/quickstart-agent`](examples/quickstart-agent/), runnable offline):

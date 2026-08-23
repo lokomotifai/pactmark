@@ -50,6 +50,16 @@ if (connectionString === undefined || connectionString.length === 0) {
 }
 
 const tlsMode = process.env.PACTMARK_TEST_POSTGRES_TLS ?? "verify-full";
+const integrationTenantSuffix = randomUUID();
+const integrationTenants = [
+  "tenant-a",
+  "other-tenant",
+  `tenant-effect-${integrationTenantSuffix}`,
+  `tenant-quota-${integrationTenantSuffix}`,
+  `tenant-active-race-${integrationTenantSuffix}`,
+  `tenant-active-clock-${integrationTenantSuffix}`,
+  `tenant-active-uow-${integrationTenantSuffix}`,
+] as const;
 const connection: PostgresConnectionConfig =
   tlsMode === "disable"
     ? { profile: "development", connectionString, ssl: { mode: "disable" } }
@@ -223,7 +233,7 @@ describe("real PostgreSQL durability", () => {
 
   it("atomically persists, reloads, and tamper-detects a protected acknowledged effect result", async () => {
     const suffix = randomUUID().replaceAll("-", "");
-    const tenantId = `tenant-effect-${suffix}`;
+    const tenantId = `tenant-effect-${integrationTenantSuffix}`;
     const runId = `run-effect-${suffix}`;
     const effectId = `effect-${suffix}`;
     const protector = integrationProtector(database, `effect-${suffix}`);
@@ -453,7 +463,7 @@ describe("real PostgreSQL durability", () => {
 
   it("serializes a tenant-wide admission ceiling across 100 distinct principals", async () => {
     const suffix = randomUUID().replaceAll("-", "");
-    const tenantId = `tenant-quota-${suffix}`;
+    const tenantId = `tenant-quota-${integrationTenantSuffix}`;
     const resourceKey = `agent:${suffix}`;
     const suite = createPostgresStoreSuite(database, {
       securityProfile: integrationStorageProfile(),
@@ -495,7 +505,7 @@ describe("real PostgreSQL durability", () => {
 
   it("serializes 100 active-execution reservations against one tenant-run budget", async () => {
     const suffix = randomUUID().replaceAll("-", "");
-    const tenantId = `tenant-active-race-${suffix}`;
+    const tenantId = `tenant-active-race-${integrationTenantSuffix}`;
     const runId = `run-active-race-${suffix}`;
     const attempts = await Promise.allSettled(
       Array.from({ length: 100 }, (_, index) =>
@@ -531,7 +541,7 @@ describe("real PostgreSQL durability", () => {
 
   it("uses PostgreSQL time for active reserve/settle and maximum crash closure", async () => {
     const suffix = randomUUID().replaceAll("-", "");
-    const tenantId = `tenant-active-clock-${suffix}`;
+    const tenantId = `tenant-active-clock-${integrationTenantSuffix}`;
     const runId = `run-active-clock-${suffix}`;
     const requested = activeReservation({
       tenantId,
@@ -601,7 +611,7 @@ describe("real PostgreSQL durability", () => {
 
   it("binds the UOW active-execution ceiling to the persisted WorkOrder budget", async () => {
     const suffix = randomUUID().replaceAll("-", "");
-    const tenantId = `tenant-active-uow-${suffix}`;
+    const tenantId = `tenant-active-uow-${integrationTenantSuffix}`;
     const runId = `run-active-uow-${suffix}`;
     const workOrder = acceptedWorkOrder({ tenant: { id: tenantId } });
     const suite = createPostgresStoreSuite(database, {
@@ -694,6 +704,8 @@ describe("real PostgreSQL durability", () => {
 function integrationStorageProfile() {
   return createPostgresStorageSecurityProfile({
     transportMode: tlsMode === "disable" ? "development-plaintext" : "verify-full",
+    allowedTenants: integrationTenants,
+    allowedPurposes: ["support"],
   });
 }
 

@@ -813,14 +813,14 @@ describe("Pactmark HTTP handler", () => {
         return Promise.reject(new KafError("KAF_RUNTIME_NOT_READY"));
       }
     }
-    expect(
-      (
-        await createAgentFetchHandler(config(new FailingRuntime()))(
-          mutation("/v1/runs", workOrder),
-          context,
-        )
-      ).status,
-    ).toBe(503);
+    const failed = await createAgentFetchHandler(config(new FailingRuntime()))(
+      mutation("/v1/runs", workOrder),
+      context,
+    );
+    expect(failed.status).toBe(503);
+    expect(await failed.json()).toMatchObject({
+      type: "https://github.com/lokomotifai/pactmark/blob/main/ERRORS.md#runtime-not-ready",
+    });
   });
 
   it("enforces credentialed CORS, cookie Origin, Fetch Metadata, and CSRF", async () => {

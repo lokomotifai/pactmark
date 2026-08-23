@@ -532,6 +532,7 @@ describe("rendering and public errors", () => {
       ),
     ).toMatchObject({
       code: "KAF_CLI_ARGUMENT_INVALID",
+      docsUrl: "https://github.com/lokomotifai/pactmark/blob/main/ERRORS.md#cli-errors",
       diagnostic: { kind: "redacted", errorType: "CliError" },
     });
     expect(
@@ -550,6 +551,7 @@ describe("rendering and public errors", () => {
     ).toMatchObject({
       code: "KAF_RUNTIME_NOT_READY",
       causeCode: "KAF_POLICY_DENIED",
+      docsUrl: "https://github.com/lokomotifai/pactmark/blob/main/ERRORS.md#runtime-not-ready",
     });
     expect(toCliPublicError(new Error("Bearer secret"), true)).toMatchObject({
       code: "KAF_CLI_IO_FAILURE",

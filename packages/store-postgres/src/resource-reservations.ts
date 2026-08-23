@@ -21,7 +21,7 @@ import {
 } from "@pactmark/core";
 
 import type { PostgresClient, PostgresDatabase } from "./database.js";
-import { withTransaction } from "./database.js";
+import { queryForTenant, withTenantTransaction, withTransaction } from "./database.js";
 import { conflict, parseJsonColumn } from "./internal.js";
 
 type JsonRow = { reservation_json: unknown; request_digest?: string };
@@ -466,7 +466,7 @@ export class PostgresQuotaStore implements QuotaStore {
   }
 
   reserve(request: AdmissionRequest): Promise<AdmissionDecision> {
-    return withTransaction(this.database, async (client) => {
+    return withTenantTransaction(this.database, request.tenant.id, async (client) => {
       try {
         return {
           admitted: true,
@@ -492,7 +492,7 @@ export class PostgresQuotaStore implements QuotaStore {
     fencingToken: number,
     releasedAt: string,
   ): Promise<void> {
-    return withTransaction(this.database, async (client) => {
+    return withTenantTransaction(this.database, tenantId, async (client) => {
       const found = await client.query<JsonRow>(
         `SELECT reservation_json FROM pactmark_admission_reservations
          WHERE tenant_id=$1 AND reservation_id=$2 FOR UPDATE`,
@@ -537,7 +537,9 @@ export class PostgresActiveExecutionReservationStore {
     tenantId: string,
     reservationId: string,
   ): Promise<ActiveExecutionReservation | undefined> {
-    const result = await this.database.query<JsonRow>(
+    const result = await queryForTenant<JsonRow>(
+      this.database,
+      tenantId,
       `SELECT reservation_json FROM pactmark_active_execution_reservations
        WHERE tenant_id=$1 AND reservation_id=$2`,
       [tenantId, reservationId],
@@ -554,7 +556,9 @@ export class PostgresActiveExecutionReservationStore {
     boundary: ActiveExecutionReservation["boundary"],
     boundaryKey: string,
   ): Promise<ActiveExecutionReservation | undefined> {
-    const result = await this.database.query<JsonRow>(
+    const result = await queryForTenant<JsonRow>(
+      this.database,
+      tenantId,
       `SELECT reservation_json FROM pactmark_active_execution_reservations
        WHERE tenant_id=$1 AND run_id=$2 AND step_id=$3 AND boundary=$4 AND boundary_key=$5`,
       [tenantId, runId, stepId, boundary, boundaryKey],
@@ -595,7 +599,9 @@ export class PostgresModelCallReservationStore {
   constructor(readonly database: PostgresDatabase) {}
 
   async get(tenantId: string, runId: string, stepId: string, attempt: number) {
-    const result = await this.database.query<JsonRow>(
+    const result = await queryForTenant<JsonRow>(
+      this.database,
+      tenantId,
       `SELECT reservation_json FROM pactmark_model_call_reservations
        WHERE tenant_id=$1 AND run_id=$2 AND step_id=$3 AND attempt=$4`,
       [tenantId, runId, stepId, attempt],
@@ -630,7 +636,9 @@ export class PostgresCircuitBreakerStore implements CircuitBreakerStore {
   constructor(readonly database: PostgresDatabase) {}
 
   async get(tenantId: string, providerKey: string): Promise<CircuitBreakerState | undefined> {
-    const result = await this.database.query<{ state_json: unknown }>(
+    const result = await queryForTenant<{ state_json: unknown }>(
+      this.database,
+      tenantId,
       "SELECT state_json FROM pactmark_circuit_breakers WHERE tenant_id=$1 AND provider_key=$2",
       [tenantId, providerKey],
     );
@@ -643,7 +651,7 @@ export class PostgresCircuitBreakerStore implements CircuitBreakerStore {
     expectedInput: CircuitBreakerState | undefined,
     nextInput: CircuitBreakerState,
   ): Promise<boolean> {
-    return withTransaction(this.database, async (client) => {
+    return withTenantTransaction(this.database, nextInput.tenantId, async (client) => {
       const expected =
         expectedInput === undefined ? undefined : CircuitBreakerStateSchema.parse(expectedInput);
       const next = CircuitBreakerStateSchema.parse(nextInput);

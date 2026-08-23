@@ -14,7 +14,7 @@ import {
 } from "@pactmark/core";
 import { POSTGRES_STORE_CAPABILITIES, PostgresStorageGuard } from "./config.js";
 import type { PostgresDatabase } from "./database.js";
-import { withTransaction } from "./database.js";
+import { queryForTenant, withTenantTransaction } from "./database.js";
 import { assertNonempty, assertNonnegative, conflict, parseJsonColumn } from "./internal.js";
 import type { PostgresRunLeaseStore } from "./lease-store.js";
 
@@ -64,7 +64,7 @@ export class PostgresEventStore implements EventStore {
     assertNonnegative(expectedSequence, "expectedSequence");
     this.#guard.assertRoutingAllowed(event.tenantId, event.dataClass);
     try {
-      return await withTransaction(this.database, async (client) => {
+      return await withTenantTransaction(this.database, event.tenantId, async (client) => {
         await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
           digestCanonicalJson({ tenantId: event.tenantId, runId: event.runId }),
         ]);
@@ -143,7 +143,9 @@ export class PostgresEventStore implements EventStore {
     assertNonempty(runId, "runId");
     this.#guard.assertTenantAllowed(tenantId);
     assertNonnegative(afterSequence, "afterSequence");
-    const result = await this.database.query<EventRow>(
+    const result = await queryForTenant<EventRow>(
+      this.database,
+      tenantId,
       "SELECT event_json, canonical_digest, sequence FROM pactmark_run_events WHERE tenant_id=$1 AND run_id=$2 AND sequence>$3 ORDER BY sequence",
       [tenantId, runId, afterSequence],
     );
@@ -165,7 +167,9 @@ export class PostgresEventStore implements EventStore {
     assertNonempty(tenantId, "tenantId");
     assertNonempty(runId, "runId");
     this.#guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<ProjectionRow>(
+    const result = await queryForTenant<ProjectionRow>(
+      this.database,
+      tenantId,
       "SELECT projection_json,last_sequence FROM pactmark_run_projections WHERE tenant_id=$1 AND run_id=$2",
       [tenantId, runId],
     );
@@ -186,7 +190,9 @@ export class PostgresEventStore implements EventStore {
     assertNonempty(tenantId, "tenantId");
     assertNonempty(runId, "runId");
     this.#guard.assertTenantAllowed(tenantId);
-    await this.database.query(
+    await queryForTenant(
+      this.database,
+      tenantId,
       "DELETE FROM pactmark_run_projections WHERE tenant_id=$1 AND run_id=$2",
       [tenantId, runId],
     );
@@ -196,7 +202,7 @@ export class PostgresEventStore implements EventStore {
     assertNonempty(tenantId, "tenantId");
     assertNonempty(runId, "runId");
     this.#guard.assertTenantAllowed(tenantId);
-    return withTransaction(this.database, async (client) => {
+    return withTenantTransaction(this.database, tenantId, async (client) => {
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
         digestCanonicalJson({ tenantId, runId }),
       ]);

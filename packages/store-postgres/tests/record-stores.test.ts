@@ -7,7 +7,6 @@ import {
 import type { QueryResultRow } from "pg";
 import { describe, expect, it } from "vitest";
 
-import { createPostgresStorageSecurityProfile } from "../src/config.js";
 import { Aes256GcmDataProtector, MemoryProtectionNonceRegistry } from "../src/data-protector.js";
 import type { PostgresClient, PostgresDatabase, SqlResult } from "../src/database.js";
 import {
@@ -15,7 +14,12 @@ import {
   PostgresContextStore,
   PostgresInputSubmissionStore,
 } from "../src/record-stores.js";
-import { artifact, contextSnapshot, inputSubmission } from "./fixtures.js";
+import {
+  artifact,
+  contextSnapshot,
+  inputSubmission,
+  postgresSecurityProfile as createPostgresStorageSecurityProfile,
+} from "./fixtures.js";
 
 describe("protected record stores", () => {
   it("stores typed input once, rejects changed replay, and isolates tenant reads", async () => {

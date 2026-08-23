@@ -139,12 +139,29 @@ export interface PostgresStorageProfileOptions {
   readonly backupResponsibility?: string;
   /** Explicit local-container-only sentinel; it can never satisfy production readiness. */
   readonly transportMode?: "verify-full" | "development-plaintext";
+  /** Explicit opt-in for wildcard tenant/purpose scope in local plaintext development only. */
+  readonly allowDevelopmentWildcardScope?: boolean;
 }
 
 export function createPostgresStorageSecurityProfile(
   options: PostgresStorageProfileOptions = {},
 ): StorageSecurityProfile {
   const developmentPlaintext = options.transportMode === "development-plaintext";
+  const developmentWildcard = options.allowDevelopmentWildcardScope === true;
+  if (developmentWildcard && !developmentPlaintext) {
+    throw invalidConfig("wildcard_scope_requires_development_plaintext");
+  }
+  if (options.allowedTenants === undefined && !developmentWildcard) {
+    throw invalidConfig("explicit_allowed_tenants_required");
+  }
+  if (options.allowedPurposes === undefined && !developmentWildcard) {
+    throw invalidConfig("explicit_allowed_purposes_required");
+  }
+  const allowedTenants = options.allowedTenants ?? ["*"];
+  const allowedPurposes = options.allowedPurposes ?? ["*"];
+  if (!developmentWildcard && (allowedTenants.includes("*") || allowedPurposes.includes("*"))) {
+    throw invalidConfig("wildcard_scope_requires_explicit_development_opt_in");
+  }
   const profile = defineStorageSecurityProfile({
     id:
       options.id ??
@@ -153,8 +170,8 @@ export function createPostgresStorageSecurityProfile(
     allowedDataClasses: [
       ...(options.allowedDataClasses ?? ["public", "internal", "confidential", "restricted"]),
     ],
-    allowedTenants: [...(options.allowedTenants ?? ["*"])],
-    allowedPurposes: [...(options.allowedPurposes ?? ["*"])],
+    allowedTenants: [...allowedTenants],
+    allowedPurposes: [...allowedPurposes],
     tenantIsolation: "database_constraint",
     encryptionMode: "application_protected",
     // Core has no plaintext transport claim. `memory` is used as the explicit
@@ -222,6 +239,12 @@ export function assertPostgresStorageSecurityProfile(
   ) {
     throw invalidConfig("storage_profile_transport_unsupported");
   }
+  if (
+    (profile.allowedTenants.includes("*") || profile.allowedPurposes.includes("*")) &&
+    profile.transportSecurity !== "memory"
+  ) {
+    throw invalidConfig("wildcard_scope_requires_development_plaintext");
+  }
 }
 
 export class PostgresStorageGuard {
@@ -239,11 +262,14 @@ export class PostgresStorageGuard {
     if (!this.securityProfile.allowedDataClasses.includes(dataClass as never))
       this.reject("data_class");
   }
-  assertWriteAllowed(tenantId: string, purpose: string, dataClass: string): void {
-    this.assertRoutingAllowed(tenantId, dataClass);
+  assertPurposeAllowed(purpose: string): void {
     if (purpose.trim().length === 0 || !matches(this.securityProfile.allowedPurposes, purpose)) {
       this.reject("purpose");
     }
+  }
+  assertWriteAllowed(tenantId: string, purpose: string, dataClass: string): void {
+    this.assertRoutingAllowed(tenantId, dataClass);
+    this.assertPurposeAllowed(purpose);
   }
   private reject(reason: string): never {
     throw new KafError("KAF_STORAGE_SECURITY_PROFILE", {

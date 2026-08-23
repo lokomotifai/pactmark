@@ -100,8 +100,10 @@ RunCompleted
 ```
 
 Oluşturulan proje bilinçli olarak ephemeral local profile kullanır: in-memory
-state, deterministic model fixture ve güvenilen in-process execution. Bu bir
-öğrenme/test yoludur; production template’i gibi sunulmaz.
+state, deterministic model fixture ve `sandbox: "unsafe_local"` ile
+`networkPolicy: "declared"` kullanan güvenilen in-process execution. Bu bir
+öğrenme/test yoludur; production template’i veya production isolation iddiası
+değildir.
 
 Tek tool’lu, yönetişimli bir agent yaklaşık otuz satıra sığar
 ([`examples/quickstart-agent`](examples/quickstart-agent/), anahtar gerektirmeden

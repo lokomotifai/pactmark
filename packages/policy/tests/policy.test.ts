@@ -1,10 +1,12 @@
+import { AcceptedCompensationWorkOrderSchema } from "@pactmark/core";
 import { describe, expect, it } from "vitest";
 
 import {
   createKillSwitchRegistry,
-  createPolicyEngine,
+  createPolicyPreflightEngine,
   defineDeterministicPolicy,
   evaluatePolicy,
+  evaluatePolicyPreflight,
 } from "../src/index.js";
 import { digest, makeApproval, makeInput, makeTool, policy, workOrder } from "./fixtures.js";
 
@@ -228,6 +230,7 @@ describe("deterministic default-deny policy", () => {
 
   it("re-checks versioned kill switches before every evaluation", () => {
     const input = makeInput("R1");
+    if (input.workOrder.kind !== "agent") throw new Error("fixture must use an agent WorkOrder");
     const switches = createKillSwitchRegistry();
     switches.activate(
       "tool_registration",
@@ -261,16 +264,96 @@ describe("deterministic default-deny policy", () => {
     expect(restored.snapshot()).toMatchObject({ version: 4 });
     restored.activate(
       "model_profile",
-      digest("b"),
+      input.workOrder.modelSecurityProfileDigest,
       "KAF_SECURITY_REVOKED",
       "maintainer-1",
       input.evaluatedAt,
     );
     expect(restored.snapshot().entries).toHaveLength(2);
+    expect(evaluatePolicy(policy.config, input, restored)).toMatchObject({
+      reasonCode: "KAF_POLICY_REGISTRATION_KILLED",
+    });
+    restored.deactivate("model_profile", input.workOrder.modelSecurityProfileDigest);
+    restored.activate(
+      "model_adapter",
+      input.workOrder.modelAdapterRegistrationDigest,
+      "KAF_SECURITY_REVOKED",
+      "maintainer-1",
+      input.evaluatedAt,
+    );
+    expect(evaluatePolicy(policy.config, input, restored)).toMatchObject({
+      reasonCode: "KAF_POLICY_REGISTRATION_KILLED",
+    });
+
+    const definitionStrategyDigest = digest("a");
+    const compensationWorkOrder = AcceptedCompensationWorkOrderSchema.parse({
+      schemaVersion: input.workOrder.schemaVersion,
+      id: "compensation-work-1",
+      createdAt: input.workOrder.createdAt,
+      goal: "Compensate the original effect",
+      input: {},
+      context: input.workOrder.context,
+      workMode: input.workOrder.workMode,
+      autonomyMode: input.workOrder.autonomyMode,
+      decisionOwner: input.workOrder.decisionOwner,
+      purpose: input.workOrder.purpose,
+      dataClass: input.workOrder.dataClass,
+      retention: input.workOrder.retention,
+      principal: input.workOrder.principal,
+      tenant: input.workOrder.tenant,
+      requestedCapabilities: input.workOrder.requestedCapabilities,
+      resourceScopeCeiling: input.workOrder.resourceScopeCeiling,
+      budget: input.workOrder.budget,
+      workOrderBindingDigest: digest("b"),
+      kind: "compensation",
+      executionDefinition: {
+        kind: "compensation",
+        id: "undo-effect",
+        version: "1.0.0",
+        compensationRunDefinitionDigest: digest("c"),
+        originalAgentDefinitionDigest: digest("d"),
+        originalEffectDigest: digest("e"),
+        compensationStrategyRegistrationDigest: definitionStrategyDigest,
+        compensationToolRegistrationDigest: digest("f"),
+      },
+      executionDefinitionDigest: digest("7"),
+      originalRunId: "run-original",
+      originalEffectId: "effect-original",
+      originalEffectDigest: digest("e"),
+      originalEffectResultDigest: digest("8"),
+      originalEffectAcknowledgementDigest: digest("9"),
+      compensationStrategyRegistrationDigest: digest("0"),
+      compensationToolId: "undo-effect",
+      compensationToolVersion: "1.0.0",
+      compensationToolRegistrationDigest: digest("f"),
+    });
+    restored.activate(
+      "compensation_strategy",
+      definitionStrategyDigest,
+      "KAF_SECURITY_REVOKED",
+      "maintainer-1",
+      input.evaluatedAt,
+    );
+    expect(
+      evaluatePolicyPreflight(
+        policy.config,
+        {
+          workOrder: compensationWorkOrder,
+          tool: makeTool("R1"),
+          policyRegistrationDigest: policy.registration.policyRegistrationDigest,
+          argumentsDigest: digest("7"),
+          resources: input.normalizedResources,
+          schemaValidated: true,
+          networkPolicy: "declared",
+          callsAlreadyUsed: 0,
+        },
+        restored,
+      ),
+    ).toMatchObject({ reasonCode: "KAF_POLICY_REGISTRATION_KILLED" });
   });
 
   it("implements the preliminary PolicyEngine port without granting authority", async () => {
-    const engine = createPolicyEngine(policy);
+    const engine = createPolicyPreflightEngine(policy);
     const r1 = makeInput("R1");
     await expect(
       engine.evaluate({
@@ -314,7 +397,7 @@ describe("deterministic default-deny policy", () => {
       "maintainer",
       r1.evaluatedAt,
     );
-    const killed = createPolicyEngine(policy, switches);
+    const killed = createPolicyPreflightEngine(policy, switches);
     await expect(
       killed.evaluate({
         workOrder: r1.workOrder,

@@ -24,6 +24,7 @@ import {
 
 import { POSTGRES_STORE_CAPABILITIES, PostgresStorageGuard } from "./config.js";
 import type { PostgresDatabase } from "./database.js";
+import { queryForTenant } from "./database.js";
 import { assertNonempty, assertNonnegative, conflict, parseJsonColumn } from "./internal.js";
 
 type WorkOrderRow = {
@@ -101,7 +102,9 @@ export class PostgresAcceptedWorkOrderStore
     assertWorkOrderBindingDigest(workOrder);
     const canonicalDigest = digestCanonicalJson(workOrder);
     const expiresAt = workOrder.retention.mode === "until" ? workOrder.retention.expiresAt : null;
-    const prior = await this.database.query<WorkOrderRow>(
+    const prior = await queryForTenant<WorkOrderRow>(
+      this.database,
+      workOrder.tenant.id,
       `SELECT canonical_digest,protected_ref_json FROM pactmark_work_orders
        WHERE tenant_id=$1 AND work_order_id=$2`,
       [workOrder.tenant.id, workOrder.id],
@@ -116,7 +119,9 @@ export class PostgresAcceptedWorkOrderStore
       new TextEncoder().encode(JSON.stringify(workOrder)),
     );
 
-    const result = await this.database.query(
+    const result = await queryForTenant(
+      this.database,
+      workOrder.tenant.id,
       `INSERT INTO pactmark_work_orders
         (tenant_id,work_order_id,work_order_kind,work_order_binding_digest,
          execution_definition_json,execution_definition_digest,model_security_profile_digest,
@@ -164,7 +169,9 @@ export class PostgresAcceptedWorkOrderStore
       ],
     );
     if (result.rowCount === 1) return;
-    const existing = await this.database.query<WorkOrderRow>(
+    const existing = await queryForTenant<WorkOrderRow>(
+      this.database,
+      workOrder.tenant.id,
       `SELECT canonical_digest,protected_ref_json FROM pactmark_work_orders
        WHERE tenant_id=$1 AND work_order_id=$2`,
       [workOrder.tenant.id, workOrder.id],
@@ -177,7 +184,9 @@ export class PostgresAcceptedWorkOrderStore
     assertNonempty(tenantId, "tenantId");
     assertNonempty(workOrderId, "workOrderId");
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<WorkOrderRow>(
+    const result = await queryForTenant<WorkOrderRow>(
+      this.database,
+      tenantId,
       `SELECT canonical_digest,protected_ref_json,work_order_kind,work_order_binding_digest,
               execution_definition_digest,purpose_code,purpose_registry_version,data_class
        FROM pactmark_work_orders
@@ -237,7 +246,9 @@ export class PostgresAcceptedWorkOrderStore
     assertNonempty(tenantId, "tenantId");
     assertNonempty(workOrderId, "workOrderId");
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query(
+    const result = await queryForTenant(
+      this.database,
+      tenantId,
       "DELETE FROM pactmark_work_orders WHERE tenant_id=$1 AND work_order_id=$2",
       [tenantId, workOrderId],
     );
@@ -294,7 +305,9 @@ export class PostgresInputSubmissionStore
     if (this.#protector === undefined) rejectSecurity("data_protector_required");
     const canonicalDigest = digestCanonicalJson(record);
     const expiresAt = record.retention.mode === "until" ? record.retention.expiresAt : null;
-    const result = await this.database.query(
+    const result = await queryForTenant(
+      this.database,
+      record.tenantId,
       `INSERT INTO pactmark_input_submissions
         (tenant_id,run_id,request_id,input_submission_record_id,input_schema_digest,value_digest,
          canonical_digest,purpose_code,data_class,consuming_command_id,expires_at,record_json,
@@ -340,7 +353,9 @@ export class PostgresInputSubmissionStore
   async delete(tenantId: string, runId: string, requestId: string): Promise<void> {
     validateRoute(tenantId, runId, requestId);
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query(
+    const result = await queryForTenant(
+      this.database,
+      tenantId,
       "DELETE FROM pactmark_input_submissions WHERE tenant_id=$1 AND run_id=$2 AND request_id=$3",
       [tenantId, runId, requestId],
     );
@@ -384,7 +399,9 @@ export class PostgresInputSubmissionStore
   ): Promise<JsonRecordRow | undefined> {
     validateRoute(tenantId, runId, requestId);
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<JsonRecordRow>(
+    const result = await queryForTenant<JsonRecordRow>(
+      this.database,
+      tenantId,
       `SELECT canonical_digest,record_json FROM pactmark_input_submissions
        WHERE tenant_id=$1 AND run_id=$2 AND request_id=$3
        ${enforceExpiry ? "AND (expires_at IS NULL OR expires_at > clock_timestamp())" : ""}`,
@@ -415,7 +432,9 @@ export class PostgresContextStore extends GuardedPostgresStore implements Contex
     this.guard.assertWriteAllowed(snapshot.tenantId, snapshot.purposeCode, snapshot.dataClass);
     if (this.#protector === undefined) rejectSecurity("context_protector_required");
     const canonicalDigest = digestCanonicalJson(snapshot);
-    const result = await this.database.query(
+    const result = await queryForTenant(
+      this.database,
+      snapshot.tenantId,
       `INSERT INTO pactmark_context_snapshots
         (tenant_id,run_id,snapshot_id,sequence,canonical_digest,purpose_code,data_class,
          expires_at,snapshot_json,protected_key_id,protected_ref)
@@ -436,7 +455,9 @@ export class PostgresContextStore extends GuardedPostgresStore implements Contex
       ],
     );
     if (result.rowCount === 1) return;
-    const existing = await this.database.query<JsonRecordRow>(
+    const existing = await queryForTenant<JsonRecordRow>(
+      this.database,
+      snapshot.tenantId,
       `SELECT canonical_digest,snapshot_json AS record_json FROM pactmark_context_snapshots
        WHERE tenant_id=$1 AND run_id=$2 AND snapshot_id=$3`,
       [snapshot.tenantId, snapshot.runId, snapshot.snapshotId],
@@ -450,7 +471,9 @@ export class PostgresContextStore extends GuardedPostgresStore implements Contex
     assertNonempty(tenantId, "tenantId");
     assertNonempty(runId, "runId");
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<JsonRecordRow>(
+    const result = await queryForTenant<JsonRecordRow>(
+      this.database,
+      tenantId,
       `SELECT canonical_digest,snapshot_json AS record_json FROM pactmark_context_snapshots
        WHERE tenant_id=$1 AND run_id=$2
          AND (expires_at IS NULL OR expires_at > clock_timestamp())
@@ -473,7 +496,9 @@ export class PostgresContextStore extends GuardedPostgresStore implements Contex
     assertNonempty(tenantId, "tenantId");
     assertNonempty(runId, "runId");
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<{ snapshot_id: string }>(
+    const result = await queryForTenant<{ snapshot_id: string }>(
+      this.database,
+      tenantId,
       `DELETE FROM pactmark_context_snapshots WHERE tenant_id=$1 AND run_id=$2
        RETURNING snapshot_id`,
       [tenantId, runId],
@@ -588,7 +613,9 @@ export class PostgresArtifactStore extends GuardedPostgresStore implements Artif
       storedContent = null;
     }
     const canonicalDigest = digestCanonicalJson(artifact);
-    const result = await this.database.query(
+    const result = await queryForTenant(
+      this.database,
+      artifact.tenantId,
       `INSERT INTO pactmark_artifacts
         (tenant_id,artifact_id,canonical_digest,content_digest,data_class,purpose_code,
          expires_at,artifact_json,content,protected_ref_json,protected_key_id,protected_ref)
@@ -627,7 +654,9 @@ export class PostgresArtifactStore extends GuardedPostgresStore implements Artif
     assertNonempty(tenantId, "tenantId");
     assertNonempty(artifactId, "artifactId");
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<ArtifactRow>(
+    const result = await queryForTenant<ArtifactRow>(
+      this.database,
+      tenantId,
       `SELECT canonical_digest,artifact_json,content,protected_ref_json FROM pactmark_artifacts
        WHERE tenant_id=$1 AND artifact_id=$2
          AND (expires_at IS NULL OR expires_at > clock_timestamp())`,
@@ -665,7 +694,9 @@ export class PostgresArtifactStore extends GuardedPostgresStore implements Artif
     assertNonempty(tenantId, "tenantId");
     assertNonempty(artifactId, "artifactId");
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query(
+    const result = await queryForTenant(
+      this.database,
+      tenantId,
       "DELETE FROM pactmark_artifacts WHERE tenant_id=$1 AND artifact_id=$2",
       [tenantId, artifactId],
     );

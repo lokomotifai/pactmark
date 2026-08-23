@@ -16,6 +16,9 @@ quota limits have an explicit `tenant` or `principal` scope. PostgreSQL advisory
 transaction locks serialize each applicable tenant/resource counter, while
 same-command replay returns the exact prior reservation and changed replay fails
 closed. Circuit-breaker updates use compare-and-set with fenced half-open probes.
+The suite also exposes `secretRefStore`, which persists only immutable,
+tenant-scoped `SecretRef` metadata and revocation state; resolved credential
+values never enter PostgreSQL.
 
 Migration `006` replaces the unreleased `001` reservation skeletons. It upgrades
 empty skeleton tables. If any old skeleton contains rows, migration stops before
@@ -61,17 +64,28 @@ and digest before returning a result.
 Migration `011` enables a fail-closed `pactmark_tenant_isolation` row-level
 security policy on every Pactmark table with a `tenant_id` column. The policy
 applies to non-owner runtime roles and compares every row with the
-transaction-local `pactmark.tenant_id` setting. A tenant-scoped host must run
-`SELECT set_config('pactmark.tenant_id', $1, true)` inside the same transaction;
-an unset setting matches no tenant. PostgreSQL table owners normally bypass
-RLS, so migrations use an operator-owned role while production requests and
-workers use non-owner roles. The package continues to advertise
-`database_constraint` until the host separately attests that role and
-transaction setup.
+transaction-local `pactmark.tenant_id` setting. When the database comes from
+`createPostgresDatabase` (including `createPostgresStoreSuiteFromConfig`),
+tenant-scoped store operations open a transaction and run
+`SELECT set_config('pactmark.tenant_id', $1, true)` before their SQL; the local
+setting is cleared by commit or rollback and cannot bleed through the pool. An
+injected `PostgresDatabase` remains an explicit host transaction boundary and
+must provide equivalent transaction-local context. An unset setting matches no
+tenant. PostgreSQL table owners normally bypass RLS,
+so migrations and explicitly cross-tenant maintenance use an operator-owned
+role while production requests and workers use a separate non-owner role. The
+package continues to advertise `database_constraint` until the host separately
+attests those role assignments.
 
 ## Security defaults
 
 Production connections accept only `ssl.mode: "verify-full"`. The adapter enables certificate-chain and hostname verification and rejects URL-level SSL overrides before constructing a pool. An explicit `ssl.mode: "disable"` is limited to loopback hosts in the `development` profile; it can never represent production readiness. CA bundles are host configuration and must not be placed in events, artifacts, evidence, or logs.
+
+Storage profiles require explicit `allowedTenants` and `allowedPurposes`.
+Wildcard scope is rejected unless the host opts into
+`allowDevelopmentWildcardScope: true` together with
+`transportMode: "development-plaintext"`; that sentinel cannot satisfy a
+production connection.
 
 Event, work-order routing metadata, and ordinary JSONB columns are not
 application-encrypted. Production operators must provide encrypted PostgreSQL
@@ -111,7 +125,11 @@ export function createProtectedStores(
     nonceRegistry: new PostgresProtectionNonceRegistry(database),
     invocationCeiling: 1_000_000,
   });
-  return createPostgresStoreSuite(database, { dataProtector });
+  return createPostgresStoreSuite(database, {
+    allowedTenants: ["tenant-a"],
+    allowedPurposes: ["service_delivery"],
+    dataProtector,
+  });
 }
 ```
 
@@ -142,7 +160,10 @@ export function connectProductionStores(
       applicationName: "pactmark-worker",
     },
     {
-      securityProfile: createPostgresStorageSecurityProfile(),
+      securityProfile: createPostgresStorageSecurityProfile({
+        allowedTenants: ["tenant-a"],
+        allowedPurposes: ["service_delivery"],
+      }),
       dataProtector,
     },
   );

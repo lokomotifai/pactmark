@@ -14,6 +14,8 @@ export interface PostgresClient {
 }
 
 export interface PostgresDatabase {
+  /** Present only when this package owns the pool and must install tenant RLS context. */
+  readonly tenantTransactions?: true;
   query<Row extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: readonly unknown[],
@@ -25,6 +27,7 @@ export interface PostgresDatabase {
 export function createPostgresDatabase(config: PoolConfig): PostgresDatabase {
   const pool = new Pool(config);
   return {
+    tenantTransactions: true,
     // The generic preserves each caller's explicit SQL row contract through the pg boundary.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
     query: async <Row extends QueryResultRow>(text: string, values?: readonly unknown[]) => {
@@ -66,4 +69,29 @@ export async function withTransaction<T>(
   } finally {
     client.release();
   }
+}
+
+/**
+ * Binds PostgreSQL RLS to one tenant for exactly one transaction. The local
+ * setting is cleared by COMMIT/ROLLBACK and can never bleed through the pool.
+ */
+export function withTenantTransaction<T>(
+  database: PostgresDatabase,
+  tenantId: string,
+  operation: (client: PostgresClient) => Promise<T>,
+): Promise<T> {
+  return withTransaction(database, async (client) => {
+    await client.query("SELECT set_config('pactmark.tenant_id', $1, true)", [tenantId]);
+    return operation(client);
+  });
+}
+
+export function queryForTenant<Row extends QueryResultRow = QueryResultRow>(
+  database: PostgresDatabase,
+  tenantId: string,
+  text: string,
+  values?: readonly unknown[],
+): Promise<SqlResult<Row>> {
+  if (database.tenantTransactions !== true) return database.query<Row>(text, values);
+  return withTenantTransaction(database, tenantId, (client) => client.query<Row>(text, values));
 }

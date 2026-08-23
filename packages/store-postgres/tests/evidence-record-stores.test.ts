@@ -2,14 +2,18 @@ import { digestCanonicalJson } from "@pactmark/core";
 import type { QueryResultRow } from "pg";
 import { describe, expect, it } from "vitest";
 
-import { createPostgresStorageSecurityProfile } from "../src/config.js";
 import type { PostgresClient, PostgresDatabase, SqlResult } from "../src/database.js";
 import {
   PostgresEvidenceRecordStore,
   PostgresPatternRecordStore,
   PostgresVerificationRecordStore,
 } from "../src/evidence-record-stores.js";
-import { evidenceRecord, patternRecord, verificationRecord } from "./fixtures.js";
+import {
+  evidenceRecord,
+  patternRecord,
+  postgresSecurityProfile as createPostgresStorageSecurityProfile,
+  verificationRecord,
+} from "./fixtures.js";
 
 describe("durable immutable evidence record stores", () => {
   it("round-trips exact records after store reconstruction and isolates tenant routes", async () => {

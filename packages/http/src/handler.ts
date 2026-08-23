@@ -38,6 +38,13 @@ const sensitiveHeaders = Object.freeze({
   Vary: "Authorization, Cookie, Origin, Accept, Last-Event-ID",
 });
 
+const DEFAULT_ERROR_REFERENCE_URL = "https://github.com/lokomotifai/pactmark/blob/main/ERRORS.md";
+
+function errorReferenceUrl(baseUrl: string, anchor: string): string {
+  const normalized = baseUrl.replace(/\/+$/u, "");
+  return normalized.endsWith(".md") ? `${normalized}#${anchor}` : `${normalized}/${anchor}`;
+}
+
 async function verifyContentDigest(content: Uint8Array, expected: string): Promise<boolean> {
   const ownedContent = new Uint8Array(content.byteLength);
   ownedContent.set(content);
@@ -106,7 +113,7 @@ function problem(error: unknown, requestId: string, documentationBaseUrl: string
   }
   return new Response(
     JSON.stringify({
-      type: `${documentationBaseUrl}/${remediation}`,
+      type: errorReferenceUrl(documentationBaseUrl, remediation),
       title: code,
       status,
       code,
@@ -422,7 +429,7 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
     });
   }
   const openapi = createOpenApiDocument(basePath);
-  const documentationBaseUrl = config.documentationBaseUrl ?? "https://pactmark.dev/errors";
+  const documentationBaseUrl = config.documentationBaseUrl ?? DEFAULT_ERROR_REFERENCE_URL;
 
   const handle: AgentFetchHandler = async (request, context) => {
     const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();

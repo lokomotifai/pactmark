@@ -18,6 +18,10 @@ import {
   type VerificationRecord,
 } from "@pactmark/core";
 
+import {
+  createPostgresStorageSecurityProfile,
+  type PostgresStorageProfileOptions,
+} from "../src/config.js";
 import { computeAcceptedWorkOrderBindingDigest } from "../src/record-stores.js";
 
 export const instant = "2026-08-03T10:00:00.000Z";
@@ -29,6 +33,14 @@ export const executionDefinition = {
   agentDefinitionDigest: digest("agent-definition"),
 };
 export const executionDefinitionDigest = digestCanonicalJson(executionDefinition);
+
+export function postgresSecurityProfile(options: PostgresStorageProfileOptions = {}) {
+  return createPostgresStorageSecurityProfile({
+    allowedTenants: ["tenant-a", "tenant-b"],
+    allowedPurposes: ["support", "service_delivery"],
+    ...options,
+  });
+}
 
 export function acceptedWorkOrder(
   overrides: Partial<AcceptedAgentWorkOrder> = {},

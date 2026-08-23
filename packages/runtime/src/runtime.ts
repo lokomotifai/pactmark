@@ -125,6 +125,19 @@ export interface RuntimeToolRegistry {
   resolve(toolRegistrationDigest: string): ToolRegistrationContract | undefined;
 }
 
+export interface RuntimeRegistrationKillSwitches {
+  isKilled(
+    targetKind:
+      | "tool_registration"
+      | "model_adapter"
+      | "model_profile"
+      | "policy_registration"
+      | "compensation_definition"
+      | "compensation_strategy",
+    targetDigest: Digest,
+  ): boolean;
+}
+
 export type RuntimeBoundaryErrorClassification =
   "aborted" | "timed_out" | "retryable" | "non_retryable" | "uncertain";
 
@@ -201,6 +214,8 @@ export interface RuntimeKernelConfig {
   readonly toolRegistry: RuntimeToolRegistry;
   readonly toolCallResolver: ToolCallResolver;
   readonly policyEngine: PolicyEngine;
+  /** Rechecked immediately before model and compensation registration use. */
+  readonly killSwitches?: RuntimeRegistrationKillSwitches;
   readonly toolExecutor: ToolExecutor;
   readonly verifierRegistry: VerifierRegistry;
   readonly evidenceBuilder: EvidenceBuilder;
@@ -1204,6 +1219,20 @@ export class AgentRuntime {
       });
     }
     const definition = CompensationRunDefinitionSchema.parse(binding.definition);
+    if (
+      this.#config.killSwitches?.isKilled(
+        "compensation_definition",
+        definition.compensationRunDefinitionDigest,
+      ) === true ||
+      this.#config.killSwitches?.isKilled(
+        "compensation_strategy",
+        definition.compensationStrategyRegistrationDigest,
+      ) === true
+    ) {
+      throw new KafError("KAF_RUNTIME_NOT_READY", {
+        details: { reason: "compensation_registration_killed" },
+      });
+    }
     const registeredDefinition = await compensation.registry.resolve(
       definition.id,
       definition.version,
@@ -2427,6 +2456,20 @@ export class AgentRuntime {
       workOrder.executionDefinition.compensationRunDefinitionDigest,
     );
     if (
+      this.#config.killSwitches?.isKilled(
+        "compensation_definition",
+        workOrder.executionDefinition.compensationRunDefinitionDigest,
+      ) === true ||
+      this.#config.killSwitches?.isKilled(
+        "compensation_strategy",
+        workOrder.executionDefinition.compensationStrategyRegistrationDigest,
+      ) === true
+    ) {
+      throw new KafError("KAF_RUNTIME_NOT_READY", {
+        details: { reason: "compensation_registration_killed" },
+      });
+    }
+    if (
       definition === undefined ||
       definition.compensationRunDefinitionDigest !==
         workOrder.executionDefinition.compensationRunDefinitionDigest ||
@@ -2600,6 +2643,24 @@ export class AgentRuntime {
       completedEventCommitted: boolean;
     }>
   > {
+    if (
+      this.#config.killSwitches?.isKilled(
+        "model_adapter",
+        input.definition.modelAdapterRegistrationDigest,
+      ) === true ||
+      this.#config.killSwitches?.isKilled(
+        "model_profile",
+        input.definition.modelSecurityProfileDigest,
+      ) === true ||
+      this.#config.killSwitches?.isKilled(
+        "model_profile",
+        input.definition.modelResourceProfileDigest,
+      ) === true
+    ) {
+      throw new KafError("KAF_RUNTIME_NOT_READY", {
+        details: { reason: "model_registration_killed" },
+      });
+    }
     this.#assertJsonByteLimit(
       input.modelInput,
       input.workOrder.budget.maxModelInputBytesPerCall,
