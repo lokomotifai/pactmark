@@ -821,6 +821,13 @@ describe("Pactmark HTTP handler", () => {
     expect(await failed.json()).toMatchObject({
       type: "https://github.com/lokomotifai/pactmark/blob/main/ERRORS.md#runtime-not-ready",
     });
+    const customDocumentation = await createAgentFetchHandler({
+      ...config(new FailingRuntime()),
+      documentationBaseUrl: `https://errors.example.com${"/".repeat(8_192)}`,
+    })(mutation("/v1/runs", workOrder), context);
+    expect(await customDocumentation.json()).toMatchObject({
+      type: "https://errors.example.com/runtime-not-ready",
+    });
   });
 
   it("enforces credentialed CORS, cookie Origin, Fetch Metadata, and CSRF", async () => {

@@ -41,7 +41,9 @@ const sensitiveHeaders = Object.freeze({
 const DEFAULT_ERROR_REFERENCE_URL = "https://github.com/lokomotifai/pactmark/blob/main/ERRORS.md";
 
 function errorReferenceUrl(baseUrl: string, anchor: string): string {
-  const normalized = baseUrl.replace(/\/+$/u, "");
+  let end = baseUrl.length;
+  while (end > 0 && baseUrl.charCodeAt(end - 1) === 47) end -= 1;
+  const normalized = baseUrl.slice(0, end);
   return normalized.endsWith(".md") ? `${normalized}#${anchor}` : `${normalized}/${anchor}`;
 }
 
