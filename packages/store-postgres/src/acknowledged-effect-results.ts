@@ -16,6 +16,7 @@ import {
 
 import { POSTGRES_STORE_CAPABILITIES, PostgresStorageGuard } from "./config.js";
 import type { PostgresDatabase } from "./database.js";
+import { queryForTenant } from "./database.js";
 import { conflict, parseJsonColumn } from "./internal.js";
 
 type EffectResultRow = {
@@ -73,7 +74,9 @@ export class PostgresAcknowledgedEffectResultStore {
       return;
     }
     const canonicalDigest = digestCanonicalJson(record);
-    const inserted = await this.database.query(
+    const inserted = await queryForTenant(
+      this.database,
+      record.tenantId,
       `INSERT INTO pactmark_acknowledged_effect_results
        (tenant_id,run_id,effect_id,effect_digest,result_digest,byte_size,work_order_id,
         work_order_binding_digest,execution_definition_digest,tool_id,tool_version,
@@ -119,7 +122,9 @@ export class PostgresAcknowledgedEffectResultStore {
     const effect = EffectRecordSchema.parse(input);
     this.#guard.assertTenantAllowed(effect.tenantId);
     if (effect.state !== "acknowledged") conflict("effect_result_requires_acknowledged_effect");
-    const result = await this.database.query<EffectResultRow>(
+    const result = await queryForTenant<EffectResultRow>(
+      this.database,
+      effect.tenantId,
       `SELECT ${SELECT_COLUMNS} FROM pactmark_acknowledged_effect_results
        WHERE tenant_id=$1 AND run_id=$2 AND effect_id=$3`,
       [effect.tenantId, effect.runId, effect.effectId],
@@ -137,7 +142,9 @@ export class PostgresAcknowledgedEffectResultStore {
   }
 
   async #findIdentity(record: ProtectedEffectResultRecord): Promise<EffectResultRow | undefined> {
-    const result = await this.database.query<EffectResultRow>(
+    const result = await queryForTenant<EffectResultRow>(
+      this.database,
+      record.tenantId,
       `SELECT ${SELECT_COLUMNS} FROM pactmark_acknowledged_effect_results
        WHERE tenant_id=$1 AND ((run_id=$2 AND effect_id=$3) OR effect_digest=$4)`,
       [record.tenantId, record.runId, record.effectId, record.effectDigest],

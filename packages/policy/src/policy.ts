@@ -263,7 +263,24 @@ export function evaluatePolicyPreflight(
   }
   if (
     killSwitches?.isKilled("tool_registration", tool.toolRegistrationDigest) === true ||
-    killSwitches?.isKilled("policy_registration", inputRaw.policyRegistrationDigest) === true
+    killSwitches?.isKilled("policy_registration", inputRaw.policyRegistrationDigest) === true ||
+    (workOrder.kind === "agent" &&
+      (killSwitches?.isKilled("model_adapter", workOrder.modelAdapterRegistrationDigest) === true ||
+        killSwitches?.isKilled("model_profile", workOrder.modelSecurityProfileDigest) === true ||
+        killSwitches?.isKilled("model_profile", workOrder.modelResourceProfileDigest) === true)) ||
+    (workOrder.kind === "compensation" &&
+      (killSwitches?.isKilled(
+        "compensation_definition",
+        workOrder.executionDefinition.compensationRunDefinitionDigest,
+      ) === true ||
+        killSwitches?.isKilled(
+          "compensation_strategy",
+          workOrder.compensationStrategyRegistrationDigest,
+        ) === true ||
+        killSwitches?.isKilled(
+          "compensation_strategy",
+          workOrder.executionDefinition.compensationStrategyRegistrationDigest,
+        ) === true))
   ) {
     return preflightDeny("KAF_POLICY_REGISTRATION_KILLED");
   }
@@ -411,7 +428,7 @@ export function evaluatePolicy(
  * Preliminary core port adapter. It never dispatches and deliberately cannot
  * turn its result into authority; runtime still resolves and reserves a grant.
  */
-export function createPolicyEngine(
+export function createPolicyPreflightEngine(
   policy: ReturnType<typeof defineDeterministicPolicy>,
   killSwitches?: KillSwitchRegistry,
 ): PolicyEngine {
@@ -437,4 +454,15 @@ export function createPolicyEngine(
     },
   };
   return Object.freeze(engine);
+}
+
+/**
+ * @deprecated Use `createPolicyPreflightEngine`; this adapter performs
+ * preflight only and an `allow_with_grant` result is not executable authority.
+ */
+export function createPolicyEngine(
+  policy: ReturnType<typeof defineDeterministicPolicy>,
+  killSwitches?: KillSwitchRegistry,
+): PolicyEngine {
+  return createPolicyPreflightEngine(policy, killSwitches);
 }

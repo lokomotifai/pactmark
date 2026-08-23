@@ -22,7 +22,6 @@ import {
 import {
   PostgresRunCommandUnitOfWork,
   PostgresEffectLedger,
-  createPostgresStorageSecurityProfile,
   type PostgresClient,
   type PostgresDatabase,
   type SqlResult,
@@ -34,6 +33,7 @@ import {
   executionDefinitionDigest,
   instant,
   inputSubmission,
+  postgresSecurityProfile as createPostgresStorageSecurityProfile,
   protectedValue,
   runAccepted,
 } from "./fixtures.js";

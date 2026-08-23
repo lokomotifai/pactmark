@@ -11,7 +11,7 @@
     },
     {
       "path": "packages/policy/src/policy.ts",
-      "digest": "sha256:b150a9e5ab52de9a6460c792f11c230e2b57ff71e06857a05251f82efba2620e"
+      "digest": "sha256:271eed60c538591b3ef78921528fa05d81156850ea6db947b1d0a19efe305af4"
     },
     {
       "path": "packages/policy/src/grants.ts",
@@ -75,7 +75,7 @@
     },
     {
       "path": "packages/runtime/src/runtime.ts",
-      "digest": "sha256:161c30db26f00bf868e32e3c67f7e19b7d2786d210b8af0160e3e7ccb1ea1c92"
+      "digest": "sha256:46b7d97867856cffaa649395b530fb56a338b6859f46fb411483281ebc185cd1"
     },
     {
       "path": "packages/mcp/src/contracts.ts",

@@ -4,9 +4,15 @@ Offline, deterministic project initializer for Pactmark. The package embeds its
 versioned templates; it never downloads template source at runtime and never
 asks for or reads provider secrets.
 
-The public `npm create pactmark@latest` command remains planned until package
-ownership and an authorized registry release are verified. A packed local
-artifact can be exercised with:
+`create-pactmark@0.2.0` is published on npm. Create a project with:
+
+```sh
+npm create pactmark@latest -- my-agent
+```
+
+The generated 0.2.0 project uses the explicit released runtime composition.
+The shorter facade shown on the repository's unreleased `main` branch is not
+part of the 0.2.0 package line. A packed local artifact can be exercised with:
 
 ```sh
 npm exec --package=/absolute/path/create-pactmark-0.2.0.tgz create-pactmark -- \

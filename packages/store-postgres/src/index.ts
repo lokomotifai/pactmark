@@ -22,12 +22,14 @@ export {
 export {
   createPostgresDatabase,
   withTransaction,
+  withTenantTransaction,
   type PostgresClient,
   type PostgresDatabase,
   type SqlResult,
 } from "./database.js";
 export { PostgresEventStore } from "./event-store.js";
 export { PostgresEffectLedger } from "./effect-ledger.js";
+export { PostgresSecretRefStore } from "./secret-ref-store.js";
 export {
   PostgresRunCommandUnitOfWork,
   type PostgresRunCommandUnitOfWorkOptions,
@@ -93,6 +95,7 @@ import {
 import { createPostgresDatabase, type PostgresDatabase } from "./database.js";
 import { PostgresEventStore } from "./event-store.js";
 import { PostgresEffectLedger } from "./effect-ledger.js";
+import { PostgresSecretRefStore } from "./secret-ref-store.js";
 import { PostgresRunCommandUnitOfWork } from "./command-unit-of-work.js";
 import { PostgresRunLeaseStore, type PostgresRunLeaseStoreOptions } from "./lease-store.js";
 import { PostgresMigrationManager } from "./migrations.js";
@@ -192,6 +195,7 @@ export function createPostgresStoreSuite(
     evidenceRecordStore: new PostgresEvidenceRecordStore(database, securityProfile),
     verificationRecordStore: new PostgresVerificationRecordStore(database, securityProfile),
     patternRecordStore: new PostgresPatternRecordStore(database, securityProfile),
+    secretRefStore: new PostgresSecretRefStore(database, securityProfile),
     leaseStore,
     runCommandUnitOfWork: new PostgresRunCommandUnitOfWork(database, {
       securityProfile,
@@ -217,7 +221,11 @@ export function createPostgresStoreSuiteFromConfig(
   const poolConfig = toPgPoolConfig(connection);
   const transportMode = connection.ssl.mode === "disable" ? "development-plaintext" : "verify-full";
   const securityProfile =
-    options.securityProfile ?? createPostgresStorageSecurityProfile({ ...options, transportMode });
+    options.securityProfile ??
+    createPostgresStorageSecurityProfile({
+      ...options,
+      transportMode,
+    });
   assertPostgresStorageSecurityProfile(securityProfile, { transportMode });
   const database = createPostgresDatabase(poolConfig);
   return createPostgresStoreSuite(database, { ...options, securityProfile, transportMode });

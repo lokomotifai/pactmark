@@ -187,7 +187,7 @@ class FacadeAgentRegistry implements AgentRegistry {
   }
 }
 
-function createPolicyEngine(
+function createAgentPolicyPreflightEngine(
   agents: readonly DefinedAgent[],
   killSwitches?: KillSwitchRegistry,
 ): PolicyEngine {
@@ -879,7 +879,8 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
     modelDriver: dispatchingModel(input.agents),
     toolRegistry: toolComposition.registry,
     toolCallResolver: toolComposition.resolver,
-    policyEngine: createPolicyEngine(input.agents, input.killSwitches),
+    policyEngine: createAgentPolicyPreflightEngine(input.agents, input.killSwitches),
+    ...(input.killSwitches === undefined ? {} : { killSwitches: input.killSwitches }),
     toolExecutor: toolComposition.executor,
     verifierRegistry: createVerifierRegistry(input.agents, localClock.now, ids),
     evidenceBuilder: createEvidenceBuilder(stores, localClock.now, ids, records),

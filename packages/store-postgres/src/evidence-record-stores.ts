@@ -16,6 +16,7 @@ import {
 
 import { POSTGRES_STORE_CAPABILITIES, PostgresStorageGuard } from "./config.js";
 import type { PostgresDatabase } from "./database.js";
+import { queryForTenant } from "./database.js";
 import { assertNonempty, conflict, parseJsonColumn } from "./internal.js";
 
 type ImmutableRecordRow = {
@@ -35,6 +36,7 @@ abstract class ImmutablePostgresRecordStore {
   }
 
   protected async insertImmutable(
+    tenantId: string,
     insertSql: string,
     insertValues: readonly unknown[],
     routeSql: string,
@@ -42,9 +44,14 @@ abstract class ImmutablePostgresRecordStore {
     canonicalDigest: Digest,
     conflictReason: string,
   ): Promise<void> {
-    const result = await this.database.query(insertSql, insertValues);
+    const result = await queryForTenant(this.database, tenantId, insertSql, insertValues);
     if (result.rowCount === 1) return;
-    const existing = await this.database.query<ImmutableRecordRow>(routeSql, routeValues);
+    const existing = await queryForTenant<ImmutableRecordRow>(
+      this.database,
+      tenantId,
+      routeSql,
+      routeValues,
+    );
     if (existing.rows[0]?.canonical_digest === canonicalDigest) return;
     conflict(conflictReason);
   }
@@ -64,6 +71,7 @@ export class PostgresEvidenceRecordStore
     assertEvidenceDigest(record);
     const canonicalDigest = digestCanonicalJson(record);
     await this.insertImmutable(
+      record.tenantId,
       `INSERT INTO pactmark_evidence_records
         (tenant_id,evidence_record_id,run_id,evidence_digest,canonical_digest,record_json)
        VALUES ($1,$2,$3,$4,$5,$6::jsonb)
@@ -87,7 +95,9 @@ export class PostgresEvidenceRecordStore
   async get(tenantId: string, evidenceRecordId: string): Promise<EvidenceRecord | undefined> {
     validateRoute(tenantId, evidenceRecordId);
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<ImmutableRecordRow>(
+    const result = await queryForTenant<ImmutableRecordRow>(
+      this.database,
+      tenantId,
       `SELECT canonical_digest,record_json FROM pactmark_evidence_records
        WHERE tenant_id=$1 AND evidence_record_id=$2`,
       [tenantId, evidenceRecordId],
@@ -98,7 +108,9 @@ export class PostgresEvidenceRecordStore
   async getByDigest(tenantId: string, evidenceDigest: Digest): Promise<EvidenceRecord | undefined> {
     validateRoute(tenantId, evidenceDigest);
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<ImmutableRecordRow>(
+    const result = await queryForTenant<ImmutableRecordRow>(
+      this.database,
+      tenantId,
       `SELECT canonical_digest,record_json FROM pactmark_evidence_records
        WHERE tenant_id=$1 AND evidence_digest=$2`,
       [tenantId, evidenceDigest],
@@ -121,6 +133,7 @@ export class PostgresVerificationRecordStore
     assertVerificationDigest(record);
     const canonicalDigest = digestCanonicalJson(record);
     await this.insertImmutable(
+      record.tenantId,
       `INSERT INTO pactmark_verification_records
         (tenant_id,run_id,verification_id,verification_digest,canonical_digest,record_json)
        VALUES ($1,$2,$3,$4,$5,$6::jsonb)
@@ -148,7 +161,9 @@ export class PostgresVerificationRecordStore
   ): Promise<VerificationRecord | undefined> {
     validateRoute(tenantId, runId, verificationId);
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<ImmutableRecordRow>(
+    const result = await queryForTenant<ImmutableRecordRow>(
+      this.database,
+      tenantId,
       `SELECT canonical_digest,record_json FROM pactmark_verification_records
        WHERE tenant_id=$1 AND run_id=$2 AND verification_id=$3`,
       [tenantId, runId, verificationId],
@@ -162,7 +177,9 @@ export class PostgresVerificationRecordStore
   ): Promise<VerificationRecord | undefined> {
     validateRoute(tenantId, verificationDigest);
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<ImmutableRecordRow>(
+    const result = await queryForTenant<ImmutableRecordRow>(
+      this.database,
+      tenantId,
       `SELECT canonical_digest,record_json FROM pactmark_verification_records
        WHERE tenant_id=$1 AND verification_digest=$2`,
       [tenantId, verificationDigest],
@@ -187,6 +204,7 @@ export class PostgresPatternRecordStore
     assertPatternDigest(record);
     const canonicalDigest = digestCanonicalJson(record);
     await this.insertImmutable(
+      record.tenantId,
       `INSERT INTO pactmark_pattern_records
         (tenant_id,pattern_id,pattern_version,pattern_digest,canonical_digest,record_json)
        VALUES ($1,$2,$3,$4,$5,$6::jsonb)
@@ -214,7 +232,9 @@ export class PostgresPatternRecordStore
   ): Promise<PatternRecord | undefined> {
     validateRoute(tenantId, patternId, version);
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<ImmutableRecordRow>(
+    const result = await queryForTenant<ImmutableRecordRow>(
+      this.database,
+      tenantId,
       `SELECT canonical_digest,record_json FROM pactmark_pattern_records
        WHERE tenant_id=$1 AND pattern_id=$2 AND pattern_version=$3`,
       [tenantId, patternId, version],
@@ -225,7 +245,9 @@ export class PostgresPatternRecordStore
   async getByDigest(tenantId: string, patternDigest: Digest): Promise<PatternRecord | undefined> {
     validateRoute(tenantId, patternDigest);
     this.guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<ImmutableRecordRow>(
+    const result = await queryForTenant<ImmutableRecordRow>(
+      this.database,
+      tenantId,
       `SELECT canonical_digest,record_json FROM pactmark_pattern_records
        WHERE tenant_id=$1 AND pattern_digest=$2`,
       [tenantId, patternDigest],

@@ -28,6 +28,63 @@ function allowingAuthority(grantId = "grant-a"): MCPExposureAuthority {
 }
 
 describe("guarded MCP discovery and calls", () => {
+  it("blocks a killed server before transport creation and rechecks live connections", async () => {
+    const profile = stdioProfile();
+    const identity = serverIdentity(profile);
+    const transportFactory = vi.fn(() => Promise.resolve(new FakeMCPServerTransport()));
+    const killed = {
+      isKilled: vi.fn(
+        (kind: string, candidateDigest: string) =>
+          kind === "mcp_server" && candidateDigest === identity.mcpServerIdentityDigest,
+      ),
+    };
+    await expect(
+      connectMCPServer(
+        {
+          transportProfile: profile,
+          expectedServerIdentity: identity,
+          toolPins: [toolPin(identity)],
+          host: { runtimeProfile: "preview" },
+          transportFactory,
+          killSwitches: killed,
+        },
+        exposure,
+        allowingAuthority(),
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({ code: "KAF_MCP_SERVER_KILLED" });
+    expect(transportFactory).not.toHaveBeenCalled();
+
+    let active = true;
+    const connection = await connectMCPServer(
+      {
+        transportProfile: profile,
+        expectedServerIdentity: identity,
+        toolPins: [toolPin(identity)],
+        host: { runtimeProfile: "preview" },
+        transportFactory: () => Promise.resolve(new FakeMCPServerTransport()),
+        killSwitches: {
+          isKilled: (kind, candidateDigest) =>
+            !active &&
+            kind === "mcp_server" &&
+            candidateDigest === identity.mcpServerIdentityDigest,
+        },
+      },
+      exposure,
+      allowingAuthority(),
+      new AbortController().signal,
+    );
+    const toolDigest = connection.listExposedTools()[0]!.registration.toolRegistrationDigest;
+    active = false;
+    expect(() => connection.listExposedTools()).toThrow(
+      expect.objectContaining({ code: "KAF_MCP_SERVER_KILLED" }),
+    );
+    await expect(
+      connection.callTool(toolDigest, { value: "blocked" }, new AbortController().signal),
+    ).rejects.toMatchObject({ code: "KAF_MCP_SERVER_KILLED" });
+    await connection.close();
+  });
+
   it("exposes only an exactly pinned and granted tool and ignores server descriptions", async () => {
     const profile = stdioProfile();
     const identity = serverIdentity(profile);

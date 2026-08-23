@@ -22,14 +22,16 @@ The public slice includes:
   boundary for local tests; and
 - a versioned registration kill-switch registry.
 
-`createPolicyEngine` applies the portable preflight boundary used by the agent
-facade: kill switches, purpose, data classes, risk, schema status, capabilities,
-canonical resources, scope ceilings, call/cost ceilings, and network policy.
-It returns policy-normalized resources and a target digest; caller- or
-model-supplied target digests are never authority. Its `allow_with_grant` result
-is still not executable effect authority. The runtime must resolve the fully
-bound grant and atomically reserve its use before an external write. Use
-`evaluatePolicy` at that full-authorization boundary.
+`createPolicyPreflightEngine` applies the portable preliminary boundary used by
+the agent facade: kill switches, purpose, data classes, risk, schema status,
+capabilities, canonical resources, scope ceilings, call/cost ceilings, and
+network policy. It returns policy-normalized resources and a target digest;
+caller- or model-supplied target digests are never authority. Its
+`allow_with_grant` result means only that preflight passed and is not executable
+effect authority. The runtime must resolve the fully bound grant and atomically
+reserve its use before an external write. Use `evaluatePolicy` at that
+full-authorization boundary. The older `createPolicyEngine` name remains as a
+deprecated compatibility alias.
 
 Path canonicalization is portable and rejects traversal, encoded traversal,
 absolute paths, and backslash ambiguity. Symlink resolution remains a host

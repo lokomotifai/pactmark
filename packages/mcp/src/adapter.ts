@@ -9,6 +9,7 @@ import {
   type JsonValue,
   type ToolRegistrationContract,
 } from "@pactmark/core";
+import type { KillSwitchRegistry } from "@pactmark/policy";
 import {
   MCPExposureRequestSchema,
   MCPAuditEventSchema,
@@ -86,11 +87,21 @@ export interface MCPAdapterConfig {
     signal: AbortSignal,
   ) => Promise<MCPClientTransport>;
   readonly audit?: MCPAuditSink;
+  readonly killSwitches?: Pick<KillSwitchRegistry, "isKilled">;
 }
 
 interface BoundMCPTool extends MCPExposedTool {
   readonly inputValidator: z.ZodType;
   readonly outputValidator: z.ZodType;
+}
+
+function assertServerActive(config: MCPAdapterConfig, serverIdentityDigest: Digest): void {
+  if (config.killSwitches?.isKilled("mcp_server", serverIdentityDigest) === true) {
+    throw new MCPAdapterError(
+      "KAF_MCP_SERVER_KILLED",
+      "The pinned MCP server is disabled by the host kill switch",
+    );
+  }
 }
 
 export interface MCPConnection {
@@ -375,6 +386,7 @@ export async function connectMCPServer(
 ): Promise<MCPConnection> {
   const profile = verifyMCPTransportSecurityProfile(config.transportProfile);
   const expectedIdentity = verifyMCPServerIdentity(config.expectedServerIdentity);
+  assertServerActive(config, expectedIdentity.mcpServerIdentityDigest);
   const exposure = MCPExposureRequestSchema.parse(untrustedExposure);
   boundedSignal(signal, profile.connectionTimeoutMs);
   const pins = verifyStaticBindings(profile, expectedIdentity, config.toolPins);
@@ -416,6 +428,7 @@ export async function connectMCPServer(
       client.getServerCapabilities(),
       negotiatedProtocolVersion(),
     );
+    assertServerActive(config, identity.mcpServerIdentityDigest);
     audit(config.audit, {
       operation: "connect",
       status: "succeeded",
@@ -432,8 +445,9 @@ export async function connectMCPServer(
     let closed = false;
     return Object.freeze({
       serverIdentity: identity,
-      listExposedTools: () =>
-        Object.freeze(
+      listExposedTools: () => {
+        assertServerActive(config, identity.mcpServerIdentityDigest);
+        return Object.freeze(
           [...exposed.values()].map((tool) =>
             Object.freeze({
               registration: tool.registration,
@@ -443,7 +457,8 @@ export async function connectMCPServer(
               grantId: tool.grantId,
             }),
           ),
-        ),
+        );
+      },
       async callTool(
         toolRegistrationDigest: Digest,
         input: JsonValue,
@@ -452,6 +467,7 @@ export async function connectMCPServer(
         if (closed) {
           throw new MCPAdapterError("KAF_MCP_CONNECTION_FAILED", "MCP connection is closed");
         }
+        assertServerActive(config, identity.mcpServerIdentityDigest);
         audit(config.audit, {
           operation: "call",
           status: "attempted",

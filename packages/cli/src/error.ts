@@ -1,5 +1,11 @@
 import { KafError } from "@pactmark/core";
 
+const ERROR_REFERENCE_URL = "https://github.com/lokomotifai/pactmark/blob/main/ERRORS.md";
+
+function errorReference(anchor: string): string {
+  return `${ERROR_REFERENCE_URL}#${anchor}`;
+}
+
 export type CliErrorCode =
   | "KAF_CLI_ARGUMENT_INVALID"
   | "KAF_CLI_COMMAND_UNSUPPORTED"
@@ -90,7 +96,7 @@ export function toCliPublicError(error: unknown, debug: boolean): CliPublicError
       message: error.message,
       retryable: false,
       remediation: error.remediation,
-      docsUrl: `https://pactmark.dev/errors/${error.code.toLowerCase().replaceAll("_", "-")}`,
+      docsUrl: errorReference("cli-errors"),
       ...(debug ? { diagnostic: { kind: "redacted" as const, errorType: error.name } } : {}),
     };
   }
@@ -101,7 +107,7 @@ export function toCliPublicError(error: unknown, debug: boolean): CliPublicError
       message: error.message,
       retryable: error.retryable,
       remediation: `See ${error.documentationSlug}.`,
-      docsUrl: `https://pactmark.dev/errors/${error.documentationSlug}`,
+      docsUrl: errorReference(error.documentationSlug),
       ...(error.causeCode === undefined ? {} : { causeCode: error.causeCode }),
       ...(debug ? { diagnostic: { kind: "redacted" as const, errorType: error.name } } : {}),
     };
@@ -112,7 +118,7 @@ export function toCliPublicError(error: unknown, debug: boolean): CliPublicError
     message: DESCRIPTORS.KAF_CLI_IO_FAILURE.message,
     retryable: false,
     remediation: DESCRIPTORS.KAF_CLI_IO_FAILURE.remediation,
-    docsUrl: "https://pactmark.dev/errors/kaf-cli-io-failure",
+    docsUrl: errorReference("cli-errors"),
     ...(debug
       ? {
           diagnostic: {

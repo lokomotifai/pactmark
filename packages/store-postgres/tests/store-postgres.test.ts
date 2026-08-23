@@ -1,4 +1,5 @@
 import {
+  defineStorageSecurityProfile,
   digestBytes,
   digestCanonicalJson,
   type AcceptedAgentWorkOrder,
@@ -45,6 +46,70 @@ const executionDefinition = {
 };
 
 describe("PostgreSQL connection security", () => {
+  it("requires explicit storage scope and confines wildcard scope to opted-in local development", () => {
+    expect(() => createPostgresStorageSecurityProfile()).toThrow(
+      expect.objectContaining({
+        code: "KAF_STORAGE_SECURITY_PROFILE",
+        details: { reason: "explicit_allowed_tenants_required" },
+      }),
+    );
+    expect(() =>
+      createPostgresStorageSecurityProfile({
+        allowedTenants: ["*"],
+        allowedPurposes: ["*"],
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        code: "KAF_STORAGE_SECURITY_PROFILE",
+        details: { reason: "wildcard_scope_requires_explicit_development_opt_in" },
+      }),
+    );
+    expect(
+      createPostgresStorageSecurityProfile({
+        transportMode: "development-plaintext",
+        allowDevelopmentWildcardScope: true,
+      }),
+    ).toMatchObject({
+      allowedTenants: ["*"],
+      allowedPurposes: ["*"],
+      transportSecurity: "memory",
+    });
+    expect(() =>
+      createPostgresStorageSecurityProfile({
+        transportMode: "verify-full",
+        allowDevelopmentWildcardScope: true,
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        code: "KAF_STORAGE_SECURITY_PROFILE",
+        details: { reason: "wildcard_scope_requires_development_plaintext" },
+      }),
+    );
+    expect(() => {
+      assertPostgresStorageSecurityProfile(
+        defineStorageSecurityProfile({
+          id: "forged.production.wildcard",
+          implementationVersion: "1.0.0",
+          allowedDataClasses: ["public"],
+          allowedTenants: ["*"],
+          allowedPurposes: ["*"],
+          tenantIsolation: "database_constraint",
+          encryptionMode: "application_protected",
+          transportSecurity: "verify_full",
+          processingRegion: "operator-configured",
+          retentionSupport: true,
+          deletionSupport: true,
+          backupResponsibility: "operator",
+        }),
+      );
+    }).toThrow(
+      expect.objectContaining({
+        code: "KAF_STORAGE_SECURITY_PROFILE",
+        details: { reason: "wildcard_scope_requires_development_plaintext" },
+      }),
+    );
+  });
+
   it("constructs hostname-verifying TLS and does not permit a driver override", () => {
     const config = toPgPoolConfig({
       profile: "production",
@@ -107,7 +172,10 @@ describe("PostgreSQL connection security", () => {
         connectionString: "postgresql://localhost/pactmark",
         ssl: { mode: "disable" },
       },
-      { dataProtector: new TestProtector() },
+      {
+        dataProtector: new TestProtector(),
+        allowDevelopmentWildcardScope: true,
+      },
     );
     expect(configured.securityProfile).toMatchObject({
       transportSecurity: "memory",
@@ -124,14 +192,20 @@ describe("PostgreSQL connection security", () => {
           ssl: { mode: "disable" },
         },
         {
-          securityProfile: createPostgresStorageSecurityProfile(),
+          securityProfile: createPostgresStorageSecurityProfile({
+            allowedTenants: ["tenant-a"],
+            allowedPurposes: ["support"],
+          }),
           dataProtector: new TestProtector(),
         },
       );
     }).toThrow(expect.objectContaining({ code: "KAF_STORAGE_SECURITY_PROFILE" }));
     expect(() => {
       assertPostgresStorageSecurityProfile({
-        ...createPostgresStorageSecurityProfile(),
+        ...createPostgresStorageSecurityProfile({
+          allowedTenants: ["tenant-a"],
+          allowedPurposes: ["support"],
+        }),
         storageSecurityProfileDigest: digest("forged-profile"),
       });
     }).toThrow(expect.objectContaining({ code: "KAF_STORAGE_SECURITY_PROFILE" }));
@@ -141,7 +215,10 @@ describe("PostgreSQL connection security", () => {
 describe("tenant and immutable record boundaries", () => {
   it("rejects disallowed tenants and highly restricted writes before SQL", () => {
     const guard = new PostgresStorageGuard(
-      createPostgresStorageSecurityProfile({ allowedTenants: ["tenant-a"] }),
+      createPostgresStorageSecurityProfile({
+        allowedTenants: ["tenant-a"],
+        allowedPurposes: ["support"],
+      }),
     );
     expect(() => {
       guard.assertWriteAllowed("tenant-b", "support", "internal");
@@ -156,7 +233,10 @@ describe("tenant and immutable record boundaries", () => {
     const protector = new TestProtector();
     const store = new PostgresAcceptedWorkOrderStore(
       database,
-      createPostgresStorageSecurityProfile(),
+      createPostgresStorageSecurityProfile({
+        allowedTenants: ["tenant-a", "tenant-b"],
+        allowedPurposes: ["support"],
+      }),
       { dataProtector: protector },
     );
     const accepted = workOrder();
@@ -174,6 +254,8 @@ describe("tenant and immutable record boundaries", () => {
       database,
       createPostgresStorageSecurityProfile({
         allowedDataClasses: ["internal", "confidential"],
+        allowedTenants: ["tenant-a"],
+        allowedPurposes: ["support"],
       }),
     );
     await expect(store.putImmutable(workOrder())).rejects.toMatchObject({
@@ -331,6 +413,8 @@ describe("store suite", () => {
   it("wires one security profile and lease store across the Postgres adapters", async () => {
     const database = new WorkOrderDatabase();
     const suite = createPostgresStoreSuite(database, {
+      allowedTenants: ["tenant-a"],
+      allowedPurposes: ["support"],
       dataProtector: new TestProtector(),
       generateLeaseId: () => "lease-suite",
       maxInlineArtifactBytes: 32,
@@ -346,7 +430,10 @@ describe("store suite", () => {
         connectionString: "postgresql://localhost/pactmark",
         ssl: { mode: "disable" },
       },
-      { dataProtector: new TestProtector() },
+      {
+        dataProtector: new TestProtector(),
+        allowDevelopmentWildcardScope: true,
+      },
     );
     await configured.database.end?.();
   });

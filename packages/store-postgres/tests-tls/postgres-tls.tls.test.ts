@@ -121,7 +121,11 @@ async function persistAndReadSafeEvent(
     });
     const store = new PostgresEventStore(
       database,
-      createPostgresStorageSecurityProfile({ transportMode: "verify-full" }),
+      createPostgresStorageSecurityProfile({
+        transportMode: "verify-full",
+        allowedTenants: [event.tenantId],
+        allowedPurposes: ["support"],
+      }),
     );
     await store.append(event, 0);
     const stored = await database.query<{ event: string }>(

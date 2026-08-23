@@ -614,6 +614,7 @@ interface FixtureOptions {
   }>[];
   readonly compensationServices?: RuntimeCompensationServices;
   readonly productionModelServices?: RuntimeKernelConfig["productionModelServices"];
+  readonly killSwitches?: RuntimeKernelConfig["killSwitches"];
   readonly requireProductionModelBoundary?: boolean;
   readonly agentDefinition?: AgentDefinition;
   readonly retryPolicy?: RuntimeKernelConfig["retryPolicy"];
@@ -927,6 +928,7 @@ function fixture(options: FixtureOptions = {}) {
     ...(options.requireProductionModelBoundary === undefined
       ? {}
       : { requireProductionModelBoundary: options.requireProductionModelBoundary }),
+    ...(options.killSwitches === undefined ? {} : { killSwitches: options.killSwitches }),
     ...(effectServices === undefined
       ? {}
       : {
@@ -2345,6 +2347,30 @@ describe("AgentRuntime", () => {
     expect(model.settle).toHaveBeenCalledOnce();
   });
 
+  it.each([
+    ["model_adapter", definition.modelAdapterRegistrationDigest],
+    ["model_profile", definition.modelSecurityProfileDigest],
+    ["model_profile", definition.modelResourceProfileDigest],
+  ] as const)("blocks a killed %s registration before model invocation", async (kind, digest) => {
+    const value = fixture({
+      killSwitches: {
+        isKilled: (candidateKind, candidateDigest) =>
+          candidateKind === kind && candidateDigest === digest,
+      },
+    });
+    const started = await value.runtime.start(
+      value.authority,
+      definition,
+      request,
+      commandFor("run.start", request, "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"),
+    );
+    await expect(value.runtime.execute(value.authority, started.runId)).rejects.toMatchObject({
+      code: "KAF_RUNTIME_NOT_READY",
+      details: { reason: "model_registration_killed" },
+    });
+    expect(value.getModelInvocationCount()).toBe(0);
+  });
+
   it("closes a dispatched production reservation uncertain and retries with a new attempt", async () => {
     const model = productionModelServicesFixture();
     const value = fixture({
@@ -3008,6 +3034,12 @@ describe("AgentRuntime", () => {
     let bindingAvailable = true;
     let bindingDefinition: CompensationRunDefinition = compensationDefinition;
     let registeredDefinition: CompensationRunDefinition | undefined = compensationDefinition;
+    let killedCompensationRegistration:
+      | Readonly<{
+          kind: "compensation_definition" | "compensation_strategy";
+          digest: string;
+        }>
+      | undefined;
     const compensationServices: RuntimeCompensationServices = {
       transactionDomain: "memory.process-local",
       registry: {
@@ -3082,6 +3114,11 @@ describe("AgentRuntime", () => {
         },
       ],
       compensationServices,
+      killSwitches: {
+        isKilled: (kind, digest) =>
+          kind === killedCompensationRegistration?.kind &&
+          digest === killedCompensationRegistration.digest,
+      },
       modelEmission: effectEmission,
     });
     const original = await value.runtime.start(
@@ -3261,6 +3298,37 @@ describe("AgentRuntime", () => {
     }
     bindingDefinition = compensationDefinition;
     registeredDefinition = compensationDefinition;
+    for (const killed of [
+      {
+        kind: "compensation_definition" as const,
+        digest: compensationDefinition.compensationRunDefinitionDigest,
+      },
+      {
+        kind: "compensation_strategy" as const,
+        digest: compensationDefinition.compensationStrategyRegistrationDigest,
+      },
+    ]) {
+      killedCompensationRegistration = killed;
+      const suffix = killed.kind === "compensation_definition" ? "a5" : "a6";
+      await expect(
+        value.runtime.requestCompensation(
+          compensationAuthority,
+          original.runId,
+          originalEffect.effectId,
+          compensationRequest,
+          scopedCommand(
+            "run.request_compensation",
+            compensationRequest,
+            [original.runId, originalEffect.effectId],
+            suffix.repeat(16),
+          ),
+        ),
+      ).rejects.toMatchObject({
+        code: "KAF_RUNTIME_NOT_READY",
+        details: { reason: "compensation_registration_killed" },
+      });
+    }
+    killedCompensationRegistration = undefined;
     const requested = await value.runtime.requestCompensation(
       compensationAuthority,
       original.runId,
@@ -3292,6 +3360,18 @@ describe("AgentRuntime", () => {
       },
     });
     const modelCallsBeforeCompensation = value.getModelInvocationCount();
+    killedCompensationRegistration = {
+      kind: "compensation_strategy",
+      digest: compensationDefinition.compensationStrategyRegistrationDigest,
+    };
+    await expect(
+      value.runtime.execute(compensationAuthority, requested.compensationRunId),
+    ).rejects.toMatchObject({
+      code: "KAF_RUNTIME_NOT_READY",
+      details: { reason: "compensation_registration_killed" },
+    });
+    expect(compensationDispatch).not.toHaveBeenCalled();
+    killedCompensationRegistration = undefined;
     registeredDefinition = undefined;
     await expect(
       value.runtime.execute(compensationAuthority, requested.compensationRunId),

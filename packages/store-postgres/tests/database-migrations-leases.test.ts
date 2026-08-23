@@ -1,8 +1,9 @@
 import type { QueryResultRow } from "pg";
 import { describe, expect, it } from "vitest";
 
+import { createPostgresStorageSecurityProfile } from "../src/config.js";
 import type { PostgresClient, PostgresDatabase, SqlResult } from "../src/database.js";
-import { withTransaction } from "../src/database.js";
+import { withTenantTransaction, withTransaction } from "../src/database.js";
 import { PostgresRunLeaseStore } from "../src/lease-store.js";
 import {
   POSTGRES_MIGRATIONS,
@@ -32,6 +33,20 @@ describe("transaction boundary", () => {
       }),
     ).rejects.toThrow("crash boundary");
     expect(database.statements).toEqual(["BEGIN", "ROLLBACK"]);
+    expect(database.released).toBe(true);
+  });
+
+  it("sets the tenant GUC locally before tenant-scoped SQL", async () => {
+    const database = new TransactionDatabase();
+    await withTenantTransaction(database, "tenant-a", async (client) => {
+      await client.query("TENANT DOMAIN WRITE");
+    });
+    expect(database.statements).toEqual([
+      "BEGIN",
+      "SELECT set_config('pactmark.tenant_id', $1, true)",
+      "TENANT DOMAIN WRITE",
+      "COMMIT",
+    ]);
     expect(database.released).toBe(true);
   });
 });
@@ -103,6 +118,10 @@ describe("fenced leases", () => {
     const database = new LeaseDatabase();
     const store = new PostgresRunLeaseStore(database, {
       generateLeaseId: () => "lease-1",
+      securityProfile: createPostgresStorageSecurityProfile({
+        allowedTenants: ["tenant-a"],
+        allowedPurposes: ["support"],
+      }),
     });
     const lease = await store.acquire("tenant-a", "run-1", "worker-1", 1_000);
     expect(lease).toMatchObject({
@@ -125,7 +144,13 @@ describe("fenced leases", () => {
   it("returns undefined while another live holder owns the tenant/run lease", async () => {
     const database = new LeaseDatabase();
     database.allowAcquire = false;
-    const store = new PostgresRunLeaseStore(database, { generateLeaseId: () => "lease-2" });
+    const store = new PostgresRunLeaseStore(database, {
+      generateLeaseId: () => "lease-2",
+      securityProfile: createPostgresStorageSecurityProfile({
+        allowedTenants: ["tenant-a"],
+        allowedPurposes: ["support"],
+      }),
+    });
     await expect(store.acquire("tenant-a", "run-1", "worker-2", 500)).resolves.toBeUndefined();
   });
 });

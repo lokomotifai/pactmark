@@ -41,7 +41,7 @@ import {
   reserveCapabilityGrantUse,
 } from "./aggregate-writes.js";
 import type { PostgresClient, PostgresDatabase } from "./database.js";
-import { withTransaction } from "./database.js";
+import { withTenantTransaction } from "./database.js";
 import {
   PostgresEffectLedger,
   putAuthorizationReservation,
@@ -121,7 +121,7 @@ export class PostgresRunCommandUnitOfWork implements RunCommandUnitOfWork {
     this.#guard.assertTenantAllowed(scope.tenant.id);
     this.#assertCommandBinding(scope, context);
     const scopeDigest = digestCanonicalJson(scope);
-    return withTransaction(this.database, async (client) => {
+    return withTenantTransaction(this.database, scope.tenant.id, async (client) => {
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
         digestCanonicalJson({ tenantId: scope.tenant.id, scopeDigest }),
       ]);
@@ -181,7 +181,7 @@ export class PostgresRunCommandUnitOfWork implements RunCommandUnitOfWork {
     const key = RunTransitionKeySchema.parse(keyInput);
     this.#guard.assertTenantAllowed(key.tenantId);
     const keyDigest = digestCanonicalJson(key);
-    return withTransaction(this.database, async (client) => {
+    return withTenantTransaction(this.database, key.tenantId, async (client) => {
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
         digestCanonicalJson({ tenantId: key.tenantId, runId: key.runId }),
       ]);

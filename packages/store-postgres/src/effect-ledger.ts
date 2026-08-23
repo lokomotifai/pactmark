@@ -13,6 +13,7 @@ import {
 
 import { PostgresStorageGuard } from "./config.js";
 import type { PostgresClient, PostgresDatabase } from "./database.js";
+import { queryForTenant } from "./database.js";
 import { conflict, parseJsonColumn } from "./internal.js";
 import type { PostgresAcknowledgedEffectResultStore } from "./acknowledged-effect-results.js";
 
@@ -42,7 +43,9 @@ export class PostgresEffectLedger {
     authorizationReservationId: string,
   ): Promise<AuthorizationReservation | undefined> {
     this.#guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<AuthorizationRow>(
+    const result = await queryForTenant<AuthorizationRow>(
+      this.database,
+      tenantId,
       `SELECT reservation_json FROM pactmark_authorization_reservations
        WHERE tenant_id=$1 AND reservation_id=$2`,
       [tenantId, authorizationReservationId],
@@ -86,7 +89,9 @@ export class PostgresEffectLedger {
     key: string,
   ): Promise<EffectRecord | undefined> {
     this.#guard.assertTenantAllowed(tenantId);
-    const result = await this.database.query<EffectRow>(
+    const result = await queryForTenant<EffectRow>(
+      this.database,
+      tenantId,
       `SELECT effect_id,run_id,effect_json FROM pactmark_effects WHERE ${predicate}`,
       [tenantId, runId, key],
     );
