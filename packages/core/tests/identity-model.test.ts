@@ -138,6 +138,15 @@ describe("canonical JSON and digests", () => {
       );
     }
   });
+
+  it("normalizes long decimal coefficients in linear time without accepting rounded aliases", () => {
+    const zeros = "0".repeat(100_000);
+
+    expect(parseJsonStrict(`1.${zeros}`)).toBe(1);
+    expect(() => parseJsonStrict(`1.${zeros}1`)).toThrow(
+      expect.objectContaining({ code: "KAF_SERIALIZATION_NON_I_JSON_NUMBER" }),
+    );
+  });
 });
 
 describe("SchemaIdentity", () => {

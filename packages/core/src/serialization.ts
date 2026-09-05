@@ -91,9 +91,13 @@ function normalizedDecimalIdentity(token: string): string | undefined {
   let coefficientDigits = `${integerDigits}${fractionalDigits}`.replace(/^0+/u, "");
   if (coefficientDigits.length === 0) return "0e0";
   let exponent = BigInt(parts[4] ?? "0") - BigInt(fractionalDigits.length);
-  const trailingZeros = /0+$/u.exec(coefficientDigits)?.[0].length ?? 0;
+  let significantLength = coefficientDigits.length;
+  while (significantLength > 0 && coefficientDigits[significantLength - 1] === "0") {
+    significantLength -= 1;
+  }
+  const trailingZeros = coefficientDigits.length - significantLength;
   if (trailingZeros > 0) {
-    coefficientDigits = coefficientDigits.slice(0, -trailingZeros);
+    coefficientDigits = coefficientDigits.slice(0, significantLength);
     exponent += BigInt(trailingZeros);
   }
   return `${sign}${coefficientDigits}e${String(exponent)}`;
