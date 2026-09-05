@@ -31,11 +31,11 @@
   },
   "devDependencies": {
     "@pactmark/testing": "workspace:*",
-    "@vitest/coverage-v8": "4.1.10",
+    "@vitest/coverage-v8": "4.1.11",
     "@types/node": "22.20.1",
     "tsdown": "0.22.14",
     "typescript": "6.0.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   },
   "engines": {
     "node": "^22.14.0 || ^24.0.0"
