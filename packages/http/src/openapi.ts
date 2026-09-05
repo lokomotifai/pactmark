@@ -1,4 +1,5 @@
 import { digestCanonicalJson, type JsonValue } from "@pactmark/core";
+import httpPackage from "../package.json" with { type: "json" };
 
 const mutatingHeaders = [
   { name: "Idempotency-Key", in: "header", required: true, schema: { type: "string" } },
@@ -37,7 +38,7 @@ export function createOpenApiDocument(basePath: string): Readonly<{
   });
   const document: JsonValue = {
     openapi: "3.1.0",
-    info: { title: "Pactmark Agent HTTP API", version: "0.1.0" },
+    info: { title: "Pactmark Agent HTTP API", version: httpPackage.version },
     servers: [{ url: basePath.length === 0 ? "/" : basePath }],
     paths: {
       "/healthz": {

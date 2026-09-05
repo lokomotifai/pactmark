@@ -6,9 +6,12 @@ description: Build deterministic candidates and separate local evidence from pub
 > Compatibility: Pactmark 0.2.x.
 
 The pinned pnpm lockfile is dependency authority. Lifecycle scripts are denied by
-default and reviewed exceptions are versioned. Offline advisory and license gates,
-immutable workflow refs, secret audits, dependency boundaries, and public-surface
-checks run locally.
+default and reviewed exceptions are versioned. The offline advisory gate verifies
+an integrity-protected export bound to the exact lockfile; it does not turn that
+historical export into a current-vulnerability claim or expire deterministic CI by
+wall-clock age. Any lockfile change requires a fresh network-authorized export.
+License gates, immutable workflow refs, secret audits, dependency boundaries, and
+public-surface checks run locally.
 
 One canonical packer stages allowlisted files, materializes exact internal versions,
 disables lifecycle scripts, and requires a second byte-identical tarball. Independent

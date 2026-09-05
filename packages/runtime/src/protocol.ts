@@ -6,13 +6,17 @@ export const RuntimeModelEmissionSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("tool_call"),
-      value: z
-        .object({
-          toolRegistrationDigest: DigestSchema,
-          input: JsonValueSchema,
-          targetDigest: DigestSchema,
-        })
-        .strict(),
+      value: z.union([
+        z
+          .object({
+            toolRegistrationDigest: DigestSchema,
+            input: JsonValueSchema,
+            /** @deprecated The host derives the authoritative target from validated input. */
+            targetDigest: DigestSchema,
+          })
+          .strict(),
+        z.object({ toolRegistrationDigest: DigestSchema, input: JsonValueSchema }).strict(),
+      ]),
     })
     .strict(),
   z.object({ type: z.literal("final"), value: JsonValueSchema }).strict(),

@@ -3,7 +3,7 @@
   "entries": [
     {
       "path": "packages/core/src/registrations.ts",
-      "digest": "sha256:6c470fa94598d700d378db155c36b9cd4d25791be9a6468348feb7d168aed531"
+      "digest": "sha256:433facd84a10109eea8ce0aef71f946316c61b23ee3833e9221b19e8eed8b40c"
     },
     {
       "path": "packages/core/src/schema-identity.ts",
@@ -15,7 +15,7 @@
     },
     {
       "path": "packages/policy/src/grants.ts",
-      "digest": "sha256:c6ce170d732603cdff6da8463610ae4e53a1d37970463c94f9af307d2ecaac7a"
+      "digest": "sha256:11b4e0c51e29d00d03ccdc061572852250d8673dd681da8423f64cb9044c8133"
     },
     {
       "path": "packages/policy/src/kill-switch.ts",
@@ -27,23 +27,23 @@
     },
     {
       "path": "packages/policy/src/authorization-reservations.ts",
-      "digest": "sha256:aa793e7ce96291bb828643efda0473cb2d4e048879c8ad3c6175baf026fb4a81"
+      "digest": "sha256:588f05e977d29d841e8f75c10121177fb8592a7fe905f0c399ad5803af7bf7fd"
     },
     {
       "path": "packages/policy/src/secrets.ts",
-      "digest": "sha256:47734d83af52434153f439f7990ba83d3b37880115eb2d5c287b360f142df885"
+      "digest": "sha256:caf30fd72f5014ad59a9b5a0bcd7f03b1c068ee4e55353b6297173b45411b5b5"
     },
     {
       "path": "packages/policy/src/admission.ts",
-      "digest": "sha256:8fc79a567ca688d3211ca3b2c6a4adc23acfe2ac38d3d01f0d89b1e67a8e687c"
+      "digest": "sha256:9011d64359be0141d1b601072eb0451bcea633566ca0cf60bc99b818b149d7f0"
     },
     {
       "path": "packages/evidence/src/verifiers.ts",
-      "digest": "sha256:42f8f530f6349ff311dfc31f05617095e08bbed4bd89be8234162817701ed6cf"
+      "digest": "sha256:0214d16d1d83ff84b20f23a3d30339e0048406f5800705197515d4a57113a9be"
     },
     {
       "path": "packages/executor-in-process/src/index.ts",
-      "digest": "sha256:2fd6960917e1e81237400899a8597950e2d42856cf0c0ac55d99585dd57af90d"
+      "digest": "sha256:948182c6f67e9e9513b54b4eeaa69e793b17141668ec617ae59bf02a1f73fa54"
     },
     {
       "path": "packages/executor-sh/src/contracts.ts",
@@ -63,11 +63,11 @@
     },
     {
       "path": "packages/ai-sdk/src/index.ts",
-      "digest": "sha256:198bafca489696a793c01faa3aa9cdf6639804e766b143bbb94c74a4e60ffb88"
+      "digest": "sha256:c60eeaacbb22d8aef3d16bd4f75d300b7658641c136788512d75fa38a0802d14"
     },
     {
       "path": "packages/agent/src/definitions.ts",
-      "digest": "sha256:0913c5b649d83e04409590770b2bbe1d71822c5142b0110fde9008068028c2b5"
+      "digest": "sha256:5c979a64ac2e037702f3ba64d912147ed88e5af9f39ec1b1d0c97f40418aca2c"
     },
     {
       "path": "packages/agent/src/readiness.ts",
@@ -75,7 +75,7 @@
     },
     {
       "path": "packages/runtime/src/runtime.ts",
-      "digest": "sha256:46b7d97867856cffaa649395b530fb56a338b6859f46fb411483281ebc185cd1"
+      "digest": "sha256:a1649026d3d924ff062224bfead6dbc6b4428e8fecc371d525337bd8e4fad441"
     },
     {
       "path": "packages/mcp/src/contracts.ts",

@@ -21,6 +21,7 @@ import {
 import { z } from "zod";
 
 import { CliError } from "./error.js";
+import { VERSION } from "./help.js";
 import type { CompileResult } from "./types.js";
 
 const SkillAuthoringSchema = z
@@ -31,7 +32,7 @@ const SkillAuthoringSchema = z
     description: z.string().min(1),
     compatibility: z
       .object({
-        pactmarkCore: z.string().min(1).default("^0.1.0"),
+        pactmarkCore: z.string().min(1).default(`^${VERSION}`),
         runtimes: z.array(z.enum(["portable", "node", "vercel", "cloudflare_preview"])).min(1),
       })
       .strict(),

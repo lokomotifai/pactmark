@@ -57,3 +57,13 @@ The core `EgressBroker.bind` shape binds one tool registration, while one MCP co
 `StreamableHTTPClientTransport.sessionId` declaration conflicts with TypeScript
 6 `exactOptionalPropertyTypes`. Pactmark's own public declarations remain fully
 typechecked and do not expose SDK transport types.
+
+## v0.3 pin migration
+
+Schema presence is part of an MCP tool's pinned identity. Hosts upgrading from
+v0.2 must regenerate pins for tools that advertise no `outputSchema`, using
+`mcpToolOutputSchemaDigest(undefined)`. The v0.2 convention of hashing an
+implicit `{ "type": "object" }` schema is intentionally rejected as drift: it
+cannot distinguish an absent schema from a server that later adds that schema.
+Do not replace an absent schema with an invented permissive schema during
+migration.

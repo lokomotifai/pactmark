@@ -40,10 +40,11 @@ export function finalizeReleaseCandidate(
     JSON.parse(readFileSync(manifestPath, "utf8")) as unknown,
     "KAF_RELEASE_CANDIDATE_MANIFEST_INVALID",
   );
+  const releaseVersion = text(manifest.releaseVersion, "KAF_RELEASE_VERSION_INVALID");
   if (
     manifest.status !== "draft" ||
     manifest.metadataProfile !== "release" ||
-    manifest.releaseVersion !== "0.2.0" ||
+    !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(releaseVersion) ||
     manifest.publication !== "not_authorized"
   ) {
     throw new Error("KAF_RELEASE_CANDIDATE_STATE_INVALID");
@@ -62,6 +63,9 @@ export function finalizeReleaseCandidate(
   const subjects: string[] = [];
   for (const value of manifest.packages) {
     const entry = record(value, "KAF_RELEASE_CANDIDATE_PACKAGE_INVALID");
+    if (entry.version !== releaseVersion) {
+      throw new Error("KAF_RELEASE_CANDIDATE_PACKAGE_VERSION_MISMATCH");
+    }
     const tarball = text(entry.tarball, "KAF_RELEASE_CANDIDATE_TARBALL_INVALID");
     if (tarball.includes("/") || tarball.includes("\\")) {
       throw new Error("KAF_RELEASE_CANDIDATE_TARBALL_INVALID");

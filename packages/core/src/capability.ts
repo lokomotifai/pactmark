@@ -92,6 +92,7 @@ export interface CapabilityGrantStore {
     at: string,
   ): Promise<CapabilityGrantResolution>;
   reserveUse(
+    tenantId: string,
     grantId: string,
     authorizationKey: string,
     at: string,

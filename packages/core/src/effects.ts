@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ExecutionDefinitionRefSchema } from "./agent.js";
 import { ProtectedValueRefSchema } from "./context.js";
 import { canonicalJsonStringify, DigestSchema, JsonValueSchema } from "./serialization.js";
-import { DataClassSchema } from "./work-order.js";
+import { DataClassSchema, WorkBudgetSchema } from "./work-order.js";
 
 export const EffectStrategyKindSchema = z.enum(["native", "transactional", "reconcilable", "none"]);
 export type EffectStrategyKind = z.infer<typeof EffectStrategyKindSchema>;
@@ -16,6 +16,15 @@ export const EffectStateSchema = z.enum([
   "compensated",
 ]);
 export type EffectState = z.infer<typeof EffectStateSchema>;
+
+export const RuntimeCompensationRequestSchema = z
+  .object({
+    schemaVersion: z.literal("1"),
+    reason: z.string().trim().min(1).max(512),
+    budget: WorkBudgetSchema,
+  })
+  .strict();
+export type RuntimeCompensationRequest = z.infer<typeof RuntimeCompensationRequestSchema>;
 
 export const EffectAcknowledgementSchema = z
   .object({

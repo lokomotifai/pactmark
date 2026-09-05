@@ -262,13 +262,20 @@ export class PostgresAcceptedWorkOrderStore
     }
   }
 
-  async purgeExpired(now = this.#now()): Promise<number> {
-    const result = await this.database.query<{ tenant_id: string; work_order_id: string }>(
-      `DELETE FROM pactmark_work_orders WHERE expires_at IS NOT NULL AND expires_at <= $1::timestamptz
+  async purgeExpiredForTenant(tenantId: string, now = this.#now()): Promise<number> {
+    assertNonempty(tenantId, "tenantId");
+    this.guard.assertTenantAllowed(tenantId);
+    assertTimestamp(now);
+    const result = await queryForTenant<{ tenant_id: string; work_order_id: string }>(
+      this.database,
+      tenantId,
+      `DELETE FROM pactmark_work_orders
+       WHERE tenant_id=$1 AND expires_at IS NOT NULL AND expires_at <= $2::timestamptz
        RETURNING tenant_id,work_order_id`,
-      [now],
+      [tenantId, now],
     );
     for (const row of result.rows) {
+      assertDeletedTenant(row.tenant_id, tenantId);
       await this.#onDelete?.({
         tenantId: row.tenant_id,
         storeKind: "accepted_work_order",
@@ -277,6 +284,12 @@ export class PostgresAcceptedWorkOrderStore
       });
     }
     return result.rowCount;
+  }
+
+  /** @deprecated Use purgeExpiredForTenant or PostgresRetentionMaintenance. */
+  purgeExpired(now?: string): Promise<number> {
+    void now;
+    return Promise.reject(operatorRetentionBoundaryRequired());
   }
 }
 
@@ -369,18 +382,24 @@ export class PostgresInputSubmissionStore
     }
   }
 
-  async purgeExpired(now = this.#now()): Promise<number> {
-    const result = await this.database.query<{
+  async purgeExpiredForTenant(tenantId: string, now = this.#now()): Promise<number> {
+    assertNonempty(tenantId, "tenantId");
+    this.guard.assertTenantAllowed(tenantId);
+    assertTimestamp(now);
+    const result = await queryForTenant<{
       tenant_id: string;
       run_id: string;
       request_id: string;
     }>(
+      this.database,
+      tenantId,
       `DELETE FROM pactmark_input_submissions
-       WHERE expires_at IS NOT NULL AND expires_at <= $1::timestamptz
+       WHERE tenant_id=$1 AND expires_at IS NOT NULL AND expires_at <= $2::timestamptz
        RETURNING tenant_id,run_id,request_id`,
-      [now],
+      [tenantId, now],
     );
     for (const row of result.rows) {
+      assertDeletedTenant(row.tenant_id, tenantId);
       await this.#onDelete?.({
         tenantId: row.tenant_id,
         storeKind: "input_submission",
@@ -389,6 +408,12 @@ export class PostgresInputSubmissionStore
       });
     }
     return result.rowCount;
+  }
+
+  /** @deprecated Use purgeExpiredForTenant or PostgresRetentionMaintenance. */
+  purgeExpired(now?: string): Promise<number> {
+    void now;
+    return Promise.reject(operatorRetentionBoundaryRequired());
   }
 
   private async getRow(
@@ -552,14 +577,20 @@ export class PostgresContextStore extends GuardedPostgresStore implements Contex
     return { snapshot, plaintext: new Uint8Array(plaintext) };
   }
 
-  async purgeExpired(now = this.#now()): Promise<number> {
-    const result = await this.database.query<{ tenant_id: string; snapshot_id: string }>(
+  async purgeExpiredForTenant(tenantId: string, now = this.#now()): Promise<number> {
+    assertNonempty(tenantId, "tenantId");
+    this.guard.assertTenantAllowed(tenantId);
+    assertTimestamp(now);
+    const result = await queryForTenant<{ tenant_id: string; snapshot_id: string }>(
+      this.database,
+      tenantId,
       `DELETE FROM pactmark_context_snapshots
-       WHERE expires_at IS NOT NULL AND expires_at <= $1::timestamptz
+       WHERE tenant_id=$1 AND expires_at IS NOT NULL AND expires_at <= $2::timestamptz
        RETURNING tenant_id,snapshot_id`,
-      [now],
+      [tenantId, now],
     );
     for (const row of result.rows) {
+      assertDeletedTenant(row.tenant_id, tenantId);
       await this.#onDelete?.({
         tenantId: row.tenant_id,
         storeKind: "context",
@@ -568,6 +599,12 @@ export class PostgresContextStore extends GuardedPostgresStore implements Contex
       });
     }
     return result.rowCount;
+  }
+
+  /** @deprecated Use purgeExpiredForTenant or PostgresRetentionMaintenance. */
+  purgeExpired(now?: string): Promise<number> {
+    void now;
+    return Promise.reject(operatorRetentionBoundaryRequired());
   }
 }
 
@@ -710,13 +747,20 @@ export class PostgresArtifactStore extends GuardedPostgresStore implements Artif
     }
   }
 
-  async purgeExpired(now = this.#now()): Promise<number> {
-    const result = await this.database.query<{ tenant_id: string; artifact_id: string }>(
-      `DELETE FROM pactmark_artifacts WHERE expires_at IS NOT NULL AND expires_at <= $1::timestamptz
+  async purgeExpiredForTenant(tenantId: string, now = this.#now()): Promise<number> {
+    assertNonempty(tenantId, "tenantId");
+    this.guard.assertTenantAllowed(tenantId);
+    assertTimestamp(now);
+    const result = await queryForTenant<{ tenant_id: string; artifact_id: string }>(
+      this.database,
+      tenantId,
+      `DELETE FROM pactmark_artifacts
+       WHERE tenant_id=$1 AND expires_at IS NOT NULL AND expires_at <= $2::timestamptz
        RETURNING tenant_id,artifact_id`,
-      [now],
+      [tenantId, now],
     );
     for (const row of result.rows) {
+      assertDeletedTenant(row.tenant_id, tenantId);
       await this.#onDelete?.({
         tenantId: row.tenant_id,
         storeKind: "artifact",
@@ -725,6 +769,12 @@ export class PostgresArtifactStore extends GuardedPostgresStore implements Artif
       });
     }
     return result.rowCount;
+  }
+
+  /** @deprecated Use purgeExpiredForTenant or PostgresRetentionMaintenance. */
+  purgeExpired(now?: string): Promise<number> {
+    void now;
+    return Promise.reject(operatorRetentionBoundaryRequired());
   }
 }
 
@@ -747,6 +797,24 @@ function parseBoundInput(
 function validateRoute(...parts: readonly string[]): void {
   parts.forEach((part, index) => {
     assertNonempty(part, `route[${String(index)}]`);
+  });
+}
+
+function assertTimestamp(value: string): void {
+  if (!Number.isFinite(Date.parse(value))) {
+    throw new KafError("KAF_SCHEMA_INVALID", {
+      details: { path: "now", issue: "valid_timestamp_required" },
+    });
+  }
+}
+
+function assertDeletedTenant(actualTenantId: string, expectedTenantId: string): void {
+  if (actualTenantId !== expectedTenantId) conflict("retention_tenant_binding_changed");
+}
+
+function operatorRetentionBoundaryRequired(): KafError {
+  return new KafError("KAF_RUNTIME_NOT_READY", {
+    details: { reason: "operator_retention_boundary_required" },
   });
 }
 

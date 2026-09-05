@@ -27,6 +27,7 @@ import type {
   SecretResolver,
 } from "@pactmark/core";
 import { isPrivateOrReservedHostname } from "@pactmark/policy";
+import mcpPackage from "../package.json" with { type: "json" };
 
 export interface MCPProtocolClient {
   connect(
@@ -60,7 +61,10 @@ export interface MCPClientTransport {
 }
 
 export function createOfficialMCPProtocolClient(): MCPProtocolClient {
-  const client = new Client({ name: "pactmark-mcp", version: "0.1.0" }, { capabilities: {} });
+  const client = new Client(
+    { name: "pactmark-mcp", version: mcpPackage.version },
+    { capabilities: {} },
+  );
   const protocolClient: MCPProtocolClient = {
     connect: (transport, options) => client.connect(transport as Transport, options),
     close: () => client.close(),

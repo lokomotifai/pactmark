@@ -1,4 +1,4 @@
-import { defineAgent, defineTool } from "@pactmark/agent";
+import { defineAgent, defineTool, type CompiledModelDefinition } from "@pactmark/agent";
 import { fromAISDK } from "@pactmark/ai-sdk";
 import { z } from "zod";
 
@@ -17,12 +17,16 @@ export const lookup = defineTool({
   },
 });
 
-export const catalogAgent = defineAgent({
-  id: "quickstart-catalog-agent",
-  version: "0.1.0",
-  input: z.object({ sku: z.string().min(1) }).strict(),
-  instructions: "Check the catalog with the lookup tool, then answer with the output JSON.",
-  model: fromAISDK(model()),
-  tools: { lookup },
-  output: z.object({ summary: z.string() }).strict(),
-});
+export function createCatalogAgent(compiledModel: CompiledModelDefinition) {
+  return defineAgent({
+    id: "quickstart-catalog-agent",
+    version: "0.1.0",
+    input: z.object({ sku: z.string().min(1) }).strict(),
+    instructions: "Check the catalog with the lookup tool, then answer with the output JSON.",
+    model: compiledModel,
+    tools: { lookup },
+    output: z.object({ summary: z.string() }).strict(),
+  });
+}
+
+export const catalogAgent = createCatalogAgent(fromAISDK(model()));

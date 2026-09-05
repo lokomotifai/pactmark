@@ -80,17 +80,18 @@ const requiredLinks: Readonly<Record<string, readonly string[]>> = {
   "README.md": [
     canonicalDocs,
     `${canonicalDocs}/getting-started/first-agent`,
-    `${canonicalDocs}/security/security-model`,
+    "docs/security/README.md",
     `${canonicalDocs}/tr`,
   ],
   "README.tr.md": [
     `${canonicalDocs}/tr`,
     `${canonicalDocs}/tr/getting-started/first-agent`,
-    `${canonicalDocs}/tr/security/security-model`,
+    "docs/security/README.md",
   ],
   "SECURITY.md": [
-    `${canonicalDocs}/security/security-model`,
-    `${canonicalDocs}/security/threat-model`,
+    "docs/security/security-model.md",
+    "docs/security/threat-model.md",
+    "docs/security/README.md",
   ],
   "SUPPORT.md": [canonicalDocs, `${canonicalDocs}/tr`],
   "docs/README.md": [canonicalDocs],

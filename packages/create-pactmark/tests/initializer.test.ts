@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { lstat, mkdir, readFile, readdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -121,6 +122,41 @@ describe("initializer planning", () => {
 });
 
 describe("atomic generation", () => {
+  it("runs the generated governed read path and emits its documented events", async () => {
+    const cwd = await root();
+    const target = path.join(cwd, "runnable");
+    await createProject(options(cwd, { target: "runnable" }));
+    const repositoryRoot = path.resolve(import.meta.dirname, "../../..");
+    await mkdir(path.join(target, "node_modules", "@pactmark"), { recursive: true });
+    await symlink(
+      path.join(repositoryRoot, "packages", "agent"),
+      path.join(target, "node_modules", "@pactmark", "agent"),
+      "dir",
+    );
+    for (const dependency of ["tsx", "zod"]) {
+      await symlink(
+        path.join(repositoryRoot, "node_modules", dependency),
+        path.join(target, "node_modules", dependency),
+        "dir",
+      );
+    }
+    const output = execFileSync(process.execPath, ["--import", "tsx", "src/dev.ts"], {
+      cwd: target,
+      encoding: "utf8",
+    });
+    for (const eventType of [
+      "RunAccepted",
+      "ToolCallRequested",
+      "ToolCallCompleted",
+      "VerificationRecorded",
+      "RunCompleted",
+    ]) {
+      expect(output).toContain(`"eventType":"${eventType}"`);
+    }
+    expect(output).toContain("Pactmark ephemeral demo completed");
+    expect(output).toContain("status: 'completed'");
+  });
+
   it("writes nothing during dry-run", async () => {
     const cwd = await root();
     const result = await createProject(options(cwd, { dryRun: true }));

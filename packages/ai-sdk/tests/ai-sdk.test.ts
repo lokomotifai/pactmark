@@ -189,6 +189,72 @@ describe("AI SDK preview adapter", () => {
     ).toThrow("The model adapter does not match");
   });
 
+  it("surfaces provider error parts for models without advertised tools", async () => {
+    const providerError = new Error("provider unavailable");
+    const sdkModel = new MockLanguageModelV3({
+      provider: "fixture",
+      modelId: "fixture-model",
+      doStream: {
+        stream: simulateReadableStream({
+          chunks: [
+            { type: "stream-start", warnings: [] },
+            { type: "error", error: providerError },
+          ],
+        }),
+      },
+    });
+
+    await expect(
+      collect(
+        fromAISDK(sdkModel, {
+          securityProfile,
+          resourceProfile: resources(),
+          credentialMode: "ambient_preview",
+        }),
+        "prompt",
+      ),
+    ).rejects.toBe(providerError);
+  });
+
+  it("surfaces an active abort for models without advertised tools", async () => {
+    let markProviderStarted: (() => void) | undefined;
+    const providerStarted = new Promise<void>((resolve) => {
+      markProviderStarted = resolve;
+    });
+    const sdkModel = new MockLanguageModelV3({
+      provider: "fixture",
+      modelId: "fixture-model",
+      doStream: (options) =>
+        Promise.resolve({
+          stream: new ReadableStream({
+            start(controller) {
+              controller.enqueue({ type: "stream-start", warnings: [] });
+              markProviderStarted?.();
+              options.abortSignal?.addEventListener(
+                "abort",
+                () => {
+                  controller.error(options.abortSignal?.reason);
+                },
+                { once: true },
+              );
+            },
+          }),
+        }),
+    });
+    const compiled = fromAISDK(sdkModel, {
+      securityProfile,
+      resourceProfile: resources(),
+      credentialMode: "ambient_preview",
+    });
+    const controller = new AbortController();
+    const pending = collect(compiled, "prompt", controller.signal);
+    await providerStarted;
+    const reason = new DOMException("cancelled while streaming", "AbortError");
+    controller.abort(reason);
+
+    await expect(pending).rejects.toBe(reason);
+  });
+
   it("fails closed on input, output, event, abort, and credential limits", async () => {
     await expect(
       collect(
@@ -363,6 +429,10 @@ describe("AI SDK agent-bound tool proposals", () => {
     expect(compiled.securityProfile.allowedDataClasses).toEqual(["public"]);
     expect(compiled.resourceProfile.providerOutputCap).toBe("enforced");
     expect(compiled.credentialMode).toBe("ambient_preview");
+    expect(compiled.modelConfig).toMatchObject({
+      adapterVersion: "0.2.0",
+      providerSdkVersion: "7.0.48",
+    });
     expect(compiled.modelAdapterRegistrationDigest).toMatch(/^sha256:/);
   });
 
@@ -386,7 +456,6 @@ describe("AI SDK agent-bound tool proposals", () => {
         value: {
           toolRegistrationDigest: digest,
           input: { sku: "P-100" },
-          targetDigest: digestCanonicalJson({ sku: "P-100" }),
         },
       },
     ]);

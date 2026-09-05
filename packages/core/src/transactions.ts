@@ -91,6 +91,7 @@ export interface RunCommandTransaction {
   putContextSnapshot(snapshot: ContextSnapshot): Promise<void>;
   issueCapabilityGrant(grant: CapabilityGrant): Promise<void>;
   reserveCapabilityGrantUse(
+    tenantId: string,
     grantId: string,
     authorizationKey: string,
     at: string,
@@ -101,6 +102,7 @@ export interface RunCommandTransaction {
   putDecisionChallenge(challenge: DecisionSubmissionChallenge): Promise<void>;
   putDecisionGate(gate: DecisionGate): Promise<void>;
   consumeDecisionChallenge(
+    tenantId: string,
     challengeId: string,
     commandId: string,
     consumedAt: string,
@@ -108,6 +110,7 @@ export interface RunCommandTransaction {
   putApproval(approval: Approval): Promise<void>;
   putDecisionRejection(rejection: DecisionRejection): Promise<void>;
   claimApproval(
+    tenantId: string,
     approvalId: string,
     authorizationKey: string,
     at: string,

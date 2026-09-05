@@ -1,11 +1,13 @@
 import {
   ApprovalSchema,
+  ApprovalUseClaimSchema,
   DecisionGateSchema,
   DecisionRejectionSchema,
   DecisionSubmissionChallengeSchema,
   KafError,
   canonicalJsonStringify,
   type Approval,
+  type ApprovalUseClaim,
   type DecisionGate,
   type DecisionRejection,
   type DecisionStore,
@@ -20,6 +22,8 @@ type DecisionStoreSnapshot = Readonly<{
   challenges: Map<string, DecisionSubmissionChallenge>;
   activeChallenges: Map<string, string>;
   approvals: Map<string, Approval>;
+  approvalClaims: Map<string, ApprovalUseClaim>;
+  approvalAuthorizationKeys: Map<string, string>;
   rejections: Map<string, DecisionRejection>;
 }>;
 
@@ -28,6 +32,8 @@ export class MemoryDecisionStore implements DecisionStore {
   readonly #challenges = new Map<string, DecisionSubmissionChallenge>();
   readonly #activeChallenges = new Map<string, string>();
   readonly #approvals = new Map<string, Approval>();
+  readonly #approvalClaims = new Map<string, ApprovalUseClaim>();
+  readonly #approvalAuthorizationKeys = new Map<string, string>();
   readonly #rejections = new Map<string, DecisionRejection>();
 
   async putGateOnce(input: DecisionGate): Promise<DecisionGate> {
@@ -111,26 +117,19 @@ export class MemoryDecisionStore implements DecisionStore {
   }
 
   async consumeChallenge(
+    tenantId: string,
     challengeId: string,
     commandId: string,
     consumedAt: string,
-    expectedTenantId?: string,
   ): Promise<void> {
     await Promise.resolve();
     const matches = [...this.#challenges.entries()].filter(
-      ([, challenge]) =>
-        challenge.id === challengeId &&
-        (expectedTenantId === undefined || challenge.binding.tenant.id === expectedTenantId),
+      ([, challenge]) => challenge.id === challengeId && challenge.binding.tenant.id === tenantId,
     );
     if (matches.length !== 1) throw new KafError("KAF_STORAGE_NOT_FOUND");
     const match = matches[0];
     if (match === undefined) throw new KafError("KAF_STORAGE_NOT_FOUND");
     const [challengeKey, challenge] = match;
-    if (expectedTenantId !== undefined && challenge.binding.tenant.id !== expectedTenantId) {
-      throw new KafError("KAF_STORAGE_CONCURRENCY_CONFLICT", {
-        details: { reason: "cross_tenant_decision_challenge" },
-      });
-    }
     const key = gateKey(
       challenge.binding.tenant.id,
       challenge.binding.runId,
@@ -181,7 +180,7 @@ export class MemoryDecisionStore implements DecisionStore {
         details: { reason: "approval_challenge_binding_mismatch" },
       });
     }
-    const key = gateKey(approval.binding.tenant.id, approval.binding.runId, approval.id);
+    const key = canonicalJsonStringify([approval.binding.tenant.id, approval.id]);
     const existing = this.#approvals.get(key);
     if (
       existing !== undefined &&
@@ -194,10 +193,54 @@ export class MemoryDecisionStore implements DecisionStore {
 
   async getApproval(tenantId: string, approvalId: string): Promise<Approval | undefined> {
     await Promise.resolve();
-    for (const approval of this.#approvals.values()) {
-      if (approval.binding.tenant.id === tenantId && approval.id === approvalId) return approval;
+    return this.#approvals.get(canonicalJsonStringify([tenantId, approvalId]));
+  }
+
+  /** Transaction-bound one-use claim used by MemoryRunCommandUnitOfWork. */
+  async claimApproval(
+    tenantId: string,
+    approvalId: string,
+    authorizationKey: string,
+    at: string,
+  ): Promise<ApprovalUseClaim> {
+    await Promise.resolve();
+    const approvalKey = canonicalJsonStringify([tenantId, approvalId]);
+    const prior = this.#approvalClaims.get(approvalKey);
+    if (prior !== undefined) {
+      if (prior.authorizationKey !== authorizationKey) {
+        throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+          details: { reason: "approval_already_used" },
+        });
+      }
+      return prior;
     }
-    return undefined;
+    const approval = this.#approvals.get(approvalKey);
+    if (approval === undefined) {
+      throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+        details: { reason: "approval_missing" },
+      });
+    }
+    if (Date.parse(approval.expiresAt) <= Date.parse(at)) {
+      throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+        details: { reason: "approval_expired" },
+      });
+    }
+    const authorizationKeyIndex = canonicalJsonStringify([tenantId, authorizationKey]);
+    const priorApprovalId = this.#approvalAuthorizationKeys.get(authorizationKeyIndex);
+    if (priorApprovalId !== undefined && priorApprovalId !== approvalId) {
+      throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+        details: { reason: "approval_authorization_key_reused" },
+      });
+    }
+    const claim = ApprovalUseClaimSchema.parse({
+      schemaVersion: "1",
+      approvalId,
+      authorizationKey,
+      claimedAt: at,
+    });
+    this.#approvalClaims.set(approvalKey, claim);
+    this.#approvalAuthorizationKeys.set(authorizationKeyIndex, approvalId);
+    return claim;
   }
 
   async putRejection(input: DecisionRejection): Promise<void> {
@@ -220,6 +263,8 @@ export class MemoryDecisionStore implements DecisionStore {
       challenges: structuredClone(this.#challenges),
       activeChallenges: structuredClone(this.#activeChallenges),
       approvals: structuredClone(this.#approvals),
+      approvalClaims: structuredClone(this.#approvalClaims),
+      approvalAuthorizationKeys: structuredClone(this.#approvalAuthorizationKeys),
       rejections: structuredClone(this.#rejections),
     };
   }
@@ -229,6 +274,8 @@ export class MemoryDecisionStore implements DecisionStore {
     replaceMap(this.#challenges, snapshot.challenges);
     replaceMap(this.#activeChallenges, snapshot.activeChallenges);
     replaceMap(this.#approvals, snapshot.approvals);
+    replaceMap(this.#approvalClaims, snapshot.approvalClaims);
+    replaceMap(this.#approvalAuthorizationKeys, snapshot.approvalAuthorizationKeys);
     replaceMap(this.#rejections, snapshot.rejections);
   }
 }

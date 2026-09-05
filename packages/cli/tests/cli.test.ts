@@ -76,7 +76,7 @@ const failedEvent = RunEventSchema.parse({
   executionDefinitionDigest: d(definition),
   prevHash: d(event),
   eventType: "RunFailed",
-  payload: { errorCode: "KAF_TEST_FAILURE" },
+  payload: { errorCode: "KAF_TOOL_EXECUTION_FAILED" },
 });
 
 const readiness = RuntimeReadinessReportSchema.parse({
@@ -246,7 +246,7 @@ describe("CLI routing and safe output", () => {
     expect((await runCli([], test.io)).exitCode).toBe(0);
     expect((await runCli(["doctor", "--help"], test.io)).exitCode).toBe(0);
     expect((await runCli(["--version"], test.io)).exitCode).toBe(0);
-    expect(test.stdout.join("")).toContain("Pactmark 0.1.0");
+    expect(test.stdout.join("")).toContain("Pactmark 0.2.0");
     expect(test.stdout.join("")).toContain("doctor");
   });
 

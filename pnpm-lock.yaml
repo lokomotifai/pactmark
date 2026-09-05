@@ -33,9 +33,6 @@ importers:
       '@pactmark/core':
         specifier: workspace:*
         version: link:packages/core
-      '@size-limit/preset-small-lib':
-        specifier: 13.0.3
-        version: 13.0.3(size-limit@13.0.3)
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
@@ -72,9 +69,6 @@ importers:
       publint:
         specifier: 0.3.22
         version: 0.3.22
-      size-limit:
-        specifier: 13.0.3
-        version: 13.0.3
       tsdown:
         specifier: 0.22.14
         version: 0.22.14(@arethetypeswrong/core@0.18.5)(@volar/typescript@2.4.28)(oxc-resolver@11.24.2)(publint@0.3.22)(tsx@4.23.5)(typescript@6.0.3)
@@ -247,6 +241,9 @@ importers:
       '@pactmark/core':
         specifier: workspace:*
         version: link:../../packages/core
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
     devDependencies:
       '@eslint/js':
         specifier: 10.0.1
@@ -377,9 +374,12 @@ importers:
 
   examples/portable-agent:
     dependencies:
-      '@pactmark/core':
+      '@pactmark/agent':
         specifier: workspace:*
-        version: link:../../packages/core
+        version: link:../../packages/agent
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
     devDependencies:
       '@eslint/js':
         specifier: 10.0.1
@@ -2443,23 +2443,6 @@ packages:
     resolution: {integrity: sha512-2SX/1jW6CIMAiebvVv5ZInoCEuWQmMyBoJXXGC6Vjakjp/fpxP5eHs7/V6WKuPEIbuK06+VpjH+vjLQhr98rDQ==}
     engines: {node: '>=22'}
 
-  '@size-limit/esbuild@13.0.3':
-    resolution: {integrity: sha512-g24wsTxM3N/SaGv1MiiDjTShNrIna1WCNJ7NXMrlsWBHWv1OL0nCyllR1bDDHf+gV41lF7QxX7vknswoOr71DQ==}
-    engines: {node: ^20.0.0 || ^22.0.0 || >=24.0.0}
-    peerDependencies:
-      size-limit: 13.0.3
-
-  '@size-limit/file@13.0.3':
-    resolution: {integrity: sha512-PWTITIXH5p9aGIf6qq2Fruihn/b9nBQyfkyoAyb6DzFJgS1Ek9MSPJYKxKFLO8jdo0aqSgBPd3sevbS6PyBiJw==}
-    engines: {node: ^20.0.0 || ^22.0.0 || >=24.0.0}
-    peerDependencies:
-      size-limit: 13.0.3
-
-  '@size-limit/preset-small-lib@13.0.3':
-    resolution: {integrity: sha512-rqKn1+JkVF5ckZRmcxeQPZ8g0e9Fqddh6bjmDotijXJtN40KJQ+5TG6pTiYq3RaA4nkuEkixHULpDBGcgAARAg==}
-    peerDependencies:
-      size-limit: 13.0.3
-
   '@speed-highlight/core@1.2.23':
     resolution: {integrity: sha512-iRoq6i6JDJP6Mt2A5JaPvzw0pgYHH6k92ij+yXiTrB7T2y9N789aWE3EHWj/5ztlJBokcCBja3iYLVdu5wgnkg==}
 
@@ -3122,10 +3105,6 @@ packages:
   byte-counter@0.1.0:
     resolution: {integrity: sha512-jheRLVMeUKrDBjVw2O5+k4EvR4t9wtxHL+bo/LxfkxsVeuGMy3a5SEGgXdAFA4FSzTrU8rQXQIrsZ3oBq5a0pQ==}
     engines: {node: '>=20'}
-
-  bytes-iec@3.1.1:
-    resolution: {integrity: sha512-fey6+4jDK7TFtFg/klGSvNKJctyU7n2aQdnM+CO0ruLPbqqMOM8Tio0Pc+deqUeVKX1tL5DQep1zQ7+37aTAsA==}
-    engines: {node: '>= 0.8'}
 
   bytes@3.1.2:
     resolution: {integrity: sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==}
@@ -4119,10 +4098,6 @@ packages:
     resolution: {integrity: sha512-WkUDrojuJs0xkgGf2udWxa3yGBRxPtxUkB79i6aCZLRgc7PM8fZe9TosfPDcvEpQZbuFASnHYmRLBLUbmLOIIA==}
     engines: {node: '>= 12.0.0'}
 
-  lilconfig@3.1.3:
-    resolution: {integrity: sha512-/vlFKAoH5Cgt3Ie+JLhRbwOsCQePABiU3tJ1egGvyQ+33R/vcwM2Zl2QR/LzjsBeItPt3oSVXapn+m4nQDvpzw==}
-    engines: {node: '>=14'}
-
   locate-path@6.0.0:
     resolution: {integrity: sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw==}
     engines: {node: '>=10'}
@@ -4308,14 +4283,6 @@ packages:
     resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
-
-  nanoid@6.0.0:
-    resolution: {integrity: sha512-mkUH+rPkwU2qPadJ0oJZOjeZ5Mxn8Q1UhevwkTRWNuUZzyia3h4rhzK39hxaHTk0o2OxB8W2SQ6A8k23ZDi1pQ==}
-    engines: {node: ^22 || ^24 || >=26}
-    hasBin: true
-
-  nanospinner@1.2.2:
-    resolution: {integrity: sha512-Zt/AmG6qRU3e+WnzGGLuMCEAO/dAu45stNbHY223tUxldaDAeE+FxSPsd9Q+j+paejmm0ZbrNVs5Sraqy3dRxA==}
 
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
@@ -4866,11 +4833,6 @@ packages:
 
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
-
-  size-limit@13.0.3:
-    resolution: {integrity: sha512-KVb2aNEU49BwTR21SVjD+2QHP9gBV/nWsTHzNB/heRwXtHyA7lLQiDZDQ1TiNh/B/TZXKAZrHYyTt+cvBUrzYw==}
-    engines: {node: ^22.18.0 || ^24.0.0 || >=26.0.0}
-    hasBin: true
 
   skin-tone@2.0.0:
     resolution: {integrity: sha512-kUMbT1oBJCpgrnKoSr0o6wPtvRWT9W9UKvGLwfJYO2WuahZRHOpEyL1ckyMGgMWh0UdpmaoFqKKD29WTomNEGA==}
@@ -6708,22 +6670,6 @@ snapshots:
 
   '@sindresorhus/is@8.1.0': {}
 
-  '@size-limit/esbuild@13.0.3(size-limit@13.0.3)':
-    dependencies:
-      esbuild: 0.28.1
-      nanoid: 6.0.0
-      size-limit: 13.0.3
-
-  '@size-limit/file@13.0.3(size-limit@13.0.3)':
-    dependencies:
-      size-limit: 13.0.3
-
-  '@size-limit/preset-small-lib@13.0.3(size-limit@13.0.3)':
-    dependencies:
-      '@size-limit/esbuild': 13.0.3(size-limit@13.0.3)
-      '@size-limit/file': 13.0.3(size-limit@13.0.3)
-      size-limit: 13.0.3
-
   '@speed-highlight/core@1.2.23': {}
 
   '@standard-schema/spec@1.1.0': {}
@@ -7456,8 +7402,6 @@ snapshots:
       '@oven/bun-windows-x64-baseline': 1.3.14
 
   byte-counter@0.1.0: {}
-
-  bytes-iec@3.1.1: {}
 
   bytes@3.1.2: {}
 
@@ -8508,8 +8452,6 @@ snapshots:
       lightningcss-win32-arm64-msvc: 1.33.0
       lightningcss-win32-x64-msvc: 1.33.0
 
-  lilconfig@3.1.3: {}
-
   locate-path@6.0.0:
     dependencies:
       p-locate: 5.0.0
@@ -8665,12 +8607,6 @@ snapshots:
       thenify-all: 1.6.0
 
   nanoid@3.3.18: {}
-
-  nanoid@6.0.0: {}
-
-  nanospinner@1.2.2:
-    dependencies:
-      picocolors: 1.1.1
 
   natural-compare@1.4.0: {}
 
@@ -9326,12 +9262,6 @@ snapshots:
   signal-exit@3.0.7: {}
 
   sisteransi@1.0.5: {}
-
-  size-limit@13.0.3:
-    dependencies:
-      bytes-iec: 3.1.1
-      lilconfig: 3.1.3
-      nanospinner: 1.2.2
 
   skin-tone@2.0.0:
     dependencies:

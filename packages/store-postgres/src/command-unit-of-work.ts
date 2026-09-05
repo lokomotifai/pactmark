@@ -257,8 +257,10 @@ export class PostgresRunCommandUnitOfWork implements RunCommandUnitOfWork {
         return contexts.put(snapshot);
       },
       issueCapabilityGrant: (grant) => issueCapabilityGrant(client, tenantId, grant),
-      reserveCapabilityGrantUse: (grantId, authorizationKey, at) =>
-        reserveCapabilityGrantUse(client, tenantId, grantId, authorizationKey, at),
+      reserveCapabilityGrantUse: (requestedTenantId, grantId, authorizationKey, at) => {
+        if (requestedTenantId !== tenantId) conflict("cross_tenant_capability_grant_use");
+        return reserveCapabilityGrantUse(client, tenantId, grantId, authorizationKey, at);
+      },
       appendRunEvent: (event) => {
         const parsed = RunEventSchema.parse(event);
         if (parsed.tenantId !== tenantId) conflict("cross_tenant_event");
@@ -277,7 +279,8 @@ export class PostgresRunCommandUnitOfWork implements RunCommandUnitOfWork {
       },
       putDecisionChallenge: (challenge) => putDecisionChallenge(client, tenantId, challenge),
       putDecisionGate: (gate) => putDecisionGate(client, tenantId, gate),
-      consumeDecisionChallenge: async (challengeId, commandId, consumedAt) => {
+      consumeDecisionChallenge: async (requestedTenantId, challengeId, commandId, consumedAt) => {
+        if (requestedTenantId !== tenantId) conflict("cross_tenant_decision_challenge_consumption");
         if (boundCommandId === undefined || boundCommandId !== commandId) {
           conflict("decision_command_binding_changed");
         }
@@ -298,8 +301,10 @@ export class PostgresRunCommandUnitOfWork implements RunCommandUnitOfWork {
         return putApproval(client, tenantId, approval);
       },
       putDecisionRejection: (rejection) => putDecisionRejection(client, tenantId, rejection),
-      claimApproval: (approvalId, authorizationKey, at) =>
-        claimApproval(client, tenantId, approvalId, authorizationKey, at),
+      claimApproval: (requestedTenantId, approvalId, authorizationKey, at) => {
+        if (requestedTenantId !== tenantId) conflict("cross_tenant_approval_claim");
+        return claimApproval(client, tenantId, approvalId, authorizationKey, at);
+      },
       putAuthorizationReservation: (reservation) =>
         putAuthorizationReservation(client, tenantId, reservation),
       putEffectRecord: (record) => putEffectRecord(client, tenantId, record),

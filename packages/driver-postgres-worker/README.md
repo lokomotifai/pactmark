@@ -21,6 +21,12 @@ runtime boundary immediately before an effect.
 
 `PostgresRunWorker.runOnce()` recovers stale claims, claims at most the configured concurrency, issues a run-scoped delegated authority, verifies it immediately before dispatch, and records completion or a bounded retry. Human-decision states are parked by the injected `RunDriver`; the worker cannot manufacture decision rights.
 
+The delegated capability reports `single_factor` authentication strength. Its
+lease and scheduler receipt authenticate a bounded worker invocation; they do
+not prove the initiating human used MFA, phishing-resistant authentication, or
+fresh user presence. Approval strength comes only from the separately verified
+approval record.
+
 Production readiness additionally requires the queue implementation, command unit of work, and wake-up outbox to share the same PostgreSQL transaction domain. This package alone is not evidence that a host satisfies that requirement.
 
 ## Tests

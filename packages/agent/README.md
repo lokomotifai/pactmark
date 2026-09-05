@@ -10,6 +10,13 @@ false. Use `createRuntime` with explicit host-owned ports for production-shaped
 composition; the facade supplies no database, credential, scheduler, sandbox,
 or provider fallback.
 
+The local profile includes a process-local human-decision surface for R4
+fixture writes. Callers must use an authority with the required authentication
+strength, issue a one-use challenge, record approval or rejection, and
+explicitly resume when no scheduler is configured. Challenge proofs and claims
+are not durable; this feature demonstrates the contract and does not turn the
+ephemeral profile into a production approval service.
+
 Optional model-provider, Postgres, platform, MCP, and OpenTelemetry adapters are
 not re-exported or installed by this package.
 

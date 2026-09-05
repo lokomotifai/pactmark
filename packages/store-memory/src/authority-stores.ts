@@ -63,24 +63,6 @@ export class MemoryCapabilityGrantStore implements CapabilityGrantStore {
   }
 
   async reserveUse(
-    grantId: string,
-    authorizationKey: string,
-    at: string,
-  ): Promise<CapabilityGrantUseClaim> {
-    const tenants = new Set(
-      [...this.#grants.values()].filter(({ id }) => id === grantId).map(({ tenant }) => tenant.id),
-    );
-    if (tenants.size !== 1) {
-      throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
-        details: { reason: "capability_grant_tenant_ambiguous" },
-      });
-    }
-    const tenantId = [...tenants][0];
-    if (tenantId === undefined) throw new KafError("KAF_STORAGE_NOT_FOUND");
-    return this.reserveUseForTenant(tenantId, grantId, authorizationKey, at);
-  }
-
-  async reserveUseForTenant(
     tenantId: string,
     grantId: string,
     authorizationKey: string,

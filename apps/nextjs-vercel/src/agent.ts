@@ -25,7 +25,7 @@ const capabilities: RuntimeCapabilities = {
   networkPolicy: "declared",
   backgroundWakeup: false,
   atomicCommandAndWakeup: false,
-  humanDecisions: false,
+  humanDecisions: true,
   typedInput: false,
   effectReconciliation: false,
   compensation: false,
@@ -70,10 +70,12 @@ const modelResources = defineModelResourceProfile({
   providerOutputCap: "enforced",
 });
 
+const inputShape = z.object({ item: z.string().min(1).max(80) }).strict();
+const modelInvocationInput = z.object({ goal: z.string().min(1), input: inputShape }).strict();
 const input = defineSchema({
   id: "nextjs-vercel.input",
   semanticRevision: "1",
-  schema: z.object({ item: z.string().min(1).max(80) }).strict(),
+  schema: inputShape,
 });
 const lookupInput = defineSchema({
   id: "nextjs-vercel.lookup.input",
@@ -91,17 +93,17 @@ const output = defineSchema({
   schema: z.object({ summary: z.string(), source: z.literal("local-fixture") }).strict(),
 });
 
-const nextLookupTool = defineTool({
-  id: "nextjs-vercel.lookup@1",
+const nextApprovalTool = defineTool({
+  id: "nextjs-vercel.reserve@1",
   implementationVersion: "1.0.0",
-  description: "Read the bounded in-process preview fixture.",
+  description: "Reserve the bounded in-process preview fixture after exact approval.",
   input: lookupInput,
   output: lookupOutput,
   security: {
-    riskClass: "R1",
+    riskClass: "R4",
     dataClasses: ["public"],
-    reversibility: "not_applicable",
-    requiredScopes: ["fixture:read"],
+    reversibility: "irreversible",
+    requiredScopes: ["fixture:reserve"],
     egress: { mode: "none" },
     networkEnforcement: "declared_ok",
     maxCallsPerRun: 1,
@@ -115,13 +117,20 @@ const nextLookupTool = defineTool({
     },
   ],
   operation: {
-    kind: "read",
+    kind: "write",
+    reversibility: "irreversible",
+    materialConsequence: "Reserves one item in the process-local demonstration fixture.",
+    approvalPreview: ({ item }) => ({
+      title: "Reserve fixture item",
+      summary: `Reserve the process-local fixture item “${item}”.`,
+      fields: [{ label: "Item", value: item }],
+    }),
     execute: ({ item }) => Promise.resolve({ item, status: "available" as const }),
   },
 });
 
 function deterministicModel(): CompiledModelDefinition {
-  const turnsByRun = new Map<string, number>();
+  const itemsByRun = new Map<string, string>();
   return {
     modelSecurityProfileDigest: modelSecurity.modelSecurityProfileDigest,
     modelResourceProfileDigest: modelResources.modelResourceProfileDigest,
@@ -132,21 +141,22 @@ function deterministicModel(): CompiledModelDefinition {
       capabilities,
       async *invoke(request: Parameters<ModelDriver["invoke"]>[0]) {
         await Promise.resolve();
-        const turn = (turnsByRun.get(request.run.runId) ?? 0) + 1;
-        if (turn >= 2) turnsByRun.delete(request.run.runId);
-        else turnsByRun.set(request.run.runId, turn);
-        yield turn === 1
+        const pendingItem = itemsByRun.get(request.run.runId);
+        const item = pendingItem ?? modelInvocationInput.parse(request.input).input.item;
+        if (pendingItem === undefined) itemsByRun.set(request.run.runId, item);
+        else itemsByRun.delete(request.run.runId);
+        yield pendingItem === undefined
           ? {
               type: "tool_call",
               value: {
-                toolRegistrationDigest: nextLookupTool.registration.toolRegistrationDigest,
-                input: { item: "notebook" },
-                targetDigest: digestCanonicalJson({ fixture: "inventory", item: "notebook" }),
+                toolRegistrationDigest: nextApprovalTool.registration.toolRegistrationDigest,
+                input: { item },
+                targetDigest: digestCanonicalJson({ fixture: "inventory", item }),
               },
             }
           : {
               type: "final",
-              value: { summary: "notebook is available", source: "local-fixture" },
+              value: { summary: `${item} was approved and reserved`, source: "local-fixture" },
             };
       },
     },
@@ -158,14 +168,16 @@ export const nextAgent = defineAgent({
   version: "0.1.0",
   description: "Deterministic Vercel preview agent.",
   input,
-  instructions: defineInstructions({ text: "Read the bounded fixture and report its status." }),
+  instructions: defineInstructions({
+    text: "Request exact approval, reserve the bounded fixture item, and report its status.",
+  }),
   model: deterministicModel(),
-  tools: { lookup: nextLookupTool },
+  tools: { reserve: nextApprovalTool },
   policy: definePolicy({
     id: "nextjs-vercel.policy",
     implementationVersion: "1.0.0",
     default: "deny",
-    rules: [{ riskClass: "R1", decision: "allow_with_grant" }],
+    rules: [{ riskClass: "R4", decision: "require_approval" }],
   }),
   output,
   verifiers: ["schema@1"],

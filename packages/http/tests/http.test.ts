@@ -334,12 +334,7 @@ class FixtureRuntime implements HttpRuntimeSurface {
     this.calls.push({ operation: "compensate", command });
     return Promise.resolve({ compensationRunId: "run-compensation" });
   }
-  cancel(
-    _authority: typeof authority,
-    _runId: string,
-    _reason: JsonValue,
-    command: CommandContext,
-  ) {
+  cancel(_authority: typeof authority, _runId: string, _reason: string, command: CommandContext) {
     this.calls.push({ operation: "cancel", command });
     return Promise.resolve({ cancelled: true });
   }
@@ -443,6 +438,7 @@ describe("Pactmark HTTP handler", () => {
     );
     expect(cached.status).toBe(304);
     const document = await openapi.clone().json();
+    expect(document).toHaveProperty(["info", "version"], "0.2.0");
     expect(document).toHaveProperty(["paths", "/v1/runs/{runId}/artifacts/{artifactId}"]);
     expect(document).toHaveProperty([
       "paths",
@@ -702,10 +698,36 @@ describe("Pactmark HTTP handler", () => {
       ["/v1/runs/run-1/resume", {}],
       ["/v1/runs/run-1/inputs/input-1", { value: "answer" }],
       ["/v1/runs/run-1/decisions/decision-1/challenge", {}],
-      ["/v1/runs/run-1/decisions/decision-1", { decision: "approve", challengeProof: "x" }],
-      ["/v1/runs/run-1/decisions/decision-1", { decision: "reject", challengeProof: "x" }],
-      ["/v1/runs/run-1/effects/effect-1/reconcile", { resolution: "occurred" }],
-      ["/v1/runs/run-1/effects/effect-1/compensate", { reason: "requested" }],
+      [
+        "/v1/runs/run-1/decisions/decision-1",
+        { decision: "approve", decisionId: " decision-1 ", challengeProof: "x".repeat(16) },
+      ],
+      [
+        "/v1/runs/run-1/decisions/decision-1",
+        {
+          decision: "reject",
+          decisionId: "decision-1",
+          challengeProof: "x".repeat(16),
+          reasonCode: "user_rejected",
+        },
+      ],
+      [
+        "/v1/runs/run-1/effects/effect-1/reconcile",
+        { schemaVersion: "1", kind: "recovered_acknowledgement" },
+      ],
+      [
+        "/v1/runs/run-1/effects/effect-1/compensate",
+        {
+          schemaVersion: "1",
+          reason: " requested ",
+          budget: {
+            maxTurns: 1,
+            maxModelCalls: 1,
+            maxToolCalls: 1,
+            maxActiveExecutionMs: 1_000,
+          },
+        },
+      ],
       ["/v1/runs/run-1/cancel", { reason: "user" }],
     ];
     for (const [path, body] of cases) {
@@ -723,6 +745,25 @@ describe("Pactmark HTTP handler", () => {
     ]);
     expect(runtime.calls[0]?.command.requestDigest).toBe(digestCanonicalJson({ runId: "run-1" }));
     expect(runtime.calls[2]?.command.requestDigest).toBe(digestCanonicalJson({}));
+    expect(runtime.calls[3]?.command.requestDigest).toBe(
+      digestCanonicalJson({
+        decision: "approve",
+        decisionId: "decision-1",
+        challengeProof: "x".repeat(16),
+      }),
+    );
+    expect(runtime.calls[6]?.command.requestDigest).toBe(
+      digestCanonicalJson({
+        schemaVersion: "1",
+        reason: "requested",
+        budget: {
+          maxTurns: 1,
+          maxModelCalls: 1,
+          maxToolCalls: 1,
+          maxActiveExecutionMs: 1_000,
+        },
+      }),
+    );
     expect(runtime.calls[7]?.command.requestDigest).toBe(
       digestCanonicalJson({ runId: "run-1", reason: "user" }),
     );
@@ -770,6 +811,25 @@ describe("Pactmark HTTP handler", () => {
         )
       ).status,
     ).toBe(400);
+    const malformedMutations: ReadonlyArray<readonly [string, JsonValue]> = [
+      ["/v1/runs/run-1/decisions/decision-1", { decision: "approve" }],
+      [
+        "/v1/runs/run-1/decisions/decision-1",
+        { decision: "reject", decisionId: "decision-1", challengeProof: "x".repeat(16) },
+      ],
+      ["/v1/runs/run-1/effects/effect-1/reconcile", { resolution: "occurred" }],
+      ["/v1/runs/run-1/effects/effect-1/compensate", { reason: "requested" }],
+      ["/v1/runs/run-1/cancel", { reason: "Not a stable reason" }],
+    ];
+    for (const [path, body] of malformedMutations) {
+      const response = await createAgentFetchHandler(config(runtime))(
+        mutation(path, body),
+        context,
+      );
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ code: "KAF_SCHEMA_INVALID" });
+    }
+    expect(runtime.calls).toHaveLength(0);
     expect(
       (
         await createAgentFetchHandler(config(runtime))(
@@ -785,6 +845,32 @@ describe("Pactmark HTTP handler", () => {
       body: "{",
     });
     expect((await createAgentFetchHandler(config(runtime))(invalidJson, context)).status).toBe(400);
+    const overflowedJson = new Request("https://api.example.com/v1/runs/run-1/inputs/input-1", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": commandId },
+      body: '{"value":1e400}',
+    });
+    const overflowedJsonResponse = await createAgentFetchHandler(config(runtime))(
+      overflowedJson,
+      context,
+    );
+    expect(overflowedJsonResponse.status).toBe(400);
+    expect(await overflowedJsonResponse.json()).toMatchObject({ code: "KAF_SCHEMA_INVALID" });
+    const invalidWorkOrder = new Request("https://api.example.com/v1/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": commandId },
+      body: JSON.stringify({ agent: 1, goal: 42 }),
+    });
+    const invalidWorkOrderResponse = await createAgentFetchHandler(config(runtime))(
+      invalidWorkOrder,
+      context,
+    );
+    expect(invalidWorkOrderResponse.status).toBe(400);
+    expect(await invalidWorkOrderResponse.json()).toMatchObject({
+      code: "KAF_SCHEMA_INVALID",
+      retryable: false,
+    });
+    expect(runtime.calls.some(({ operation }) => operation === "start")).toBe(false);
     const missingKey = new Request("https://api.example.com/v1/runs/run-1/resume", {
       method: "POST",
       headers: { "content-type": "application/json" },

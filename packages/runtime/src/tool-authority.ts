@@ -1,5 +1,7 @@
 import {
+  DigestSchema,
   JsonValueSchema,
+  KafError,
   ResourceScopeSchema,
   digestCanonicalJson,
   type AcceptedWorkOrder,
@@ -13,6 +15,22 @@ import {
 import { z } from "zod";
 
 const ResolvedResourcesSchema = z.array(ResourceScopeSchema).min(1).max(256);
+const PolicyDecisionSchema = z.discriminatedUnion("decision", [
+  z
+    .object({
+      decision: z.literal("deny"),
+      reasonCode: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      decision: z.enum(["allow_with_grant", "require_approval"]),
+      reasonCode: z.string().min(1),
+      normalizedResources: ResolvedResourcesSchema,
+      normalizedTargetDigest: DigestSchema,
+    })
+    .strict(),
+]);
 
 export interface ResolvedHostToolCall {
   readonly validatedInput: JsonValue;
@@ -54,7 +72,7 @@ export async function resolveHostToolCall(
   });
 }
 
-export function evaluateHostToolCall(
+export async function evaluateHostToolCall(
   input: Readonly<{
     policyEngine: PolicyEngine;
     workOrder: AcceptedWorkOrder;
@@ -64,16 +82,25 @@ export function evaluateHostToolCall(
     callsAlreadyUsed: number;
   }>,
 ): ReturnType<PolicyEngine["evaluate"]> {
-  return input.policyEngine.evaluate({
-    workOrder: input.workOrder,
-    tool: input.registration,
-    argumentsDigest: input.resolvedCall.argumentsDigest,
-    resources: input.resolvedCall.resources,
-    schemaValidated: true,
-    networkPolicy: input.networkPolicy,
-    callsAlreadyUsed: input.callsAlreadyUsed,
-    ...(input.resolvedCall.requestedCost === undefined
-      ? {}
-      : { requestedCost: input.resolvedCall.requestedCost }),
-  });
+  const result = PolicyDecisionSchema.safeParse(
+    await input.policyEngine.evaluate({
+      workOrder: input.workOrder,
+      tool: input.registration,
+      argumentsDigest: input.resolvedCall.argumentsDigest,
+      resources: input.resolvedCall.resources,
+      schemaValidated: true,
+      networkPolicy: input.networkPolicy,
+      callsAlreadyUsed: input.callsAlreadyUsed,
+      ...(input.resolvedCall.requestedCost === undefined
+        ? {}
+        : { requestedCost: input.resolvedCall.requestedCost }),
+    }),
+  );
+  if (!result.success) {
+    throw new KafError("KAF_POLICY_DENIED", {
+      details: { reason: "policy_result_invalid" },
+      internalCause: result.error,
+    });
+  }
+  return result.data;
 }

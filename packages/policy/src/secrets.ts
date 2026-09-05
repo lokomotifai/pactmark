@@ -62,33 +62,36 @@ export function createMemoryToolCredentialBoundary(input: {
   resolver: SecretResolver;
 }> {
   const slotDefinitions = new Map(input.slots.map((slot) => [slot.slot, Object.freeze(slot)]));
-  const metadata = new Map<string, SecretRef>();
-  const uses = new Map<string, Map<string, string>>();
+  const metadata = new Map<string, Map<string, SecretRef>>();
+  const uses = new Map<string, Map<string, Map<string, string>>>();
 
   const store: SecretRefStore = Object.freeze({
     putImmutable(rawRef: SecretRef) {
       return Promise.resolve().then(() => {
         const ref = SecretRefSchema.parse(rawRef);
-        const key = `${ref.tenantId}:${ref.refId}`;
-        const existing = metadata.get(key);
+        const tenantMetadata = metadata.get(ref.tenantId) ?? new Map<string, SecretRef>();
+        const existing = tenantMetadata.get(ref.refId);
         if (
           existing !== undefined &&
           canonicalJsonStringify(existing) !== canonicalJsonStringify(ref)
         ) {
           throw new SecretBoundaryError("SecretRef immutable binding conflict");
         }
-        metadata.set(key, Object.freeze(ref));
+        tenantMetadata.set(ref.refId, Object.freeze(ref));
+        metadata.set(ref.tenantId, tenantMetadata);
       });
     },
     get(tenantId: string, refId: string) {
-      return Promise.resolve(metadata.get(`${tenantId}:${refId}`));
+      return Promise.resolve(metadata.get(tenantId)?.get(refId));
     },
     revoke(tenantId: string, refId: string, revokedAt: string) {
       return Promise.resolve().then(() => {
-        const key = `${tenantId}:${refId}`;
-        const ref = metadata.get(key);
-        if (ref === undefined) throw new SecretBoundaryError("SecretRef is unavailable");
-        metadata.set(key, Object.freeze(SecretRefSchema.parse({ ...ref, revokedAt })));
+        const tenantMetadata = metadata.get(tenantId);
+        const ref = tenantMetadata?.get(refId);
+        if (tenantMetadata === undefined || ref === undefined) {
+          throw new SecretBoundaryError("SecretRef is unavailable");
+        }
+        tenantMetadata.set(refId, Object.freeze(SecretRefSchema.parse({ ...ref, revokedAt })));
       });
     },
   });
@@ -141,7 +144,8 @@ export function createMemoryToolCredentialBoundary(input: {
         ) {
           throw new SecretBoundaryError("Credential resolution binding is denied");
         }
-        const refUses = uses.get(ref.refId) ?? new Map<string, string>();
+        const tenantUses = uses.get(ref.tenantId) ?? new Map<string, Map<string, string>>();
+        const refUses = tenantUses.get(ref.refId) ?? new Map<string, string>();
         const replay = refUses.get(binding.authorizationReservationId);
         if (replay !== undefined && replay !== canonicalJsonStringify(binding)) {
           throw new SecretBoundaryError("Authorization reservation binding changed");
@@ -150,7 +154,8 @@ export function createMemoryToolCredentialBoundary(input: {
           throw new SecretBoundaryError("Credential use is exhausted");
         }
         refUses.set(binding.authorizationReservationId, canonicalJsonStringify(binding));
-        uses.set(ref.refId, refUses);
+        tenantUses.set(ref.refId, refUses);
+        uses.set(ref.tenantId, tenantUses);
         return ResolvedToolCredential.fromAdapter(slot.value);
       });
     },

@@ -70,3 +70,37 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify portable host and packed-consumer surface
         run: pnpm verify:portable-host
+
+  durable-and-platform-contracts:
+    name: Durable storage, container, UI, and platform contracts
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # actions/setup-node v7.0.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.18.1
+          package-manager-cache: false
+      # pnpm/setup v2.0.2
+      - name: Install pinned pnpm
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
+        with:
+          version: 11.18.0
+          install: false
+      - name: Install frozen dependency graph
+        run: pnpm install --frozen-lockfile
+      - name: Build workspace packages
+        run: pnpm build
+      - name: Exercise PostgreSQL crash recovery and non-owner tenant isolation
+        run: pnpm test:durable-resume
+      - name: Exercise PostgreSQL verify-full TLS
+        run: pnpm test:postgres-tls
+      - name: Exercise the OCI runtime contract
+        run: pnpm test:container
+      - name: Exercise the Vercel and approval UI contracts
+        run: pnpm test:vercel-contract && pnpm test:ui-security && pnpm test:ui-accessibility
+      - name: Exercise the Cloudflare dry-run contract
+        run: pnpm test:cloudflare-dry-run

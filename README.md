@@ -95,6 +95,7 @@ Expected progress includes:
 
 ```text
 RunAccepted
+ToolCallRequested
 ToolCallCompleted
 VerificationRecorded(status=pass)
 RunCompleted
@@ -149,8 +150,10 @@ const result = await runtime.run(catalogAgent, {
 provider-shaped fixture so it runs without a key. Tools reach the provider as
 schema-only advertisements; every proposal is revalidated and policed by the
 host before dispatch. Facade defaults never widen authority: reads default to
-risk class R1, a write must declare R2 plus an explicit policy rule, and the
-default policy denies everything else. The fully explicit form — profiles,
+risk class R1, an ordinary write must declare R2 plus an explicit policy rule,
+and an R4 write requires the process-local one-use approval flow. R3
+compensation and R5 user-presence policy remain explicit host-composition
+boundaries; the default policy denies everything else. The fully explicit form — profiles,
 authority, `WorkOrder`, budgets, and command identity spelled out — is
 [`examples/minimal-tool-agent/src/example.ts`](examples/minimal-tool-agent/src/example.ts).
 
@@ -249,8 +252,8 @@ Pactmark is designed around several non-negotiable boundaries:
 Pactmark is **not** a generic chat SDK, no-code builder, swarm orchestrator,
 hosted control plane, or production arbitrary-code sandbox. Its trusted
 in-process executor is explicitly not an isolation boundary. Read the
-[security model](https://pactmark-docs.lokomotif.ai/security/security-model)
-before evaluating a production-shaped host.
+repository's [self-contained security model](docs/security/README.md) before
+evaluating a production-shaped host.
 
 ## Runtime and platform status
 
@@ -346,6 +349,7 @@ triage, test design, and community care are all meaningful.
 
 ## Documentation and examples
 
+- [Repository security model](docs/security/README.md)
 - [Documentation home](https://pactmark-docs.lokomotif.ai)
 - [Türkçe dokümantasyon](https://pactmark-docs.lokomotif.ai/tr)
 - [Build your first agent](https://pactmark-docs.lokomotif.ai/getting-started/first-agent)
@@ -355,15 +359,17 @@ triage, test design, and community care are all meaningful.
 
 ### Executable examples
 
-Every example runs offline against deterministic fixtures and needs no model key.
-Each one states its own boundary; none is a production template.
+Every required example command runs offline against deterministic fixtures and
+needs no model key. The quickstart's separately named live-provider smoke is an
+explicit opt-in and is not required CI. Each example states its own boundary;
+none is a production template.
 
 | Example                                                                | What it demonstrates                                                                                                                     |
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| [`quickstart-agent`](examples/quickstart-agent/)                       | The shortest governed agent: default local policy, one R1 read, one governed R2 write. Uses the unreleased `main` facade.                |
+| [`quickstart-agent`](examples/quickstart-agent/)                       | The shortest governed agent: default local policy, one R1 read, one governed R2 write, and an opt-in live-provider smoke. Uses `main`.   |
 | [`minimal-tool-agent`](examples/minimal-tool-agent/)                   | The explicit composition published 0.2.0 supports: profiles, authority, `WorkOrder`, budgets, ordered events, artifact, evidence export. |
 | [`approval-agent`](examples/approval-agent/)                           | A simulated outbound effect behind a real approval boundary; the decision challenge never reaches command output.                        |
-| [`approval-purchase-boundary`](examples/approval-purchase-boundary/)   | An exact R4 purchase preview that fails closed because the public decision and approval commands are not exposed.                        |
+| [`approval-purchase-boundary`](examples/approval-purchase-boundary/)   | An exact R4 simulated purchase through the facade's one-use challenge, approval/rejection, and explicit-resume paths.                    |
 | [`delegated-incident-boundary`](examples/delegated-incident-boundary/) | Worker delegation bound to one run, scheduler receipt, lease, and fencing token; a newer fence invalidates the older delegation.         |
 | [`evidence-document-pipeline`](examples/evidence-document-pipeline/)   | Content-addressed document bytes, exact-byte and citation-shape verification, and a claim-bounded `EvidenceRecord` export.               |
 | [`portable-agent`](examples/portable-agent/)                           | One unchanged agent implementation called through Node, Vercel, and Cloudflare-shaped entrypoints.                                       |

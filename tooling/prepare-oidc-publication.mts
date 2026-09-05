@@ -4,30 +4,12 @@ import { delimiter, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { canonicalJson, sha256Bytes } from "./lib/release-integrity.mjs";
+import { coordinatedReleaseMetadata } from "./release-version.mjs";
 
 type JsonRecord = Record<string, unknown>;
 
-const EXPECTED_PACKAGES = [
-  "@pactmark/agent",
-  "@pactmark/ai-sdk",
-  "@pactmark/cli",
-  "@pactmark/cloudflare",
-  "@pactmark/core",
-  "@pactmark/driver-postgres-worker",
-  "@pactmark/evidence",
-  "@pactmark/executor-in-process",
-  "@pactmark/http",
-  "@pactmark/mcp",
-  "@pactmark/node",
-  "@pactmark/otel",
-  "@pactmark/policy",
-  "@pactmark/runtime",
-  "@pactmark/store-memory",
-  "@pactmark/store-postgres",
-  "@pactmark/testing",
-  "@pactmark/vercel",
-  "create-pactmark",
-] as const;
+const RELEASE_METADATA = coordinatedReleaseMetadata();
+const EXPECTED_PACKAGES = RELEASE_METADATA.packageNames;
 
 function record(value: unknown, code: string): JsonRecord {
   if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error(code);
@@ -74,18 +56,19 @@ export function prepareOidcPublicationConfig(
   if (
     manifest["status"] !== "attested" ||
     manifest["metadataProfile"] !== "release" ||
-    manifest["releaseVersion"] !== "0.2.0"
+    manifest["releaseVersion"] !== RELEASE_METADATA.version
   ) {
     throw new Error("KAF_RELEASE_OIDC_MANIFEST_INVALID");
   }
   if (!Array.isArray(manifest["packages"])) throw new Error("KAF_RELEASE_PACKAGES_EMPTY");
   const packageNames = manifest["packages"]
-    .map((value) =>
-      text(
-        record(value, "KAF_RELEASE_PACKAGE_ENTRY_INVALID")["name"],
-        "KAF_RELEASE_PACKAGE_NAME_INVALID",
-      ),
-    )
+    .map((value) => {
+      const entry = record(value, "KAF_RELEASE_PACKAGE_ENTRY_INVALID");
+      if (entry["version"] !== RELEASE_METADATA.version) {
+        throw new Error("KAF_RELEASE_VERSION_MISMATCH");
+      }
+      return text(entry["name"], "KAF_RELEASE_PACKAGE_NAME_INVALID");
+    })
     .sort();
   if (canonicalJson(packageNames) !== canonicalJson([...EXPECTED_PACKAGES].sort())) {
     throw new Error("KAF_RELEASE_OIDC_PACKAGE_SET_INVALID");

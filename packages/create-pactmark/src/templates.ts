@@ -236,6 +236,9 @@ ${model}
 
 Run \`${options.packageManager} run dev\` for the deterministic local path and
 \`${options.packageManager} run doctor\` to inspect declared runtime capabilities.
+The successful local event trail includes \`RunAccepted\`,
+\`ToolCallRequested\`, \`ToolCallCompleted\`, \`VerificationRecorded\`, and
+\`RunCompleted\`; the read-only tool reaches only the embedded fixture.
 Production readiness never treats the in-process executor's declared egress as
 network isolation. Supply an isolated executor that passes Pactmark's executor
 and enforced-egress contracts when a tool requires enforced egress.
@@ -254,6 +257,7 @@ function agentSource(): TemplateFile {
 } from "@pactmark/agent";
 import { z } from "zod";
 import { deterministicModel } from "./model.js";
+import { starterLookup } from "./tool.js";
 
 const input = defineSchema({
   id: "starter.input",
@@ -277,14 +281,58 @@ export const agent = defineAgent({
     text: "Complete the bounded request and state what the result supports.",
   }),
   model: deterministicModel,
+  tools: { lookup: starterLookup },
   policy: definePolicy({
     id: "starter.policy",
     implementationVersion: "1.0.0",
     default: "deny",
-    rules: [],
+    rules: [{ riskClass: "R1", decision: "allow_with_grant" }],
   }),
   output,
   verifiers: ["schema@1"],
+});
+`,
+  };
+}
+
+function toolSource(): TemplateFile {
+  return {
+    path: "src/tool.ts",
+    content: `import { defineSchema, defineTool } from "@pactmark/agent";
+import { z } from "zod";
+
+const lookupInput = defineSchema({
+  id: "starter.lookup.input",
+  semanticRevision: "1",
+  schema: z.object({ query: z.string().min(1) }).strict(),
+});
+
+const lookupOutput = defineSchema({
+  id: "starter.lookup.output",
+  semanticRevision: "1",
+  schema: z.object({ query: z.string(), source: z.literal("embedded-fixture") }).strict(),
+});
+
+export const starterLookup = defineTool({
+  id: "starter.lookup@1",
+  implementationVersion: "1.0.0",
+  description: "Read one value from the embedded starter fixture.",
+  input: lookupInput,
+  output: lookupOutput,
+  security: {
+    riskClass: "R1",
+    dataClasses: ["public"],
+    reversibility: "not_applicable",
+    requiredScopes: ["starter:read"],
+    egress: { mode: "none" },
+    networkEnforcement: "declared_ok",
+    maxCallsPerRun: 1,
+    timeoutMs: 1_000,
+  },
+  operation: {
+    kind: "read",
+    execute: ({ query }) => Promise.resolve({ query, source: "embedded-fixture" as const }),
+  },
 });
 `,
   };
@@ -303,6 +351,15 @@ function modelSource(model: ModelName): TemplateFile {
   type CompiledModelDefinition,
   type RuntimeCapabilities,
 } from "@pactmark/agent";
+import { z } from "zod";
+import { starterLookup } from "./tool.js";
+
+const invocationInput = z
+  .object({
+    goal: z.string().min(1),
+    input: z.object({ prompt: z.string().min(1) }).strict(),
+  })
+  .strict();
 
 const capabilities: RuntimeCapabilities = {
   schemaVersion: "1",
@@ -362,6 +419,8 @@ const resources = defineModelResourceProfile({
   providerOutputCap: "enforced",
 });
 
+const pendingPrompts = new Map<string, string>();
+
 /** ${switchText} */
 export const deterministicModel: CompiledModelDefinition = {
   modelSecurityProfileDigest: security.modelSecurityProfileDigest,
@@ -372,8 +431,23 @@ export const deterministicModel: CompiledModelDefinition = {
   credentialMode: "ambient_preview",
   driver: {
     capabilities,
-    async *invoke() {
-      yield { type: "final", value: { result: "Pactmark deterministic result" } };
+    async *invoke(request) {
+      const pendingPrompt = pendingPrompts.get(request.run.runId);
+      const prompt = pendingPrompt ?? invocationInput.parse(request.input).input.prompt;
+      if (pendingPrompt === undefined) pendingPrompts.set(request.run.runId, prompt);
+      else pendingPrompts.delete(request.run.runId);
+      yield pendingPrompt === undefined
+        ? {
+            type: "tool_call",
+            value: {
+              toolRegistrationDigest: starterLookup.registration.toolRegistrationDigest,
+              input: { query: prompt },
+            },
+          }
+        : {
+            type: "final",
+            value: { result: "Embedded fixture read completed for: " + prompt },
+          };
     },
   },
 };
@@ -387,16 +461,14 @@ function hostSource(store: StoreName): TemplateFile {
     content: `import { createRuntime, type CreateRuntimeInput } from "@pactmark/agent";
 import {
   createDeclaredToolExecutor,
-  createDenyAllEgressBroker,
 } from "@pactmark/executor-in-process";
 
 export const executionProfile = "${store === "memory" ? "ephemeral" : "durable"}" as const;
 
-export function createProductionHost(ports: Omit<CreateRuntimeInput, "toolExecutor" | "egressBroker">) {
+export function createProductionHost(ports: Omit<CreateRuntimeInput, "toolExecutor">) {
   const toolExecutor = createDeclaredToolExecutor([]);
-  const egressBroker = createDenyAllEgressBroker();
-  const runtime = createRuntime({ ...ports, toolExecutor, egressBroker });
-  return Object.freeze({ runtime, toolExecutor, egressBroker, capabilities: runtime.getCapabilities() });
+  const runtime = createRuntime({ ...ports, toolExecutor });
+  return Object.freeze({ runtime, toolExecutor, capabilities: runtime.getCapabilities() });
 }
 `,
   };
@@ -431,7 +503,14 @@ const request = createWorkOrderRequest({
   purpose: { code: "service_delivery", registryVersion: "general@1" },
   dataClass: "public",
   retention: { mode: "session" },
-  requestedCapabilities: [],
+  requestedCapabilities: ["starter:read"],
+  resourceScopeCeiling: [
+    {
+      kind: "tenant",
+      value: "local",
+      normalizationVersion: "pactmark.policy-normalization@1",
+    },
+  ],
   budget: {
     maxTurns: 4,
     maxModelCalls: 4,
@@ -487,6 +566,7 @@ function commonFiles(options: TemplateOptions): TemplateFile[] {
     agentSource(),
     developmentSource(),
     modelSource(options.model),
+    toolSource(),
     hostSource(options.store),
     {
       path: "tests/agent.test.ts",

@@ -8,6 +8,9 @@ import {
   type ToolExecutor,
   type ToolRegistrationContract,
 } from "@pactmark/core";
+import executorPackage from "../package.json" with { type: "json" };
+
+export const EXECUTOR_IN_PROCESS_VERSION = executorPackage.version;
 
 export interface DeclaredTool {
   readonly registration: ToolRegistrationContract;

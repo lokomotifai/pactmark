@@ -81,8 +81,15 @@ describe("embedded templates", () => {
       const host = result.files.find((file) => file.path === "src/host.ts")?.content ?? "";
       expect(host).toContain('from "@pactmark/executor-in-process"');
       expect(host).toContain("createDeclaredToolExecutor");
-      expect(host).toContain("createDenyAllEgressBroker");
+      expect(host).not.toContain("createDenyAllEgressBroker");
       expect(host).toContain("runtime.getCapabilities()");
+      const sources = result.files.map((file) => file.content).join("\n");
+      expect(sources).toContain('id: "starter.lookup@1"');
+      expect(sources).toContain('requiredScopes: ["starter:read"]');
+      expect(sources).toContain('requestedCapabilities: ["starter:read"]');
+      expect(sources).toContain('type: "tool_call"');
+      expect(sources).toContain("ToolCallCompleted");
+      expect(sources).not.toContain("requestedCapabilities: []");
     }
   });
 

@@ -21,19 +21,30 @@ pnpm --filter pactmark-example-quickstart dev
 
 ## Run against a live provider
 
-Replace the fixture in `src/model.ts` with any AI SDK v7 model instance, for
-example:
+The required test and development commands never make a live call. The separate
+`smoke:live` command is fail-closed unless it receives an explicit opt-in,
+provider module, provider export, model ID, and the provider's own credential.
+Install the AI SDK v7 provider package you intend to test, then run, for example:
 
-```ts
-import { anthropic } from "@ai-sdk/anthropic";
-export const model = () => anthropic("claude-sonnet-4-5");
+```text
+pnpm --filter pactmark-example-quickstart add @ai-sdk/anthropic
+PACTMARK_ENABLE_LIVE_PROVIDER=1 \
+PACTMARK_LIVE_PROVIDER_MODULE=@ai-sdk/anthropic \
+PACTMARK_LIVE_PROVIDER_EXPORT=anthropic \
+PACTMARK_LIVE_MODEL_ID='<reviewed-model-id>' \
+ANTHROPIC_API_KEY='<secret>' \
+pnpm --filter pactmark-example-quickstart smoke:live
 ```
 
-Nothing else changes: tools remain schema-only advertisements to the provider,
-the host revalidates every proposed input, and a final answer that does not
-match the output schema fails verification instead of completing the run.
-Default model profiles are explicit `unreviewed-local-preview` claims — a
-production host must review provider terms and pass its own profiles.
+The smoke command reports only provider/model identity, stable event names, and
+whether evidence was produced; it does not print the credential or raw provider
+errors. Tools remain schema-only advertisements to the provider, the host
+revalidates every proposed input, and the smoke fails unless the provider calls
+the governed lookup tool and the final output passes verification. Default
+model profiles are explicit `unreviewed-local-preview` claims — this is an
+opt-in integration observation, not required CI evidence or production
+readiness. A production host must review provider terms and pass its own
+profiles.
 
 The full explicit form of the same agent — every capability, profile, policy,
 and budget spelled out — is

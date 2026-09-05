@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { Aes256GcmDataProtector, MemoryProtectionNonceRegistry } from "../src/data-protector.js";
 import type { PostgresClient, PostgresDatabase, SqlResult } from "../src/database.js";
 import {
+  PostgresAcceptedWorkOrderStore,
   PostgresArtifactStore,
   PostgresContextStore,
   PostgresInputSubmissionStore,
@@ -148,12 +149,44 @@ describe("protected record stores", () => {
       },
     };
     const profile = createPostgresStorageSecurityProfile();
+    const workOrderStore = new PostgresAcceptedWorkOrderStore(database, profile, options);
+    const inputStore = new PostgresInputSubmissionStore(database, profile, options);
     const contextStore = new PostgresContextStore(database, profile, options);
     const artifactStore = new PostgresArtifactStore(database, profile, options);
-    await expect(contextStore.purgeExpired()).resolves.toBe(1);
-    await expect(artifactStore.purgeExpired()).resolves.toBe(1);
-    expect(database.values).toEqual([["2026-08-05T00:00:00.000Z"], ["2026-08-05T00:00:00.000Z"]]);
+    await expect(workOrderStore.purgeExpiredForTenant("tenant-a")).resolves.toBe(1);
+    await expect(inputStore.purgeExpiredForTenant("tenant-a")).resolves.toBe(1);
+    await expect(contextStore.purgeExpiredForTenant("tenant-a")).resolves.toBe(1);
+    await expect(artifactStore.purgeExpiredForTenant("tenant-a")).resolves.toBe(1);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- regression for the fail-closed compatibility method
+    await expect(contextStore.purgeExpired()).rejects.toMatchObject({
+      code: "KAF_RUNTIME_NOT_READY",
+      details: { reason: "operator_retention_boundary_required" },
+    });
+    expect(database.values).toEqual([
+      ["tenant-a", "2026-08-05T00:00:00.000Z"],
+      ["tenant-a", "2026-08-05T00:00:00.000Z"],
+      ["tenant-a", "2026-08-05T00:00:00.000Z"],
+      ["tenant-a", "2026-08-05T00:00:00.000Z"],
+    ]);
+    expect(database.statements).toEqual([
+      expect.stringContaining("WHERE tenant_id=$1"),
+      expect.stringContaining("WHERE tenant_id=$1"),
+      expect.stringContaining("WHERE tenant_id=$1"),
+      expect.stringContaining("WHERE tenant_id=$1"),
+    ]);
     expect(deletions).toEqual([
+      {
+        tenantId: "tenant-a",
+        storeKind: "accepted_work_order",
+        recordId: "work-order-expired",
+        reason: "expired",
+      },
+      {
+        tenantId: "tenant-a",
+        storeKind: "input_submission",
+        recordId: "run-expired/request-expired",
+        reason: "expired",
+      },
       {
         tenantId: "tenant-a",
         storeKind: "context",
@@ -328,12 +361,28 @@ class RoundTripProtector implements DataProtector {
 
 class RetentionDatabase implements PostgresDatabase {
   readonly values: unknown[][] = [];
+  readonly statements: string[] = [];
 
   query<Row extends QueryResultRow>(
     text: string,
     values: readonly unknown[] = [],
   ): Promise<SqlResult<Row>> {
+    this.statements.push(text);
     this.values.push([...values]);
+    if (text.includes("pactmark_work_orders")) {
+      return Promise.resolve({
+        rows: [{ tenant_id: "tenant-a", work_order_id: "work-order-expired" }] as unknown as Row[],
+        rowCount: 1,
+      });
+    }
+    if (text.includes("pactmark_input_submissions")) {
+      return Promise.resolve({
+        rows: [
+          { tenant_id: "tenant-a", run_id: "run-expired", request_id: "request-expired" },
+        ] as unknown as Row[],
+        rowCount: 1,
+      });
+    }
     if (text.includes("pactmark_context_snapshots")) {
       return Promise.resolve({
         rows: [{ tenant_id: "tenant-a", snapshot_id: "snapshot-expired" }] as unknown as Row[],

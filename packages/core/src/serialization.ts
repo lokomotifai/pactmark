@@ -68,23 +68,58 @@ function quote(value: string, path: string): string {
   return JSON.stringify(value);
 }
 
+function serializeCanonicalNumber(value: number, path: string): string {
+  const serialized = JSON.stringify(value);
+  const unsafePlainInteger =
+    Number.isInteger(value) && !Number.isSafeInteger(value) && !/[eE]/u.test(serialized);
+  if (!Number.isFinite(value) || unsafePlainInteger) {
+    throw new CanonicalJsonError(
+      "KAF_SERIALIZATION_NON_I_JSON_NUMBER",
+      "Numbers must be finite IEEE-754 values and integers must be exactly representable",
+      path,
+    );
+  }
+  return serialized;
+}
+
+function normalizedDecimalIdentity(token: string): string | undefined {
+  const parts = /^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/u.exec(token);
+  if (parts === null) return undefined;
+  const sign = parts[1] ?? "";
+  const integerDigits = parts[2] ?? "";
+  const fractionalDigits = parts[3] ?? "";
+  let coefficientDigits = `${integerDigits}${fractionalDigits}`.replace(/^0+/u, "");
+  if (coefficientDigits.length === 0) return "0e0";
+  let exponent = BigInt(parts[4] ?? "0") - BigInt(fractionalDigits.length);
+  const trailingZeros = /0+$/u.exec(coefficientDigits)?.[0].length ?? 0;
+  if (trailingZeros > 0) {
+    coefficientDigits = coefficientDigits.slice(0, -trailingZeros);
+    exponent += BigInt(trailingZeros);
+  }
+  return `${sign}${coefficientDigits}e${String(exponent)}`;
+}
+
+function assertUnroundedIntegerToken(
+  token: string,
+  value: number,
+  canonicalToken: string,
+  path: string,
+): void {
+  if (!Number.isInteger(value)) return;
+  if (normalizedDecimalIdentity(token) !== normalizedDecimalIdentity(canonicalToken)) {
+    throw new CanonicalJsonError(
+      "KAF_SERIALIZATION_NON_I_JSON_NUMBER",
+      "Integer number tokens must not be rounded to another canonical value",
+      path,
+    );
+  }
+}
+
 function canonicalize(value: unknown, path: string, ancestors: Set<object>): string {
   if (value === null) return "null";
   if (typeof value === "string") return quote(value, path);
   if (typeof value === "boolean") return value ? "true" : "false";
-  if (typeof value === "number") {
-    const serialized = JSON.stringify(value);
-    const unsafePlainInteger =
-      Number.isInteger(value) && !Number.isSafeInteger(value) && !/[eE]/u.test(serialized);
-    if (!Number.isFinite(value) || unsafePlainInteger) {
-      throw new CanonicalJsonError(
-        "KAF_SERIALIZATION_NON_I_JSON_NUMBER",
-        "Numbers must be finite IEEE-754 values and integers must be exactly representable",
-        path,
-      );
-    }
-    return serialized;
-  }
+  if (typeof value === "number") return serializeCanonicalNumber(value, path);
   if (typeof value !== "object") {
     throw new CanonicalJsonError(
       "KAF_SERIALIZATION_UNSUPPORTED_VALUE",
@@ -276,13 +311,8 @@ class StrictJsonParser {
     if (!match) this.fail("Expected a JSON value");
     this.offset += match[0].length;
     const value = Number(match[0]);
-    if (!Number.isFinite(value) || (Number.isInteger(value) && !Number.isSafeInteger(value))) {
-      throw new CanonicalJsonError(
-        "KAF_SERIALIZATION_NON_I_JSON_NUMBER",
-        "Non-I-JSON number",
-        path,
-      );
-    }
+    const canonicalToken = serializeCanonicalNumber(value, path);
+    assertUnroundedIntegerToken(match[0], value, canonicalToken, path);
     return value;
   }
 

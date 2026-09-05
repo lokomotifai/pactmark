@@ -1,7 +1,17 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["tooling/**/*.mts", "tests/**/*.test.ts", "*.config.{ts,mjs,cjs}"],
-  "project": ["tooling/**/*.{ts,mts}", "tests/**/*.ts", "*.config.{ts,mjs,cjs}"],
+  "workspaces": {
+    ".": {
+      "entry": [
+        "tooling/**/*.{ts,mts,js,mjs,cjs}",
+        "tests/**/*.test.ts",
+        "fixtures/security/malicious-postinstall-canary/postinstall.cjs",
+        "*.config.{ts,mjs,cjs}"
+      ],
+      "project": ["tooling/**/*.{ts,mts,js,mjs,cjs}", "tests/**/*.ts", "*.config.{ts,mjs,cjs}"]
+    },
+    "packages/*": {}
+  },
   "ignore": ["packages/cli/tests/fixtures/*.mjs"],
   "ignoreDependencies": [
     "@eslint/js",

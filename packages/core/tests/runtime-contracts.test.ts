@@ -110,7 +110,7 @@ describe("runtime contracts", () => {
       reduceRunEvent(terminal, {
         ...envelope(1),
         eventType: "RunFailed",
-        payload: { errorCode: "KAF_TEST" },
+        payload: { errorCode: "KAF_POLICY_DENIED" },
       }),
     ).toThrow(KafError);
     expect(() =>
@@ -120,6 +120,16 @@ describe("runtime contracts", () => {
         payload: { workOrderId: "wo-1", workOrderBindingDigest: digest, requiredVerifierIds: [] },
       }),
     ).toThrow(/sequence/i);
+  });
+
+  it("rejects unregistered terminal error codes", () => {
+    expect(
+      RunEventSchema.safeParse({
+        ...envelope(1),
+        eventType: "RunFailed",
+        payload: { errorCode: "KAF_UNREGISTERED_SENTINEL" },
+      }).success,
+    ).toBe(false);
   });
 
   it("encodes effect transitions and transactional acknowledgement exception", () => {

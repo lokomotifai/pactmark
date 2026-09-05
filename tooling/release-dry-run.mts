@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { packPublishablePackages } from "./consumer/packed-artifacts.mjs";
+import { packPublishablePackages, packedArtifactInternals } from "./consumer/packed-artifacts.mjs";
 import { generateReleaseArtifacts } from "./release-artifacts.mjs";
 import { canonicalJson, sha256Bytes } from "./lib/release-integrity.mjs";
 import { gitFiles, gitSourceState, repositoryRoot, sha256File } from "./lib/repository.mjs";
@@ -103,7 +103,7 @@ const sourceState = gitSourceState();
 const artifacts = generateReleaseArtifacts({
   outputDirectory,
   metadataProfile: "release",
-  releaseVersion: "0.2.0",
+  releaseVersion: packedArtifactInternals.releaseVersion,
   source: { commit: sourceState.commit, tree: sourceDigest, clean: sourceState.clean },
   sourceDateEpoch: Number(process.env["SOURCE_DATE_EPOCH"] ?? "0"),
   tarballs,

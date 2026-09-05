@@ -1,5 +1,6 @@
 import {
   AgentDefinitionSchema,
+  ApprovalPreviewDisplaySchema,
   DigestSchema,
   JsonValueSchema,
   ResourceScopeSchema,
@@ -10,6 +11,7 @@ import {
   digestBytes,
   digestCanonicalJson,
   type AgentDefinition,
+  type ApprovalPreviewDisplay,
   type Digest,
   type InstructionBundle,
   type JsonValue,
@@ -22,6 +24,7 @@ import {
 } from "@pactmark/core";
 import { defineSchema } from "@pactmark/core";
 import type { DefinedSchema } from "@pactmark/core";
+import { EXECUTOR_IN_PROCESS_VERSION } from "@pactmark/executor-in-process";
 import { z } from "zod";
 
 /**
@@ -129,9 +132,10 @@ export type DefineToolReadOperation<I extends z.ZodType, O extends z.ZodType> = 
 /**
  * A facade write tool dispatches through the kernel's governed effect path:
  * deterministic preview, bound authorization, effect ledger, and a bound
- * acknowledgement. The facade local profile supports risk class R2 only;
- * R3+ (compensation and approval machinery) requires kernel-level
- * composition, so `security.riskClass` is mandatory for writes.
+ * acknowledgement. The facade local profile supports R2 writes and explicit
+ * one-use approval for R4 writes. R3 compensation and R5 production-grade
+ * user-presence policy remain kernel-level composition concerns, so
+ * `security.riskClass` is mandatory for writes.
  */
 export type DefineToolWriteOperation<I extends z.ZodType, O extends z.ZodType> = Readonly<{
   kind: "write";
@@ -139,6 +143,13 @@ export type DefineToolWriteOperation<I extends z.ZodType, O extends z.ZodType> =
   reversibility: "compensatable" | "irreversible";
   /** One-line consequence statement recorded in the effect preview. */
   materialConsequence?: string;
+  /**
+   * Explicitly safe, human-readable fields persisted with approval requests.
+   * Do not return secrets or sensitive inputs: the result becomes run truth.
+   */
+  approvalPreview?: (
+    input: z.output<I>,
+  ) => Pick<ApprovalPreviewDisplay, "title" | "summary" | "fields">;
   execute(input: z.output<I>, context: ToolExecutionContext): Promise<z.input<O>>;
 }>;
 
@@ -154,6 +165,7 @@ export interface ToolEffectDefinition {
   readonly reversibility: "compensatable" | "irreversible";
   readonly materialConsequence: string;
   readonly previewRegistrationDigest: Digest;
+  renderApprovalDisplay(input: JsonValue): ApprovalPreviewDisplay;
   execute(input: JsonValue, context: ToolExecutionContext): Promise<JsonValue>;
 }
 
@@ -213,10 +225,10 @@ export function defineTool<const I extends z.ZodType, const O extends z.ZodType>
     if (input.security.riskClass === undefined) {
       throw new TypeError("A write tool must declare its risk class explicitly");
     }
-    if (input.security.riskClass !== "R2") {
+    if (input.security.riskClass !== "R2" && input.security.riskClass !== "R4") {
       throw new TypeError(
-        "Facade write tools support risk class R2 only; R3+ requires kernel-level " +
-          "composition with registered compensation and approval machinery",
+        "Facade write tools support risk classes R2 and R4; R3 compensation and R5 " +
+          "user-presence policy require kernel-level composition",
       );
     }
     if (
@@ -263,7 +275,7 @@ export function defineTool<const I extends z.ZodType, const O extends z.ZodType>
     executorIdentity: {
       package: "@pactmark/executor-in-process",
       export: "createDeclaredToolExecutor",
-      version: "0.1.0",
+      version: EXECUTOR_IN_PROCESS_VERSION,
     },
     identifierNormalizerVersion: "pactmark.identifier@1",
     resourceNormalizerVersion: "pactmark.resource@1",
@@ -283,7 +295,7 @@ export function defineTool<const I extends z.ZodType, const O extends z.ZodType>
       ? {}
       : { previewStrategyRegistrationDigest: digestCanonicalJson(previewStrategyIdentity) }),
     executorKind: "@pactmark/executor-in-process",
-    executorVersion: "0.1.0",
+    executorVersion: EXECUTOR_IN_PROCESS_VERSION,
     toolRegistrationDigest: identity.toolRegistrationDigest,
   });
   const result = deepFreeze({
@@ -327,6 +339,20 @@ export function defineTool<const I extends z.ZodType, const O extends z.ZodType>
       materialConsequence:
         write.materialConsequence ?? `Executes the declared ${input.id} write operation.`,
       previewRegistrationDigest,
+      renderApprovalDisplay(value) {
+        const parsedInput = inputSchema.parse(value);
+        const consequence =
+          write.materialConsequence ?? `Executes the declared ${input.id} write operation.`;
+        const display = write.approvalPreview?.(parsedInput) ?? {
+          title: input.description,
+          summary: consequence,
+        };
+        return ApprovalPreviewDisplaySchema.parse({
+          ...display,
+          materialConsequence: consequence,
+          reversibility: write.reversibility,
+        });
+      },
       async execute(value, context) {
         const parsedInput = inputSchema.parse(value);
         const output = await write.execute(parsedInput, context);
@@ -573,6 +599,9 @@ export function requiredCapabilitiesForAgents(
     for (const capability of agent.requiredRuntimeCapabilities) required.add(capability);
     const metadata = getAgentRuntimeMetadata(agent);
     if (metadata.credentialMode === "host_bound") required.add("model_credentials");
+    if (metadata.policy.rules.some((rule) => rule.decision === "require_approval")) {
+      required.add("human_decisions");
+    }
     for (const tool of metadata.tools) {
       if (tool.security.networkEnforcement === "required") required.add("network_enforced");
     }

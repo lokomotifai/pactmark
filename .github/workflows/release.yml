@@ -3,8 +3,12 @@ name: Release candidate
 on:
   workflow_dispatch:
     inputs:
+      version:
+        description: Exact coordinated package version to release
+        required: true
+        type: string
       confirmation:
-        description: Type publish-pactmark-0.2.0 to build, attest, and publish the release
+        description: Type publish-pactmark-<version> to build, attest, and publish the release
         required: true
         type: string
 
@@ -12,16 +16,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-0.2.0
+  group: release-${{ inputs.version }}
   cancel-in-progress: false
 
 jobs:
   build-candidate:
-    name: Build and freeze v0.2.0 candidate
+    name: Build and freeze v${{ inputs.version }} candidate
     if: >-
       github.repository == 'lokomotifai/pactmark' &&
       github.ref == 'refs/heads/main' &&
-      inputs.confirmation == 'publish-pactmark-0.2.0'
+      inputs.confirmation == format('publish-pactmark-{0}', inputs.version)
     runs-on: ubuntu-latest
     steps:
       # actions/checkout v7.0.1
@@ -43,6 +47,10 @@ jobs:
         run: test "$(npm --version)" = "11.16.0"
       - name: Install frozen dependency graph
         run: pnpm install --frozen-lockfile
+      - name: Verify requested version against package metadata
+        run: pnpm release:version:check "$PACTMARK_RELEASE_VERSION"
+        env:
+          PACTMARK_RELEASE_VERSION: ${{ inputs.version }}
       - name: Bootstrap digest-pinned sandbox base image
         run: pnpm bootstrap:sandbox-container-base
       - name: Bootstrap digest-pinned Executor self-host image
@@ -67,7 +75,7 @@ jobs:
         # actions/upload-artifact v7.0.1
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: pactmark-v0.2.0-release-${{ github.sha }}
+          name: pactmark-v${{ inputs.version }}-release-${{ github.sha }}
           path: .artifacts/release-dry-run
           if-no-files-found: error
           include-hidden-files: true
@@ -75,12 +83,12 @@ jobs:
           retention-days: 14
 
   publish:
-    name: Attest and publish frozen v0.2.0 candidate
+    name: Attest and publish frozen v${{ inputs.version }} candidate
     needs: build-candidate
     if: >-
       github.repository == 'lokomotifai/pactmark' &&
       github.ref == 'refs/heads/main' &&
-      inputs.confirmation == 'publish-pactmark-0.2.0'
+      inputs.confirmation == format('publish-pactmark-{0}', inputs.version)
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -111,7 +119,7 @@ jobs:
         # actions/download-artifact v6
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          name: pactmark-v0.2.0-release-${{ github.sha }}
+          name: pactmark-v${{ inputs.version }}-release-${{ github.sha }}
           path: .artifacts/release-dry-run
       - name: Verify downloaded candidate checksums
         working-directory: .artifacts/release-dry-run
@@ -146,15 +154,16 @@ jobs:
         run: >-
           node --import tsx tooling/release-publish.mts
           --config .artifacts/release-dry-run/oidc-publication-config.json
-          --authorize-public-release publish-pactmark-0.2.0
+          --authorize-public-release "$PACTMARK_RELEASE_CONFIRMATION"
         env:
           PACTMARK_RELEASE_ENVIRONMENT: release
           PACTMARK_RELEASE_RUNNER: github-hosted
+          PACTMARK_RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
       - name: Upload attestation bundles
         # actions/upload-artifact v7.0.1
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: pactmark-v0.2.0-attestations-${{ github.sha }}
+          name: pactmark-v${{ inputs.version }}-attestations-${{ github.sha }}
           path: .artifacts/release-dry-run/attestations
           if-no-files-found: error
           include-hidden-files: true

@@ -5,7 +5,7 @@ import { mkdir } from "node:fs/promises";
 import { createServer } from "node:net";
 import { basename, dirname, join, resolve } from "node:path";
 
-import type { PackedArtifact } from "../consumer/packed-artifacts.mjs";
+import { packedArtifactInternals, type PackedArtifact } from "../consumer/packed-artifacts.mjs";
 import { readNpmPackedManifest } from "../lib/release-integrity.mjs";
 import { sha256Bytes } from "../lib/release-integrity.mjs";
 import { repositoryRoot } from "../lib/repository.mjs";
@@ -18,7 +18,7 @@ import {
 } from "../release-publish.mjs";
 
 const LOOPBACK_HOST = "127.0.0.1";
-const RELEASE_VERSION = "0.2.0";
+const RELEASE_VERSION = packedArtifactInternals.releaseVersion;
 
 type JsonObject = Record<string, unknown>;
 

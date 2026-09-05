@@ -327,6 +327,28 @@ describe("artifacts and verifier registry", () => {
     ).toBe("fail");
   });
 
+  it("does not alias delimiter-bearing verifier ID and version tuples", () => {
+    const registry = new VerifierRegistry();
+    const first = createSchemaConformanceVerifier({
+      id: "a\u0000b",
+      version: "c",
+      verifierRegistrationDigest: d("delimiter-first"),
+      rubricDigest: d("delimiter-first-rubric"),
+      schema: z.unknown(),
+    });
+    const second = createSchemaConformanceVerifier({
+      id: "a",
+      version: "b\u0000c",
+      verifierRegistrationDigest: d("delimiter-second"),
+      rubricDigest: d("delimiter-second-rubric"),
+      schema: z.unknown(),
+    });
+    registry.register(first);
+    registry.register(second);
+    expect(registry.has(first.id, first.version)).toBe(true);
+    expect(registry.has(second.id, second.version)).toBe(true);
+  });
+
   it("labels model assessment as needs review", () => {
     const registry = new VerifierRegistry();
     registry.register(

@@ -118,6 +118,26 @@ describe("canonical JSON and digests", () => {
       expect.objectContaining({ code: "KAF_SERIALIZATION_INVALID_JSON" }),
     );
   });
+
+  it("keeps strict parsing symmetric with canonical number serialization", () => {
+    const canonical = canonicalJsonStringify({ large: 1e30, threshold: 1e21 });
+    const parsed = parseJsonStrict(canonical);
+    expect(parsed).toEqual({ large: 1e30, threshold: 1e21 });
+    expect(canonicalJsonStringify(parsed)).toBe(canonical);
+    expect(() => parseJsonStrict('{"n":9007199254740992e0}')).toThrow(
+      expect.objectContaining({ code: "KAF_SERIALIZATION_NON_I_JSON_NUMBER" }),
+    );
+    expect(parseJsonStrict('{"n":1000000000000000000000}')).toEqual({ n: 1e21 });
+    for (const roundedAlias of [
+      "999999999999999999999",
+      "1000000000000000000001",
+      "999999999999999999999.1",
+    ]) {
+      expect(() => parseJsonStrict(`{"n":${roundedAlias}}`)).toThrow(
+        expect.objectContaining({ code: "KAF_SERIALIZATION_NON_I_JSON_NUMBER" }),
+      );
+    }
+  });
 });
 
 describe("SchemaIdentity", () => {
@@ -310,6 +330,20 @@ describe("model profiles and immutable registrations", () => {
     expect(registry.register(first)).toBe(first);
     expect(registry.register(first)).toBe(first);
     expect(() => registry.register(changed)).toThrow(RegistrationDriftError);
+  });
+
+  it("does not alias delimiter-bearing registration ID and version tuples", () => {
+    const registry = new ImmutableRegistrationRegistry<{
+      id: string;
+      implementationVersion: string;
+      digest: typeof D1;
+    }>((registration) => registration.digest);
+    const first = { id: "a\u0000b", implementationVersion: "c", digest: D1 };
+    const second = { id: "a", implementationVersion: "b\u0000c", digest: D2 };
+    expect(registry.register(first)).toEqual(first);
+    expect(registry.register(second)).toEqual(second);
+    expect(registry.resolve(first.id, first.implementationVersion)).toEqual(first);
+    expect(registry.resolve(second.id, second.implementationVersion)).toEqual(second);
   });
 
   it("binds adapter registration to both model profiles and released artifacts", () => {
