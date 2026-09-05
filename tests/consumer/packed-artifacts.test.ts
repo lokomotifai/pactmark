@@ -39,6 +39,7 @@ const externalOverrides = {
   "@hono/node-server": "2.0.12",
   "eventsource-parser": "3.1.0",
   "express-rate-limit": "8.6.1",
+  "fast-uri": "3.1.6",
   hono: "4.12.34",
   "ip-address": "10.4.0",
   jose: "6.2.7",

@@ -27,6 +27,7 @@ overrides:
   "@hono/node-server": 2.0.12
   eventsource-parser: 3.1.0
   express-rate-limit: 8.6.1
+  fast-uri: 3.1.6
   hono: 4.12.34
   ip-address: 10.4.0
   jose: 6.2.7
@@ -588,10 +589,10 @@ packages:
         integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==,
       }
 
-  fast-uri@3.1.5:
+  fast-uri@3.1.6:
     resolution:
       {
-        integrity: sha512-gHwA1O9LDIcKunMKhObS/HimwtehO1nPUECKAu5TpKgaO19fcWEl4bliWe1jWxVFvIXztJjjQ4L8XQ1EU9f7Jw==,
+        integrity: sha512-7Ical1vFEMr0onbVzEDIreM22I4khW+fzyQPwvAFWBp1iwdshSZRsL4jjRvPG9JP1uiqMHRto+YU6R2/CzDz5Q==,
       }
 
   finalhandler@2.1.1:
@@ -1181,6 +1182,7 @@ snapshots:
       "@pactmark/core": file:../tarballs/pactmark-core-0.2.0.tgz
       "@pactmark/evidence": file:../tarballs/pactmark-evidence-0.2.0.tgz
       "@pactmark/executor-in-process": file:../tarballs/pactmark-executor-in-process-0.2.0.tgz
+      "@pactmark/policy": file:../tarballs/pactmark-policy-0.2.0.tgz
       "@pactmark/runtime": file:../tarballs/pactmark-runtime-0.2.0.tgz
       "@pactmark/store-memory": file:../tarballs/pactmark-store-memory-0.2.0.tgz
       zod: 4.4.3
@@ -1228,6 +1230,7 @@ snapshots:
     dependencies:
       "@modelcontextprotocol/sdk": 1.30.0(zod@4.4.3)
       "@pactmark/core": file:../tarballs/pactmark-core-0.2.0.tgz
+      "@pactmark/policy": file:../tarballs/pactmark-policy-0.2.0.tgz
       zod: 4.4.3
     transitivePeerDependencies:
       - "@cfworker/json-schema"
@@ -1308,7 +1311,7 @@ snapshots:
   ajv@8.20.0:
     dependencies:
       fast-deep-equal: 3.1.3
-      fast-uri: 3.1.5
+      fast-uri: 3.1.6
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
@@ -1438,7 +1441,7 @@ snapshots:
 
   fast-deep-equal@3.1.3: {}
 
-  fast-uri@3.1.5: {}
+  fast-uri@3.1.6: {}
 
   finalhandler@2.1.1:
     dependencies:
