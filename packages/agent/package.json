@@ -42,12 +42,12 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "7.58.12",
-    "@vitest/coverage-v8": "4.1.10",
+    "@microsoft/api-extractor": "7.59.0",
+    "@vitest/coverage-v8": "4.1.11",
     "@types/node": "22.20.1",
     "tsdown": "0.22.14",
     "typescript": "6.0.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   },
   "engines": {
     "node": "^22.14.0 || ^24.0.0"
