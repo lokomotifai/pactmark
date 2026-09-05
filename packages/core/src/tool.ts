@@ -33,6 +33,27 @@ export const ToolSecuritySchema = z
   .strict();
 export type ToolSecurity = z.infer<typeof ToolSecuritySchema>;
 
+export const ApprovalPreviewDisplaySchema = z
+  .object({
+    title: z.string().trim().min(1).max(160),
+    summary: z.string().trim().min(1).max(1_000),
+    materialConsequence: z.string().trim().min(1).max(1_000),
+    reversibility: z.enum(["compensatable", "irreversible"]),
+    fields: z
+      .array(
+        z
+          .object({
+            label: z.string().trim().min(1).max(80),
+            value: z.string().trim().min(1).max(500),
+          })
+          .strict(),
+      )
+      .max(16)
+      .optional(),
+  })
+  .strict();
+export type ApprovalPreviewDisplay = z.infer<typeof ApprovalPreviewDisplaySchema>;
+
 export const EffectPreviewSchema = z
   .object({
     schemaVersion: z.literal("1"),
@@ -41,6 +62,7 @@ export const EffectPreviewSchema = z
     contentDigest: DigestSchema,
     reversibility: z.enum(["compensatable", "irreversible"]),
     materialConsequence: z.string().min(1),
+    approvalDisplay: ApprovalPreviewDisplaySchema.optional(),
     diffDigest: DigestSchema.optional(),
     previewDigest: DigestSchema,
   })

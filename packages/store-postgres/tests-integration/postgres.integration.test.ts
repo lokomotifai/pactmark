@@ -12,7 +12,7 @@ import {
 
 import {
   Aes256GcmDataProtector,
-  createPostgresDatabase,
+  createPostgresMaintenanceDatabase,
   createPostgresStoreSuite,
   createPostgresStorageSecurityProfile,
   PostgresEventStore,
@@ -20,6 +20,7 @@ import {
   PostgresMigrationManager,
   PostgresProtectionNonceRegistry,
   PostgresPatternRecordStore,
+  PostgresRetentionMaintenance,
   PostgresVerificationRecordStore,
   POSTGRES_INITIAL_SCHEMA_SQL,
   POSTGRES_COMMAND_UOW_SCHEMA_SQL,
@@ -29,12 +30,14 @@ import {
   toPgPoolConfig,
   type PostgresConnectionConfig,
   type PostgresDatabase,
+  type PostgresMaintenanceDatabase,
 } from "../src/index.js";
 import {
   acceptedWorkOrder,
   acknowledgedEffect,
   acknowledgedEffectResult,
   evidenceRecord,
+  inputSubmission,
   patternRecord,
   protectedEffectResult,
   runAccepted,
@@ -51,6 +54,8 @@ if (connectionString === undefined || connectionString.length === 0) {
 
 const tlsMode = process.env.PACTMARK_TEST_POSTGRES_TLS ?? "verify-full";
 const integrationTenantSuffix = randomUUID();
+const retentionTenantA = `tenant-retention-a-${integrationTenantSuffix}`;
+const retentionTenantB = `tenant-retention-b-${integrationTenantSuffix}`;
 const integrationTenants = [
   "tenant-a",
   "other-tenant",
@@ -59,6 +64,8 @@ const integrationTenants = [
   `tenant-active-race-${integrationTenantSuffix}`,
   `tenant-active-clock-${integrationTenantSuffix}`,
   `tenant-active-uow-${integrationTenantSuffix}`,
+  retentionTenantA,
+  retentionTenantB,
 ] as const;
 const connection: PostgresConnectionConfig =
   tlsMode === "disable"
@@ -75,11 +82,11 @@ const connection: PostgresConnectionConfig =
       };
 
 describe("real PostgreSQL durability", () => {
-  let database: PostgresDatabase;
+  let database: PostgresMaintenanceDatabase;
   let store: PostgresEventStore;
 
   beforeAll(async () => {
-    database = createPostgresDatabase(toPgPoolConfig(connection));
+    database = createPostgresMaintenanceDatabase(toPgPoolConfig(connection));
     await new PostgresMigrationManager(database).migrate();
     store = new PostgresEventStore(database, integrationStorageProfile());
   });
@@ -175,6 +182,178 @@ describe("real PostgreSQL durability", () => {
         ["tenant-a", evidence.evidenceRecordId],
       ),
     ).rejects.toThrow("pactmark immutable record cannot be updated");
+  });
+
+  it("enforces non-owner RLS and reserves global expiry deletion for maintenance", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const runtimeRole = `pactmark_runtime_${suffix}`;
+    const quotedRuntimeRole = `"${runtimeRole}"`;
+    const expiresAt = "2099-01-01T00:00:00.000Z";
+    const purgeAt = "2099-01-02T00:00:00.000Z";
+    const suite = createPostgresStoreSuite(database, {
+      securityProfile: integrationStorageProfile(),
+      dataProtector: compactReferenceProtector(`retention-${suffix}`),
+    });
+    const records = [retentionTenantA, retentionTenantB].map((tenantId, index) => {
+      const base = inputSubmission();
+      return {
+        ...base,
+        tenantId,
+        runId: `run-retention-${String(index)}-${suffix}`,
+        requestId: `request-retention-${String(index)}-${suffix}`,
+        inputSubmissionRecordId: `submission-retention-${String(index)}-${suffix}`,
+        protectedValue: {
+          ...base.protectedValue,
+          ciphertextRef: `retention-ref-${String(index)}-${suffix}`,
+        },
+        retention: { mode: "until" as const, expiresAt },
+      };
+    });
+    for (const record of records) await suite.inputSubmissionStore.putOnce(record);
+    const linkedWorkOrders = [retentionTenantA, retentionTenantB].map((tenantId, index) =>
+      acceptedWorkOrder({
+        tenant: { id: tenantId },
+        id: `work-retention-${String(index)}-${suffix}`,
+        retention: { mode: "until" as const, expiresAt },
+      }),
+    );
+    for (const [index, workOrder] of linkedWorkOrders.entries()) {
+      const runId = `run-work-retention-${String(index)}-${suffix}`;
+      await suite.acceptedWorkOrderStore.putImmutable(workOrder);
+      await database.query(
+        `INSERT INTO pactmark_run_work_orders
+         (tenant_id,run_id,work_order_id,work_order_binding_digest,execution_definition_digest)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [
+          workOrder.tenant.id,
+          runId,
+          workOrder.id,
+          workOrder.workOrderBindingDigest,
+          workOrder.executionDefinitionDigest,
+        ],
+      );
+      await database.query(
+        `INSERT INTO pactmark_wakeups
+         (tenant_id,run_id,wakeup_id,deduplication_key,delegation_json,available_at,state,
+          request_digest,work_order_id)
+         VALUES ($1,$2,$3,$4,$5::jsonb,$6::timestamptz,'pending',$7,$8)`,
+        [
+          workOrder.tenant.id,
+          runId,
+          `wakeup-retention-${String(index)}-${suffix}`,
+          `dedupe-retention-${String(index)}-${suffix}`,
+          "{}",
+          instant,
+          digest(`request-retention-${String(index)}-${suffix}`),
+          workOrder.id,
+        ],
+      );
+    }
+
+    await database.query(`CREATE ROLE ${quotedRuntimeRole} NOLOGIN NOSUPERUSER NOBYPASSRLS`);
+    try {
+      await database.query(`GRANT USAGE ON SCHEMA public TO ${quotedRuntimeRole}`);
+      await database.query(
+        `GRANT SELECT,DELETE ON pactmark_input_submissions TO ${quotedRuntimeRole}`,
+      );
+      const rls = await database.query<{
+        enabled: boolean;
+        forced: boolean;
+        maintenance_owner: boolean;
+      }>(
+        `SELECT c.relrowsecurity AS enabled,
+                c.relforcerowsecurity AS forced,
+                pg_get_userbyid(c.relowner)=current_user AS maintenance_owner
+         FROM pg_class c WHERE c.oid='pactmark_input_submissions'::regclass`,
+      );
+      expect(rls.rows[0]).toEqual({
+        enabled: true,
+        forced: false,
+        maintenance_owner: true,
+      });
+
+      const client = await database.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(`SET LOCAL ROLE ${quotedRuntimeRole}`);
+        const unset = await client.query<{ count: string }>(
+          "SELECT count(*)::text AS count FROM pactmark_input_submissions",
+        );
+        expect(unset.rows[0]?.count).toBe("0");
+        await client.query("SELECT set_config('pactmark.tenant_id', $1, true)", [retentionTenantA]);
+        const own = await client.query<{ count: string }>(
+          "SELECT count(*)::text AS count FROM pactmark_input_submissions WHERE tenant_id=$1",
+          [retentionTenantA],
+        );
+        const crossTenant = await client.query<{ count: string }>(
+          "SELECT count(*)::text AS count FROM pactmark_input_submissions WHERE tenant_id=$1",
+          [retentionTenantB],
+        );
+        expect(own.rows[0]?.count).toBe("1");
+        expect(crossTenant.rows[0]?.count).toBe("0");
+        const runtimeDelete = await client.query<{ tenant_id: string }>(
+          `DELETE FROM pactmark_input_submissions
+           WHERE expires_at <= $1::timestamptz RETURNING tenant_id`,
+          [purgeAt],
+        );
+        expect(runtimeDelete.rows).toEqual([{ tenant_id: retentionTenantA }]);
+      } finally {
+        await client.query("ROLLBACK");
+        client.release();
+      }
+
+      await expect(
+        suite.acceptedWorkOrderStore.purgeExpiredForTenant(retentionTenantA, purgeAt),
+      ).resolves.toBe(1);
+      const tenantWorkOrders = await database.query<{ tenant_id: string }>(
+        `SELECT tenant_id FROM pactmark_work_orders
+         WHERE work_order_id = ANY($1::text[]) ORDER BY tenant_id`,
+        [linkedWorkOrders.map(({ id }) => id)],
+      );
+      expect(tenantWorkOrders.rows).toEqual([{ tenant_id: retentionTenantB }]);
+
+      const deleted = await new PostgresRetentionMaintenance(database).purgeAllExpired(purgeAt);
+      expect(deleted.acceptedWorkOrders).toBeGreaterThanOrEqual(1);
+      expect(deleted.inputSubmissions).toBeGreaterThanOrEqual(2);
+      const remaining = await database.query<{ count: string }>(
+        `SELECT count(*)::text AS count
+         FROM pactmark_input_submissions
+         WHERE tenant_id = ANY($1::text[])
+         UNION ALL
+         SELECT count(*)::text AS count
+         FROM pactmark_work_orders
+         WHERE tenant_id = ANY($1::text[])`,
+        [[retentionTenantA, retentionTenantB]],
+      );
+      expect(remaining.rows).toEqual([{ count: "0" }, { count: "0" }]);
+      const retainedBindings = await database.query<{ count: string }>(
+        `SELECT count(*)::text AS count FROM pactmark_run_work_orders
+         WHERE tenant_id = ANY($1::text[])
+         UNION ALL
+         SELECT count(*)::text AS count FROM pactmark_wakeups
+         WHERE tenant_id = ANY($1::text[])`,
+        [[retentionTenantA, retentionTenantB]],
+      );
+      expect(retainedBindings.rows).toEqual([{ count: "2" }, { count: "2" }]);
+      const deletedParent = linkedWorkOrders[0]!;
+      await expect(
+        database.query(
+          `INSERT INTO pactmark_run_work_orders
+           (tenant_id,run_id,work_order_id,work_order_binding_digest,execution_definition_digest)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [
+            deletedParent.tenant.id,
+            `run-orphan-${suffix}`,
+            deletedParent.id,
+            deletedParent.workOrderBindingDigest,
+            deletedParent.executionDefinitionDigest,
+          ],
+        ),
+      ).rejects.toThrow("pactmark run WorkOrder parent binding is missing or changed");
+    } finally {
+      await database.query(`DROP OWNED BY ${quotedRuntimeRole}`);
+      await database.query(`DROP ROLE IF EXISTS ${quotedRuntimeRole}`);
+    }
   });
 
   it("atomically persists a durable command record and deduplicated wakeup", async () => {

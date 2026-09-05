@@ -11,7 +11,6 @@ export interface AdvisoryVerificationInput {
   readonly checksumPath: string;
   readonly lockfilePath: string;
   readonly now: Date;
-  readonly maximumAgeDays: number;
 }
 
 export interface AdvisoryVerificationResult {
@@ -41,9 +40,6 @@ function equalDigest(left: string, right: string, code: string): void {
 export function verifyAdvisorySnapshot(
   input: AdvisoryVerificationInput,
 ): AdvisoryVerificationResult {
-  if (!Number.isFinite(input.maximumAgeDays) || input.maximumAgeDays <= 0) {
-    throw new Error("KAF_ADVISORY_MAXIMUM_AGE_INVALID");
-  }
   const snapshotBytes = readFileSync(input.snapshotPath);
   const snapshotDigest = sha256Bytes(snapshotBytes);
   const expectedChecksum = readFileSync(input.checksumPath, "utf8").trim();
@@ -67,9 +63,6 @@ export function verifyAdvisorySnapshot(
   const retrieved = new Date(upstreamRetrievedAt);
   if (!Number.isFinite(retrieved.valueOf()) || retrieved > input.now)
     throw new Error("KAF_ADVISORY_TIMESTAMP_INVALID");
-  if (input.now.valueOf() - retrieved.valueOf() > input.maximumAgeDays * 86_400_000) {
-    throw new Error("KAF_ADVISORY_SNAPSHOT_STALE");
-  }
   const lockfileDigest = sha256Bytes(readFileSync(input.lockfilePath));
   equalDigest(
     lockfileDigest,
@@ -135,7 +128,6 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     checksumPath,
     lockfilePath,
     now: new Date(),
-    maximumAgeDays: 7,
   });
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }

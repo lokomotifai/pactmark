@@ -1,4 +1,7 @@
 import {
+  ApprovalSchema,
+  DecisionPreviewReferenceSchema,
+  DecisionSubmissionChallengeSchema,
   JsonValueSchema,
   KafError,
   RuntimeCapabilitiesSchema,
@@ -6,9 +9,11 @@ import {
   createCommandContext,
   createCommandId as createCoreCommandId,
   createWorkOrderRequest,
+  canonicalJsonStringify,
   digestBytes,
   digestCanonicalJson,
   parseJsonStrict,
+  parseWire,
   type AgentDefinition,
   type AgentRegistry,
   type Artifact,
@@ -17,6 +22,8 @@ import {
   type CommandContext,
   type ContextStore,
   type DataProtector,
+  type DecisionChallengeIssuer,
+  type DecisionPreviewer,
   type EvidenceBuilder,
   type EvidenceRecord,
   type EgressBroker,
@@ -24,6 +31,7 @@ import {
   type JsonValue,
   type PolicyEngine,
   type ProtectedValueRef,
+  type ProposedEffectBinding,
   type RunEvent,
   type RunProjection,
   type RuntimeCapabilities,
@@ -83,7 +91,7 @@ const LOCAL_CAPABILITIES: RuntimeCapabilities = Object.freeze({
   networkPolicy: "declared",
   backgroundWakeup: false,
   atomicCommandAndWakeup: false,
-  humanDecisions: false,
+  humanDecisions: true,
   typedInput: false,
   effectReconciliation: false,
   compensation: false,
@@ -142,6 +150,158 @@ function processLocalContextProtector(ids: ReturnType<typeof idGenerator>): Data
   });
 }
 
+function verifiedLocalDecisionClaims(
+  authorityIssuer: AuthorityIssuer,
+  authority: AuthorityContext,
+  now: string,
+) {
+  const verification = authorityIssuer.verify(authority, new Date(now));
+  if (!verification.valid) {
+    throw new KafError(
+      verification.reason === "expired"
+        ? "KAF_AUTHORIZATION_EXPIRED"
+        : "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      {
+        details: { reason: verification.reason },
+      },
+    );
+  }
+  return verification.claims;
+}
+
+/** Process-local, command-idempotent challenge authority for the ephemeral profile. */
+function createProcessLocalDecisionChallengeIssuer(
+  authorityIssuer: AuthorityIssuer,
+  now: () => string,
+  ids: ReturnType<typeof idGenerator>,
+): DecisionChallengeIssuer {
+  const issuedByCommand = new Map<
+    string,
+    Readonly<{
+      requestDigest: string;
+      challengeProof: string;
+      challenge: ReturnType<typeof DecisionSubmissionChallengeSchema.parse>;
+    }>
+  >();
+  const challengesByProofDigest = new Map<
+    string,
+    ReturnType<typeof DecisionSubmissionChallengeSchema.parse>
+  >();
+  const approvalsByCommand = new Map<
+    string,
+    Readonly<{
+      requestDigest: string;
+      approval: ReturnType<typeof ApprovalSchema.parse>;
+    }>
+  >();
+  const assertPrincipalBinding = (
+    claims: ReturnType<typeof verifiedLocalDecisionClaims>,
+    binding: ProposedEffectBinding,
+  ) => {
+    if (
+      claims.tenant.id !== binding.tenant.id ||
+      canonicalJsonStringify(claims.actor) !== canonicalJsonStringify(binding.principal)
+    ) {
+      throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+        details: { reason: "local_decision_principal_binding_changed" },
+      });
+    }
+  };
+  const issuer: DecisionChallengeIssuer = {
+    async issue(authority, request, command) {
+      await Promise.resolve();
+      const issuedAt = now();
+      const claims = verifiedLocalDecisionClaims(authorityIssuer, authority, issuedAt);
+      assertPrincipalBinding(claims, request.binding);
+      const key = canonicalJsonStringify([
+        claims.tenant.id,
+        claims.actor.type,
+        claims.actor.id,
+        command.commandId,
+      ]);
+      const requestDigest = digestCanonicalJson(request);
+      const prior = issuedByCommand.get(key);
+      if (prior !== undefined) {
+        if (prior.requestDigest !== requestDigest) {
+          throw new KafError("KAF_HTTP_IDEMPOTENCY_CONFLICT");
+        }
+        return { challengeProof: prior.challengeProof, challenge: prior.challenge };
+      }
+      const challengeProof = `pactmark_local_${[...randomBytes(32)]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("")}`;
+      const challenge = DecisionSubmissionChallengeSchema.parse({
+        schemaVersion: "1",
+        id: ids.generate("challenge"),
+        issuerId: "pactmark.local-decision@1",
+        proofDigest: digestBytes(new TextEncoder().encode(challengeProof)),
+        binding: request.binding,
+        requiredAuthenticationStrength: request.requiredAuthenticationStrength,
+        issuedAt,
+        expiresAt: request.expiresAt,
+      });
+      const issued = Object.freeze({ requestDigest, challengeProof, challenge });
+      issuedByCommand.set(key, issued);
+      challengesByProofDigest.set(challenge.proofDigest, challenge);
+      return { challengeProof, challenge };
+    },
+    async verify(authority, challengeProof, binding) {
+      await Promise.resolve();
+      const verifiedAt = now();
+      const claims = verifiedLocalDecisionClaims(authorityIssuer, authority, verifiedAt);
+      assertPrincipalBinding(claims, binding);
+      const proofDigest = digestBytes(new TextEncoder().encode(challengeProof));
+      const challenge = challengesByProofDigest.get(proofDigest);
+      if (
+        challenge === undefined ||
+        canonicalJsonStringify(challenge.binding) !== canonicalJsonStringify(binding) ||
+        Date.parse(challenge.expiresAt) <= Date.parse(verifiedAt)
+      ) {
+        throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+          details: { reason: "local_decision_challenge_invalid" },
+        });
+      }
+      return challenge;
+    },
+    async createApproval(authority, challenge, command) {
+      await Promise.resolve();
+      const createdAt = now();
+      const claims = verifiedLocalDecisionClaims(authorityIssuer, authority, createdAt);
+      assertPrincipalBinding(claims, challenge.binding);
+      const key = canonicalJsonStringify([
+        claims.tenant.id,
+        claims.actor.type,
+        claims.actor.id,
+        command.commandId,
+      ]);
+      const requestDigest = digestCanonicalJson({ challenge, actor: claims.actor });
+      const prior = approvalsByCommand.get(key);
+      if (prior !== undefined) {
+        if (prior.requestDigest !== requestDigest) {
+          throw new KafError("KAF_HTTP_IDEMPOTENCY_CONFLICT");
+        }
+        return prior.approval;
+      }
+      const approval = ApprovalSchema.parse({
+        schemaVersion: "1",
+        id: ids.generate("approval"),
+        issuerId: "pactmark.local-decision@1",
+        challengeId: challenge.id,
+        challengeProofDigest: challenge.proofDigest,
+        binding: challenge.binding,
+        approvedBy: claims.actor,
+        authenticationStrength: claims.authenticationStrength,
+        createdAt,
+        expiresAt: challenge.expiresAt,
+        maximumUses: 1,
+      });
+      approvalsByCommand.set(key, Object.freeze({ requestDigest, approval }));
+      return approval;
+    },
+  };
+  return Object.freeze(issuer);
+}
+
 export function createCommandId(): ReturnType<typeof createCoreCommandId> {
   return createCoreCommandId({ now: () => new Date(), randomBytes });
 }
@@ -152,7 +312,7 @@ class FacadeAgentRegistry implements AgentRegistry {
 
   constructor(definitions: readonly AgentDefinition[]) {
     for (const definition of definitions) {
-      const key = `${definition.id}\u0000${definition.version}`;
+      const key = canonicalJsonStringify([definition.id, definition.version]);
       const existing = this.#definitions.get(key);
       const existingByDigest = this.#definitionsByDigest.get(definition.agentDefinitionDigest);
       if (
@@ -167,7 +327,7 @@ class FacadeAgentRegistry implements AgentRegistry {
   }
 
   register(definition: AgentDefinition): Promise<void> {
-    const key = `${definition.id}\u0000${definition.version}`;
+    const key = canonicalJsonStringify([definition.id, definition.version]);
     const existing = this.#definitions.get(key);
     const existingByDigest = this.#definitionsByDigest.get(definition.agentDefinitionDigest);
     if (
@@ -182,7 +342,7 @@ class FacadeAgentRegistry implements AgentRegistry {
   }
 
   resolve(id: string, version: string, digest: string): Promise<AgentDefinition | undefined> {
-    const definition = this.#definitions.get(`${id}\u0000${version}`);
+    const definition = this.#definitions.get(canonicalJsonStringify([id, version]));
     return Promise.resolve(definition?.agentDefinitionDigest === digest ? definition : undefined);
   }
 }
@@ -251,12 +411,6 @@ function createAgentPolicyPreflightEngine(
       );
       if (preflight.decision === "deny") return Promise.resolve(preflight);
       const requiresApproval = rule.decision === "require_approval" || preflight.approvalRequired;
-      if (requiresApproval) {
-        return Promise.resolve({
-          decision: "deny" as const,
-          reasonCode: "KAF_POLICY_PREVIEW_REQUIRED" as const,
-        });
-      }
       // Write effects bind their preview to a facade target derived from the
       // exact tool registration and validated arguments; reads keep the
       // resource-derived preflight digest.
@@ -266,6 +420,14 @@ function createAgentPolicyPreflightEngine(
           : digestCanonicalJson(
               facadeEffectTarget(input.tool.toolRegistrationDigest, input.argumentsDigest),
             );
+      if (requiresApproval) {
+        return Promise.resolve({
+          decision: "require_approval" as const,
+          reasonCode: "KAF_POLICY_APPROVAL_REQUIRED" as const,
+          normalizedResources: preflight.normalizedResources,
+          normalizedTargetDigest,
+        });
+      }
       return Promise.resolve({
         decision: "allow_with_grant" as const,
         reasonCode: "KAF_POLICY_ALLOWED" as const,
@@ -368,7 +530,13 @@ function createEvidenceBuilder(
         input.verifications.map((verification) => {
           const reference = verificationResultIdentity(verification);
           return [
-            `${reference.id}\u0000${reference.version}\u0000${reference.verifierRegistrationDigest}\u0000${reference.rubricVersion}\u0000${reference.rubricDigest}`,
+            canonicalJsonStringify([
+              reference.id,
+              reference.version,
+              reference.verifierRegistrationDigest,
+              reference.rubricVersion,
+              reference.rubricDigest,
+            ]),
             reference,
           ] as const;
         }),
@@ -427,7 +595,7 @@ function createEvidenceBuilder(
         verifications: input.verifications,
         verifierReferences: [...verifierReferences.values()],
       });
-      records.set(`${input.run.tenantId}\u0000${input.run.runId}`, record);
+      records.set(canonicalJsonStringify([input.run.tenantId, input.run.runId]), record);
       return record;
     },
   });
@@ -441,23 +609,11 @@ function createFacadeWriteStrategy(
   const effect = getToolEffectDefinition(tool);
   if (effect === undefined) throw new TypeError("KAF_TOOL_NOT_COMPILED_BY_FACADE");
   const registration = tool.registration;
-  const buildPreview = (value: JsonValue) => {
-    const argumentsDigest = digestCanonicalJson(value);
-    const material = {
-      schemaVersion: "1" as const,
-      normalizedTarget: facadeEffectTarget(registration.toolRegistrationDigest, argumentsDigest),
-      operationClass: `${registration.id}.write`,
-      contentDigest: argumentsDigest,
-      reversibility: effect.reversibility,
-      materialConsequence: effect.materialConsequence,
-    };
-    return { ...material, previewDigest: digestCanonicalJson(material) };
-  };
   const strategy: RuntimeExecutableEffectStrategy = {
     kind: "none",
     registrationDigest: registration.effectStrategyRegistrationDigest,
     previewRegistrationDigest: effect.previewRegistrationDigest,
-    preview: (value: JsonValue) => Promise.resolve(buildPreview(value)),
+    preview: (value: JsonValue) => Promise.resolve(buildFacadeWritePreview(tool, value)),
     validateOutput: (result: unknown) => JsonValueSchema.parse(tool.output.parse(result)),
     async dispatch(value, context) {
       const executionContext: ToolExecutionContext = {
@@ -503,6 +659,25 @@ function createFacadeWriteStrategy(
     },
   };
   return Object.freeze(strategy);
+}
+
+function buildFacadeWritePreview(
+  tool: ReturnType<typeof getAgentRuntimeMetadata>["tools"][number],
+  value: JsonValue,
+) {
+  const effect = getToolEffectDefinition(tool);
+  if (effect === undefined) throw new TypeError("KAF_TOOL_NOT_COMPILED_BY_FACADE");
+  const argumentsDigest = digestCanonicalJson(value);
+  const material = {
+    schemaVersion: "1" as const,
+    normalizedTarget: facadeEffectTarget(tool.registration.toolRegistrationDigest, argumentsDigest),
+    operationClass: `${tool.registration.id}.write`,
+    contentDigest: argumentsDigest,
+    reversibility: effect.reversibility,
+    materialConsequence: effect.materialConsequence,
+    approvalDisplay: effect.renderApprovalDisplay(value),
+  };
+  return Object.freeze({ ...material, previewDigest: digestCanonicalJson(material) });
 }
 
 /**
@@ -572,6 +747,7 @@ function createLocalEffectAuthorization(
         argumentsDigest: request.argumentsDigest,
         normalizedTargetDigest: request.normalizedTargetDigest,
         grantId,
+        ...(request.approvalId === undefined ? {} : { approvalId: request.approvalId }),
         secretRefIds: [],
         purposeCode: request.workOrder.purpose.code,
         purposeRegistryVersion: request.workOrder.purpose.registryVersion,
@@ -595,33 +771,31 @@ function createToolComposition(agents: readonly DefinedAgent[], now: () => strin
       tools.set(tool.registration.toolRegistrationDigest, tool);
     }
   }
-  const egressTools = [...tools.values()].filter(
-    (tool) => tool.security.egress.mode === "allowlist",
+  const denyAllEgress = createDenyAllEgressBroker();
+  const brokers = new Map(
+    [...tools.values()].map((tool) => {
+      const digest = tool.registration.toolRegistrationDigest;
+      const egress = tool.security.egress;
+      const broker =
+        egress.mode === "allowlist"
+          ? createDeclaredAllowlistEgressBroker({
+              allowedOrigins: egress.destinations,
+              allowedMethods: egress.methods,
+              authorizeBinding: (binding) => binding.toolRegistrationDigest === digest,
+              fetch: globalThis.fetch.bind(globalThis),
+            })
+          : denyAllEgress;
+      return [digest, broker] as const;
+    }),
   );
-  const egressToolDigests = new Set(
-    egressTools.map((tool) => tool.registration.toolRegistrationDigest),
-  );
-  const broker =
-    egressTools.length === 0
-      ? createDenyAllEgressBroker()
-      : createDeclaredAllowlistEgressBroker({
-          allowedOrigins: egressTools.flatMap((tool) => {
-            if (tool.security.egress.mode !== "allowlist") return [];
-            return tool.security.egress.destinations;
-          }),
-          allowedMethods: egressTools.flatMap((tool) => {
-            if (tool.security.egress.mode !== "allowlist") return [];
-            return tool.security.egress.methods;
-          }),
-          authorizeBinding: (binding) => egressToolDigests.has(binding.toolRegistrationDigest),
-          fetch: globalThis.fetch.bind(globalThis),
-        });
+  const brokerFor = (tool: ReturnType<typeof getAgentRuntimeMetadata>["tools"][number]) =>
+    brokers.get(tool.registration.toolRegistrationDigest) ?? denyAllEgress;
   const strategies = new Map<string, RuntimeExecutableEffectStrategy>();
   for (const tool of tools.values()) {
     if (getToolEffectDefinition(tool) !== undefined) {
       strategies.set(
         tool.registration.toolRegistrationDigest,
-        createFacadeWriteStrategy(tool, broker, now),
+        createFacadeWriteStrategy(tool, brokerFor(tool), now),
       );
     }
   }
@@ -640,7 +814,7 @@ function createToolComposition(agents: readonly DefinedAgent[], now: () => strin
             purposeCode: "service_delivery",
             dataClass: "public",
           },
-          egress: broker.bind({
+          egress: brokerFor(tool).bind({
             tenantId: "local",
             runId: "local-in-process",
             toolRegistrationDigest: tool.registration.toolRegistrationDigest,
@@ -670,14 +844,50 @@ function createToolComposition(agents: readonly DefinedAgent[], now: () => strin
       return Promise.resolve(resolved);
     },
   });
+  const previewer: DecisionPreviewer = {
+    async preview(input) {
+      await Promise.resolve();
+      const tool = tools.get(input.toolRegistrationDigest);
+      if (tool === undefined || digestCanonicalJson(input.value) !== input.argumentsDigest) {
+        throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+          details: { reason: "local_decision_preview_binding_changed" },
+        });
+      }
+      if (getToolEffectDefinition(tool) === undefined) {
+        const material = {
+          schemaVersion: "1" as const,
+          operationClass: `${tool.registration.id}.read`,
+          toolRegistrationDigest: tool.registration.toolRegistrationDigest,
+          argumentsDigest: input.argumentsDigest,
+          targetDigest: input.targetDigest,
+        };
+        return DecisionPreviewReferenceSchema.parse({
+          schemaVersion: "1",
+          previewDigest: digestCanonicalJson(material),
+        });
+      }
+      const preview = buildFacadeWritePreview(tool, JsonValueSchema.parse(input.value));
+      if (digestCanonicalJson(preview.normalizedTarget) !== input.targetDigest) {
+        throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+          details: { reason: "local_decision_preview_target_changed" },
+        });
+      }
+      return DecisionPreviewReferenceSchema.parse({
+        schemaVersion: "1",
+        previewDigest: preview.previewDigest,
+        contentDigest: preview.contentDigest,
+        approvalDisplay: preview.approvalDisplay,
+      });
+    },
+  };
   return {
     registry: {
       resolve: (digest: string) => tools.get(digest)?.registration,
     },
     executor: createDeclaredToolExecutor(declared),
     resolver,
-    broker,
     strategies,
+    previewer: Object.freeze(previewer),
   };
 }
 
@@ -705,6 +915,16 @@ function dispatchingModel(agents: readonly DefinedAgent[]) {
       return driver.invoke(request);
     },
   });
+}
+
+function validateAgentStartInput(agent: AgentDefinition, request: WorkOrderRequest): void {
+  const inputSchema = getAgentRuntimeMetadata(agent).input;
+  if (inputSchema.identity.schemaIdentityDigest !== agent.inputSchemaDigest) {
+    throw new KafError("KAF_RUNTIME_AGENT_DEFINITION_MISMATCH", {
+      details: { reason: "agent_input_schema_digest_mismatch" },
+    });
+  }
+  void parseWire(inputSchema.schema, request.input);
 }
 
 export interface RuntimeFacade {
@@ -858,6 +1078,11 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
     ...LOCAL_CAPABILITIES,
     effectReconciliation: effectServices !== undefined,
   });
+  const decisionChallengeIssuer = createProcessLocalDecisionChallengeIssuer(
+    authorityIssuer,
+    localClock.now,
+    ids,
+  );
   const kernel = createKernelRuntime({
     authorityIssuer,
     ...(effectServices === undefined
@@ -876,6 +1101,9 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
     contextCheckpointTransactionDomain: stores.runCommandUnitOfWork.transactionDomain,
     leaseStore: stores.leaseStore,
     runCommandUnitOfWork: stores.runCommandUnitOfWork,
+    decisionStore: stores.decisionStore,
+    decisionChallengeIssuer,
+    decisionPreviewer: toolComposition.previewer,
     modelDriver: dispatchingModel(input.agents),
     toolRegistry: toolComposition.registry,
     toolCallResolver: toolComposition.resolver,
@@ -891,7 +1119,7 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
   const executions = new Map<string, Promise<unknown>>();
   const facade: LocalRuntimeFacade = {
     async start(authority, agent, request, command, options) {
-      getAgentRuntimeMetadata(agent).input.parse(request.input);
+      validateAgentStartInput(agent, request);
       const started = await kernel.start(authority, agent, request, command);
       const execution = Promise.resolve().then(() =>
         options === undefined
@@ -901,7 +1129,7 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
       executions.set(started.runId, execution);
       void execution.then(
         () => executions.delete(started.runId),
-        () => executions.delete(started.runId),
+        () => undefined,
       );
       return started;
     },
@@ -935,7 +1163,7 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
       }),
     async getEvidence(authority, runId) {
       const run = await kernel.getRun(authority, runId);
-      return records.get(`${run.tenantId}\u0000${runId}`);
+      return records.get(canonicalJsonStringify([run.tenantId, runId]));
     },
     async getArtifacts(authority, runId) {
       const run = await kernel.getRun(authority, runId);
@@ -948,7 +1176,14 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
       );
     },
     async wait(authority, runId) {
-      await executions.get(runId);
+      const execution = executions.get(runId);
+      if (execution !== undefined) {
+        try {
+          await execution;
+        } finally {
+          executions.delete(runId);
+        }
+      }
       return kernel.getRun(authority, runId);
     },
     async run(agent, options) {
@@ -1032,8 +1267,11 @@ export function createLocalRuntime(input: CreateLocalRuntimeInput): LocalRuntime
 export interface CreateRuntimeInput extends RuntimeKernelConfig {
   readonly contextStore: ContextStore;
   readonly inputSubmissionStore: InputSubmissionStore;
-  /** Explicit host-owned egress boundary; model and request data can never select it. */
-  readonly egressBroker: EgressBroker;
+  /**
+   * @deprecated Configure egress inside the tool executor or effect strategy that
+   * actually performs network I/O. The runtime kernel does not dispatch HTTP.
+   */
+  readonly egressBroker?: EgressBroker;
   readonly requiredRuntimeCapabilities?: readonly string[];
   readonly evidenceReader?: Readonly<{
     get(tenantId: string, runId: string): Promise<EvidenceRecord | undefined>;
@@ -1080,7 +1318,9 @@ function productionCapabilities(input: CreateRuntimeInput): RuntimeCapabilities 
       input.productionModelServices.reservations.durable &&
       input.productionModelServices.reservations.transactionDomain ===
         input.runCommandUnitOfWork.transactionDomain,
-    toolCredentials: input.toolExecutor.capabilities.toolCredentials,
+    // Tool credentials are adapter-owned today. Do not inherit an executor's
+    // claim until the kernel has a bound reservation/claim port for them.
+    toolCredentials: false,
     telemetry: "none",
     transactionDomains: [input.runCommandUnitOfWork.transactionDomain],
   });
@@ -1092,7 +1332,10 @@ export function createRuntime(input: CreateRuntimeInput): RuntimeFacade {
   const requiredCapabilities = [...(input.requiredRuntimeCapabilities ?? [])];
   const kernel = createKernelRuntime({ ...input, requireProductionModelBoundary: true });
   const facade: RuntimeFacade = {
-    start: (authority, agent, request, command) => kernel.start(authority, agent, request, command),
+    async start(authority, agent, request, command) {
+      validateAgentStartInput(agent, request);
+      return kernel.start(authority, agent, request, command);
+    },
     resume: (authority, runId, command, options) =>
       kernel.resume(authority, runId, command, options),
     getRun: (authority, runId) => kernel.getRun(authority, runId),

@@ -94,6 +94,7 @@ Beklenen ilerleme kayıtları arasında şunlar bulunur:
 
 ```text
 RunAccepted
+ToolCallRequested
 ToolCallCompleted
 VerificationRecorded(status=pass)
 RunCompleted
@@ -150,10 +151,11 @@ const result = await runtime.run(catalogAgent, {
 diye provider biçimli deterministic bir fixture ile gelir. Tool’lar sağlayıcıya
 yalnızca şema olarak tanıtılır; her öneri dispatch öncesi host tarafından yeniden
 doğrulanır ve policy’den geçer. Facade varsayılanları yetkiyi asla genişletmez:
-okumalar R1’e varsayılanır, yazma R2 ve açık policy kuralı ister, varsayılan
-policy geri kalan her şeyi reddeder. Eksiksiz açık formda —model güvenlik/kaynak
-profilleri, authority issuer, `WorkOrder`, purpose ve data class, istenen
-capability’ler, bütçeler ve command identity— her şey
+okumalar R1’e varsayılanır, sıradan bir yazma R2 ile açık policy kuralı ister ve
+R4 yazma process-local, one-use approval akışını gerektirir. R3 compensation ve
+R5 user-presence policy açık host-composition sınırları olarak kalır; varsayılan
+policy geri kalan her şeyi reddeder. Eksiksiz açık formda —profiller, authority,
+`WorkOrder`, bütçeler ve command identity— her şey
 [`examples/minimal-tool-agent/src/example.ts`](examples/minimal-tool-agent/src/example.ts)
 içinde açıkça tanımlıdır.
 
@@ -251,8 +253,8 @@ provider, database, platform adapter veya telemetry paketlerini re-export etmez.
 Pactmark genel amaçlı chat SDK’sı, no-code builder, swarm orchestrator, hosted
 control plane veya production arbitrary-code sandbox değildir. Güvenilen
 in-process executor bir isolation boundary değildir. Production-shaped host
-değerlendirmeden önce [güvenlik modelini](https://pactmark-docs.lokomotif.ai/tr/security/security-model)
-okuyun.
+değerlendirmeden önce repository içindeki
+[kendi kendine yeterli güvenlik modelini](docs/security/README.md) okuyun.
 
 ## Runtime ve platform durumu
 
@@ -341,6 +343,7 @@ design ve community care katkılarının tümü değerlidir.
 
 ## Dokümantasyon ve örnekler
 
+- [Repository güvenlik modeli](docs/security/README.md)
 - [Dokümantasyon ana sayfası](https://pactmark-docs.lokomotif.ai/tr)
 - [English documentation](https://pactmark-docs.lokomotif.ai)
 - [İlk agent’ını oluştur](https://pactmark-docs.lokomotif.ai/tr/getting-started/first-agent)
@@ -350,13 +353,14 @@ design ve community care katkılarının tümü değerlidir.
 
 ### Çalıştırılabilir örnekler
 
-Her örnek deterministic fixture’larla çevrimdışı çalışır ve model anahtarı
-istemez. Her biri kendi sınırını açıkça yazar; hiçbiri production template’i
-değildir.
+Her zorunlu örnek komutu deterministic fixture’larla çevrimdışı çalışır ve model
+anahtarı istemez. Quickstart’ın ayrı adlandırılmış live-provider smoke’u açıkça
+opt-in’dir ve zorunlu CI’ın parçası değildir. Her örnek kendi sınırını açıkça
+yazar; hiçbiri production template’i değildir.
 
 | Örnek                                                                  | Neyi gösterir                                                                                                                          |
 | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| [`quickstart-agent`](examples/quickstart-agent/)                       | En kısa yönetişimli agent: varsayılan local policy, bir R1 read, bir governed R2 write. Yayımlanmamış `main` facade’ini kullanır.      |
+| [`quickstart-agent`](examples/quickstart-agent/)                       | En kısa yönetişimli agent: varsayılan local policy, bir R1 read, bir governed R2 write ve opt-in live-provider smoke. `main` kullanır. |
 | [`minimal-tool-agent`](examples/minimal-tool-agent/)                   | Yayımlanmış 0.2.0’ın desteklediği açık kompozisyon: profiller, authority, `WorkOrder`, bütçeler, sıralı event’ler, artifact, evidence. |
 | [`approval-agent`](examples/approval-agent/)                           | Gerçek bir approval sınırının arkasındaki simüle dışa dönük effect; decision challenge komut çıktısına asla girmez.                    |
 | [`approval-purchase-boundary`](examples/approval-purchase-boundary/)   | Public decision ve approval komutları açık olmadığı için fail-closed davranan exact R4 satın alma preview’ı.                           |

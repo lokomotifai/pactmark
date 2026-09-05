@@ -1,5 +1,7 @@
 import { runPortableAgent } from "../agent.js";
-import type { PortableRequest, PortableResult } from "../contract.js";
-export function handleNode(request: PortableRequest): Promise<PortableResult> {
-  return Promise.resolve(runPortableAgent(request));
+import type { PortableResult } from "../contract.js";
+
+/** A Node application boundary; a real server must supply its own auth and tenancy. */
+export function handleNode(request: unknown): Promise<PortableResult> {
+  return runPortableAgent(request);
 }

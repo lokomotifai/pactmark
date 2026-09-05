@@ -20,6 +20,7 @@ import {
 import {
   createAuthorityIssuer,
   digestCanonicalJson,
+  KafError,
   type JsonValue,
   type RunCommandTransaction,
   type ToolExecutionContext,
@@ -584,6 +585,43 @@ describe("local runtime", () => {
     ).rejects.toMatchObject({ code: "KAF_AUTHORIZATION_BINDING_MISMATCH" });
   });
 
+  it("retains a background infrastructure failure until wait observes it", async () => {
+    const agent = defineAgent({
+      id: "wait-failure-agent",
+      version: "0.1.0",
+      description: "Local wait failure fixture",
+      input: inputSchema,
+      instructions: defineInstructions({ text: "Fail at the configured host boundary." }),
+      model: modelDefinition(() => {
+        throw new KafError("KAF_RUNTIME_NOT_READY", {
+          details: { reason: "fixture_runtime_unavailable" },
+        });
+      }),
+      output: outputSchema,
+    });
+    const local = createLocalAuthorityIssuer();
+    const authority = local.issue({
+      principal: { type: "user", id: "local-user" },
+      tenant: { id: "local" },
+    });
+    const runtime = createLocalRuntime({ agents: [agent], authorityIssuer: local.issuer });
+    const request = requestFor({ id: agent.id, version: agent.version });
+    const started = await runtime.start(
+      authority,
+      agent,
+      request,
+      createCommandContext({
+        commandId: createCommandId(),
+        operation: "run.start",
+        payload: request,
+      }),
+    );
+    await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+    await expect(runtime.wait(authority, started.runId)).rejects.toMatchObject({
+      code: "KAF_RUNTIME_NOT_READY",
+    });
+  });
+
   it("fails closed for unknown purpose, required network isolation, and invalid authority options", async () => {
     const tool = defineTool({
       id: "fixture.enforced@1",
@@ -806,7 +844,7 @@ describe("local runtime", () => {
 
   it.each([
     ["deny", "failed"],
-    ["require_approval", "failed"],
+    ["require_approval", "waiting_for_approval"],
   ] as const)(
     "applies the %s policy decision outside model authority",
     async (decision, status) => {
@@ -933,18 +971,37 @@ describe("explicit production composition", () => {
       transactionDomains: ["fixture"],
     };
     const issuer = createAuthorityIssuer("production-fixture");
+    const productionAgent = defineAgent({
+      id: "production-fixture-agent",
+      version: "1.0.0",
+      input: inputSchema,
+      instructions: defineInstructions({ text: "Produce a bounded production result." }),
+      model: modelDefinition(
+        () => ({ type: "final", value: { title: "Result", body: "bounded" } }),
+        "host_bound",
+      ),
+      output: outputSchema,
+    });
     const transaction = {} as RunCommandTransaction;
+    const transactCommand = vi.fn(() => Promise.reject(new Error("production kernel reached")));
     const unitOfWork: CreateRuntimeInput["runCommandUnitOfWork"] = {
       transactionDomain: "fixture",
       atomicCommandAndWakeup: false,
-      transactCommand: () => Promise.reject(new Error("not reached")),
+      transactCommand,
       transactTransition: (_key, callback) => callback(transaction),
     };
     const config: CreateRuntimeInput = {
       authorityIssuer: issuer,
       agentRegistry: {
         register: () => Promise.resolve(),
-        resolve: () => Promise.resolve(undefined),
+        resolve: (id, version, digest) =>
+          Promise.resolve(
+            id === productionAgent.id &&
+              version === productionAgent.version &&
+              digest === productionAgent.agentDefinitionDigest
+              ? productionAgent
+              : undefined,
+          ),
       },
       purposeRegistry: { version: "general@1", has: () => true },
       acceptedWorkOrderStore: {
@@ -1020,10 +1077,6 @@ describe("explicit production composition", () => {
         networkPolicy: "enforced",
         execute: () => Promise.reject(new Error("not reached")),
       },
-      egressBroker: {
-        capabilities: durable,
-        bind: () => ({ fetch: () => Promise.reject(new Error("not reached")) }),
-      },
       verifierRegistry: {
         has: () => false,
         verify: () => Promise.reject(new Error("not reached")),
@@ -1057,6 +1110,7 @@ describe("explicit production composition", () => {
     expect(runtime.getCapabilities()).toMatchObject({
       executionProfile: "durable",
       networkPolicy: "enforced",
+      toolCredentials: false,
     });
     expect(runtime.evaluateReadiness({ profile: "production" })).toMatchObject({
       ready: false,
@@ -1076,7 +1130,58 @@ describe("explicit production composition", () => {
       createRuntime({ ...config, productionModelServices }).evaluateReadiness({
         profile: "production",
       }),
+    ).toMatchObject({
+      ready: false,
+      capabilities: { modelCredentials: true, toolCredentials: false },
+    });
+    expect(
+      createRuntime({
+        ...config,
+        productionModelServices,
+        requiredRuntimeCapabilities: ["model_credentials"],
+      }).evaluateReadiness({ profile: "production" }),
     ).toMatchObject({ ready: true, capabilities: { modelCredentials: true } });
+
+    const validAuthority = issuer.issue({
+      actor: { type: "user", id: "production-user" },
+      tenant: { id: "local" },
+      authenticatedAt: "2026-08-03T12:00:00.000Z",
+      authenticationStrength: "multi_factor",
+      decisionRoles: ["owner"],
+      requestCorrelationId: "production-request",
+      issuedAt: "2026-08-03T11:00:00.000Z",
+      expiresAt: "2026-08-03T13:00:00.000Z",
+    });
+    const validRequest = requestFor({ id: productionAgent.id, version: productionAgent.version });
+    const invalidRequest = { ...validRequest, input: { topic: "" } };
+    await expect(
+      runtime.start(
+        validAuthority,
+        productionAgent,
+        invalidRequest,
+        createCommandContext({
+          commandId: "kafcmd_1785758400000_11111111111111111111111111111111",
+          operation: "run.start",
+          payload: invalidRequest,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "KAF_SCHEMA_INVALID" });
+    expect(transactCommand).not.toHaveBeenCalled();
+
+    await expect(
+      runtime.start(
+        validAuthority,
+        productionAgent,
+        validRequest,
+        createCommandContext({
+          commandId: "kafcmd_1785758400000_12121212121212121212121212121212",
+          operation: "run.start",
+          payload: validRequest,
+        }),
+      ),
+    ).rejects.toThrow("production kernel reached");
+    expect(transactCommand).toHaveBeenCalledOnce();
+
     const invalidAuthority = {} as never;
     const command = createCommandContext({
       commandId: createCommandId(),
@@ -1461,7 +1566,7 @@ describe("facade write tools", () => {
         security: { requiredScopes: ["records:write"], riskClass: "R3" },
         operation,
       }),
-    ).toThrow(/risk class R2 only/u);
+    ).toThrow(/R3 compensation/u);
     expect(() =>
       defineTool({
         id: "records.update@1",
@@ -1513,6 +1618,225 @@ describe("facade write tools", () => {
       ]),
     );
     expect(result.evidence).toBeDefined();
+    vi.unstubAllGlobals();
+  });
+
+  it("issues, approves, atomically claims, and resumes one R4 local write", async () => {
+    const fetch = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    vi.stubGlobal("fetch", fetch);
+    const writes: string[] = [];
+    let siblingEgressDenied = false;
+    const purchase = defineTool({
+      id: "purchase.submit@1",
+      description: "Submit one exact fixture purchase.",
+      input: writeInput,
+      output: writeOutput,
+      security: {
+        requiredScopes: ["purchase:submit"],
+        riskClass: "R4",
+        egress: {
+          mode: "allowlist",
+          destinations: ["https://purchase-a.invalid"],
+          methods: ["POST"],
+          credentialSlots: [],
+        },
+      },
+      operation: {
+        kind: "write",
+        reversibility: "irreversible",
+        materialConsequence: "Charges one fixture purchase amount.",
+        approvalPreview: ({ key, value }) => ({
+          title: "Approve fixture purchase",
+          summary: `Submit ${key} for ${value}.`,
+          fields: [
+            { label: "Order", value: key },
+            { label: "Amount", value },
+          ],
+        }),
+        async execute({ key, value }, context) {
+          try {
+            await context.egress.fetch("https://sibling-b.invalid/borrowed", { method: "GET" });
+          } catch (error) {
+            if (!(error instanceof TypeError) || error.message !== "KAF_EGRESS_DENIED") throw error;
+            siblingEgressDenied = true;
+          }
+          await context.egress.fetch("https://purchase-a.invalid/submit", { method: "POST" });
+          writes.push(`${key}:${value}`);
+          return { key, stored: true };
+        },
+      },
+    });
+    const siblingLookup = defineTool({
+      id: "sibling.lookup@1",
+      description: "Sibling with an unrelated read-only egress declaration.",
+      input: z.object({ key: z.string() }).strict(),
+      output: z.object({ found: z.boolean() }).strict(),
+      security: {
+        requiredScopes: ["sibling:read"],
+        riskClass: "R1",
+        egress: {
+          mode: "allowlist",
+          destinations: ["https://sibling-b.invalid"],
+          methods: ["GET"],
+          credentialSlots: [],
+        },
+      },
+      operation: { kind: "read", execute: () => Promise.resolve({ found: false }) },
+    });
+    const agent = defineAgent({
+      id: "approval-write-agent",
+      version: "0.1.0",
+      input: z.object({ key: z.string().min(1) }).strict(),
+      instructions: "Request approval, submit the purchase, then summarize.",
+      model: modelDefinition((invocation) =>
+        invocation === 1
+          ? {
+              type: "tool_call",
+              value: {
+                toolRegistrationDigest: purchase.registration.toolRegistrationDigest,
+                input: { key: "order-1", value: "2500-USD" },
+                targetDigest: digestCanonicalJson({ ignored: "model target is not authority" }),
+              },
+            }
+          : { type: "final", value: { title: "Approved", body: "order-1" } },
+      ),
+      tools: { purchase, siblingLookup },
+      policy: definePolicy({
+        id: "approval-write-agent.policy",
+        implementationVersion: "1.0.0",
+        default: "deny",
+        rules: [{ riskClass: "R4", decision: "require_approval" }],
+      }),
+      output: z.object({ title: z.string(), body: z.string() }).strict(),
+    });
+    const local = createLocalAuthorityIssuer();
+    const authority = local.issue({
+      principal: { type: "user", id: "approver-1" },
+      tenant: { id: "local" },
+      authenticationStrength: "phishing_resistant",
+    });
+    const runtime = createLocalRuntime({ agents: [agent], authorityIssuer: local.issuer });
+    expect(runtime.getCapabilities().humanDecisions).toBe(true);
+    expect(
+      runtime
+        .evaluateReadiness({ profile: "preview" })
+        .checks.find((check) => check.requiredCapability === "human_decisions"),
+    ).toMatchObject({ status: "pass" });
+    const request = createWorkOrderRequest({
+      agent: { id: agent.id, version: agent.version },
+      goal: "Submit one approved fixture purchase",
+      input: { key: "order-1" },
+      context: { roleFamily: "purchasing", workflowId: "fixture", riskClass: "high" },
+      workMode: "assist",
+      autonomyMode: "assist",
+      decisionOwner: { mode: "requesting_principal" },
+      purpose: { code: "service_delivery", registryVersion: "general@1" },
+      dataClass: "public",
+      retention: { mode: "session" },
+      requestedCapabilities: ["purchase:submit"],
+      resourceScopeCeiling: [
+        { kind: "tenant", value: "local", normalizationVersion: "pactmark.policy-normalization@1" },
+      ],
+      budget: {
+        maxTurns: 4,
+        maxModelCalls: 4,
+        maxToolCalls: 2,
+        maxActiveExecutionMs: 30_000,
+      },
+    });
+    const started = await runtime.start(
+      authority,
+      agent,
+      request,
+      createCommandContext({
+        commandId: createCommandId(),
+        operation: "run.start",
+        payload: request,
+      }),
+    );
+    await expect(runtime.wait(authority, started.runId)).resolves.toMatchObject({
+      status: "waiting_for_approval",
+    });
+    expect(writes).toEqual([]);
+    const waiting = await runtime.getRun(authority, started.runId);
+    const decisionId = waiting.waitingDecisionId;
+    if (decisionId === null) throw new Error("decision id missing");
+    const decisionScopes = [
+      { kind: "run" as const, value: started.runId, normalizationVersion: "pactmark.command@1" },
+      { kind: "opaque" as const, value: decisionId, normalizationVersion: "pactmark.command@1" },
+    ];
+    const challenge = await runtime.issueDecisionChallenge(
+      authority,
+      started.runId,
+      decisionId,
+      createCommandContext({
+        commandId: createCommandId(),
+        operation: "run.issue_decision_challenge",
+        payload: {},
+        normalizedResourceScope: decisionScopes,
+      }),
+    );
+    const submission = {
+      decision: "approve" as const,
+      decisionId,
+      challengeProof: challenge.challengeProof,
+    };
+    const approved = await runtime.approve(
+      authority,
+      started.runId,
+      submission,
+      createCommandContext({
+        commandId: createCommandId(),
+        operation: "run.approve",
+        payload: submission,
+        normalizedResourceScope: decisionScopes,
+      }),
+    );
+    expect(approved.automaticResume).toBe(false);
+    const resumed = await runtime.resume(
+      authority,
+      started.runId,
+      createCommandContext({
+        commandId: createCommandId(),
+        operation: "run.resume",
+        payload: { runId: started.runId },
+      }),
+    );
+    expect(resumed).toMatchObject({ status: "completed" });
+    expect(writes).toEqual(["order-1:2500-USD"]);
+    expect(siblingEgressDenied).toBe(true);
+    expect(fetch).toHaveBeenCalledOnce();
+    const dispatchedRequest = fetch.mock.calls[0]?.[0];
+    expect(dispatchedRequest).toBeInstanceOf(Request);
+    expect((dispatchedRequest as Request).url).toBe("https://purchase-a.invalid/submit");
+    expect((dispatchedRequest as Request).method).toBe("POST");
+    const events = [];
+    for await (const event of runtime.events(authority, started.runId)) events.push(event);
+    expect(events.find((event) => event.eventType === "ApprovalRequested")?.payload).toMatchObject({
+      approvalDisplay: {
+        title: "Approve fixture purchase",
+        summary: "Submit order-1 for 2500-USD.",
+        materialConsequence: "Charges one fixture purchase amount.",
+        reversibility: "irreversible",
+        fields: [
+          { label: "Order", value: "order-1" },
+          { label: "Amount", value: "2500-USD" },
+        ],
+      },
+    });
+    expect(events.map((event) => event.eventType)).toEqual(
+      expect.arrayContaining([
+        "ApprovalRequested",
+        "ApprovalRecorded",
+        "EffectPrepared",
+        "EffectAcknowledged",
+        "RunCompleted",
+      ]),
+    );
+    expect(
+      JSON.stringify(events).includes(challenge.challengeProof),
+      "raw challenge proof must remain process-local",
+    ).toBe(false);
     vi.unstubAllGlobals();
   });
 

@@ -1,3 +1,6 @@
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import { createLocalRuntime } from "@pactmark/agent";
@@ -37,5 +40,24 @@ describe("quickstart agents", () => {
     expect(result.events.map((event) => event.eventType)).toEqual(
       expect.arrayContaining(["EffectPrepared", "EffectDispatched", "EffectAcknowledged"]),
     );
+  });
+
+  it("keeps the real-provider smoke explicitly opt-in", () => {
+    const script = fileURLToPath(new URL("../src/live-provider-smoke.ts", import.meta.url));
+    const environment = { ...process.env };
+    delete environment["PACTMARK_ENABLE_LIVE_PROVIDER"];
+    delete environment["PACTMARK_LIVE_PROVIDER_MODULE"];
+    delete environment["PACTMARK_LIVE_PROVIDER_EXPORT"];
+    delete environment["PACTMARK_LIVE_MODEL_ID"];
+    const result = spawnSync(process.execPath, ["--import", "tsx", script], {
+      encoding: "utf8",
+      env: environment,
+    });
+    expect(result.status).toBe(1);
+    expect(JSON.parse(result.stderr)).toEqual({
+      schemaVersion: "1",
+      code: "KAF_LIVE_PROVIDER_OPT_IN_REQUIRED",
+    });
+    expect(result.stdout).toBe("");
   });
 });

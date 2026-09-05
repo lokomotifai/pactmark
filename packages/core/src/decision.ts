@@ -5,6 +5,7 @@ import type { AuthorityContext } from "./authority.js";
 import { AuthenticationStrengthSchema, PrincipalSchema, TenantSchema } from "./authority.js";
 import type { CommandContext } from "./commands.js";
 import { DigestSchema, JsonValueSchema } from "./serialization.js";
+import { ApprovalPreviewDisplaySchema } from "./tool.js";
 import { PurposeSchema } from "./work-order.js";
 
 export const ProposedEffectBindingSchema = z
@@ -95,6 +96,7 @@ export const DecisionPreviewReferenceSchema = z
     schemaVersion: z.literal("1"),
     previewDigest: DigestSchema,
     contentDigest: DigestSchema.optional(),
+    approvalDisplay: ApprovalPreviewDisplaySchema.optional(),
   })
   .strict();
 export type DecisionPreviewReference = z.infer<typeof DecisionPreviewReferenceSchema>;
@@ -202,7 +204,12 @@ export interface DecisionStore {
     runId: string,
     decisionId: string,
   ): Promise<DecisionSubmissionChallenge | undefined>;
-  consumeChallenge(challengeId: string, commandId: string, consumedAt: string): Promise<void>;
+  consumeChallenge(
+    tenantId: string,
+    challengeId: string,
+    commandId: string,
+    consumedAt: string,
+  ): Promise<void>;
   putApproval(approval: Approval): Promise<void>;
   getApproval(tenantId: string, approvalId: string): Promise<Approval | undefined>;
   putRejection(rejection: DecisionRejection): Promise<void>;

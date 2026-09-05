@@ -4,7 +4,7 @@ import {
   EffectExecutionResultSchema,
   EffectPreviewSchema,
   EffectRecordSchema,
-  WorkBudgetSchema,
+  RuntimeCompensationRequestSchema,
   canonicalJsonStringify,
   digestCanonicalJson,
   KafError,
@@ -24,14 +24,8 @@ import {
 } from "@pactmark/core";
 import { z } from "zod";
 
-export const RuntimeCompensationRequestSchema = z
-  .object({
-    schemaVersion: z.literal("1"),
-    reason: z.string().trim().min(1).max(512),
-    budget: WorkBudgetSchema,
-  })
-  .strict();
-export type RuntimeCompensationRequest = z.infer<typeof RuntimeCompensationRequestSchema>;
+export { RuntimeCompensationRequestSchema };
+export type { RuntimeCompensationRequest } from "@pactmark/core";
 
 export interface RuntimeEffectStore {
   getByEffectId(
@@ -68,6 +62,13 @@ type RuntimeEffectStrategyBase = Readonly<{
   validateOutput(result: unknown): JsonValue;
 }>;
 
+const RuntimeEffectLookupResultSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("applied"), execution: EffectExecutionResultSchema }).strict(),
+  z.object({ status: z.literal("not_applied") }).strict(),
+  z.object({ status: z.literal("unknown") }).strict(),
+]);
+export type RuntimeEffectLookupResult = z.infer<typeof RuntimeEffectLookupResultSchema>;
+
 export type RuntimeExecutableEffectStrategy =
   | (RuntimeEffectStrategyBase &
       Readonly<{
@@ -86,11 +87,7 @@ export type RuntimeExecutableEffectStrategy =
         lookup(
           operationKey: string,
           context: RuntimeEffectDispatchContext,
-        ): Promise<
-          | Readonly<{ status: "applied"; execution: EffectExecutionResult }>
-          | Readonly<{ status: "not_applied" }>
-          | Readonly<{ status: "unknown" }>
-        >;
+        ): Promise<RuntimeEffectLookupResult>;
         dispatch(
           input: JsonValue,
           operationKey: string,
@@ -108,6 +105,17 @@ export type RuntimeExecutableEffectStrategy =
 
 export interface RuntimeEffectStrategyRegistry {
   resolve(toolRegistrationDigest: string): RuntimeExecutableEffectStrategy | undefined;
+}
+
+export function validateEffectLookupResult(input: unknown): RuntimeEffectLookupResult {
+  const result = RuntimeEffectLookupResultSchema.safeParse(input);
+  if (!result.success) {
+    throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+      details: { reason: "effect_lookup_result_invalid" },
+      internalCause: result.error,
+    });
+  }
+  return result.data;
 }
 
 export type RuntimeEffectOperationBinding = Readonly<{
@@ -128,6 +136,8 @@ export type RuntimeEffectAuthorizationRequest = Readonly<{
   normalizedTargetDigest: Digest;
   authorizationKey: string;
   policyRegistrationDigest: Digest;
+  /** Exact runtime-recorded approval authorizing this effect, when required. */
+  approvalId?: string;
 }>;
 
 /** Resolves host-owned authority metadata; durable claims are made by the runtime UoW. */
@@ -273,6 +283,24 @@ export async function validateEffectPreview(input: {
     contentDigest: preview.contentDigest,
     reversibility: preview.reversibility,
     materialConsequence: preview.materialConsequence,
+    ...(preview.approvalDisplay === undefined
+      ? {}
+      : {
+          approvalDisplay: {
+            title: preview.approvalDisplay.title,
+            summary: preview.approvalDisplay.summary,
+            materialConsequence: preview.approvalDisplay.materialConsequence,
+            reversibility: preview.approvalDisplay.reversibility,
+            ...(preview.approvalDisplay.fields === undefined
+              ? {}
+              : {
+                  fields: preview.approvalDisplay.fields.map(({ label, value }) => ({
+                    label,
+                    value,
+                  })),
+                }),
+          },
+        }),
     ...(preview.diffDigest === undefined ? {} : { diffDigest: preview.diffDigest }),
   });
   if (
@@ -310,6 +338,7 @@ export function validateAuthorizationReservation(input: {
     toolVersion: input.request.registration.implementationVersion,
     toolRegistrationDigest: input.request.registration.toolRegistrationDigest,
     policyRegistrationDigest: input.request.policyRegistrationDigest,
+    ...(input.request.approvalId === undefined ? {} : { approvalId: input.request.approvalId }),
     argumentsDigest: input.request.argumentsDigest,
     normalizedTargetDigest: input.request.normalizedTargetDigest,
     purposeCode: input.request.workOrder.purpose.code,
@@ -330,6 +359,7 @@ export function validateAuthorizationReservation(input: {
     toolVersion: reservation.toolVersion,
     toolRegistrationDigest: reservation.toolRegistrationDigest,
     policyRegistrationDigest: reservation.policyRegistrationDigest,
+    ...(reservation.approvalId === undefined ? {} : { approvalId: reservation.approvalId }),
     argumentsDigest: reservation.argumentsDigest,
     normalizedTargetDigest: reservation.normalizedTargetDigest,
     purposeCode: reservation.purposeCode,
@@ -340,6 +370,7 @@ export function validateAuthorizationReservation(input: {
     canonicalJsonStringify(actual) !== canonicalJsonStringify(expected) ||
     Date.parse(reservation.createdAt) > Date.parse(input.now) ||
     Date.parse(reservation.expiresAt) <= Date.parse(input.now) ||
+    reservation.consumedAt !== undefined ||
     reservation.secretRefIds.length > 0
   ) {
     throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
@@ -354,6 +385,28 @@ export function validateAuthorizationReservation(input: {
   return reservation;
 }
 
+export function markAuthorizationReservationConsumed(input: {
+  readonly reservation: AuthorizationReservation;
+  readonly consumedAt: string;
+}): AuthorizationReservation {
+  const reservation = AuthorizationReservationSchema.parse(input.reservation);
+  if (
+    reservation.state !== "reserved" ||
+    reservation.consumedAt !== undefined ||
+    Date.parse(input.consumedAt) < Date.parse(reservation.createdAt) ||
+    Date.parse(input.consumedAt) >= Date.parse(reservation.expiresAt)
+  ) {
+    throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+      details: { reason: "effect_authorization_reservation_not_consumable" },
+    });
+  }
+  return AuthorizationReservationSchema.parse({
+    ...reservation,
+    state: "consumed",
+    consumedAt: input.consumedAt,
+  });
+}
+
 export function assertEffectRecordBinding(
   recordInput: EffectRecord,
   expected: Readonly<{
@@ -361,6 +414,8 @@ export function assertEffectRecordBinding(
     runId: string;
     effectKey: string;
     toolRegistrationDigest: Digest;
+    strategy: EffectRecord["strategy"];
+    strategyRegistrationDigest: Digest;
     argumentsDigest: Digest;
     normalizedTargetDigest: Digest;
   }>,
@@ -371,6 +426,8 @@ export function assertEffectRecordBinding(
     runId: record.runId,
     effectKey: record.effectKey,
     toolRegistrationDigest: record.toolRegistrationDigest,
+    strategy: record.strategy,
+    strategyRegistrationDigest: record.strategyRegistrationDigest,
     argumentsDigest: record.argumentsDigest,
     normalizedTargetDigest: record.normalizedTargetDigest,
   };

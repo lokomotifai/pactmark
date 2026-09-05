@@ -3,6 +3,7 @@ import {
   RunDelegationDescriptorSchema,
   RunLeaseSchema,
   RuntimeCapabilitiesSchema,
+  canonicalJsonStringify,
   createAuthorityIssuer,
   type AuthorityContext,
   type AuthorityIssuer,
@@ -46,7 +47,8 @@ export function createWorkerDelegatingAuthorityIssuer(
   const issued = new WeakMap<object, DelegatedState>();
   const leases = new Map<string, Readonly<{ leaseId: string; fencingToken: number }>>();
   const invalidReceipts = new Set<string>();
-  const leaseKey = (tenantId: string, runId: string): string => `${tenantId}\u0000${runId}`;
+  const leaseKey = (tenantId: string, runId: string): string =>
+    canonicalJsonStringify([tenantId, runId]);
   const issue: AuthorityIssuer["issue"] = (claims) => base.issue(claims);
   const verify: AuthorityIssuer["verify"] = (authority, at) => base.verify(authority, at);
 
@@ -84,7 +86,10 @@ export function createWorkerDelegatingAuthorityIssuer(
         subject: descriptor.initiatingPrincipal,
         tenant: descriptor.tenant,
         authenticatedAt: descriptor.issuedAt,
-        authenticationStrength: "phishing_resistant",
+        // The lease and scheduler receipt authenticate this worker invocation,
+        // not the initiating human. Never manufacture a stronger human-auth
+        // claim from durable scheduling metadata.
+        authenticationStrength: "single_factor",
         decisionRoles: [],
         requestCorrelationId: descriptor.schedulerReceiptId,
         issuedAt: descriptor.issuedAt,

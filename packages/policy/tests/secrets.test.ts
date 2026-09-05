@@ -146,4 +146,25 @@ describe("one-use SecretRef boundary", () => {
       service.store.revoke("tenant-2", ref.refId, "2026-08-03T10:01:00.000Z"),
     ).rejects.toBeInstanceOf(SecretBoundaryError);
   });
+
+  it("isolates equal ref IDs, use budgets, and delimiter-colliding store keys by tenant", async () => {
+    const service = boundary();
+    const tenantARef = await service.issuer.issue(issueRequest());
+    const tenantBRef = await service.issuer.issue(issueRequest({ tenantId: "tenant-2" }));
+    await service.store.putImmutable(tenantARef);
+    await service.store.putImmutable(tenantBRef);
+    await expect(service.resolver.resolve(tenantARef, resolutionBinding())).resolves.toBeDefined();
+    await expect(
+      service.resolver.resolve(tenantBRef, resolutionBinding({ tenantId: "tenant-2" })),
+    ).resolves.toBeDefined();
+
+    const delimiterA = { ...tenantARef, tenantId: "a:b", refId: "c" };
+    const delimiterB = { ...tenantARef, tenantId: "a", refId: "b:c" };
+    await service.store.putImmutable(delimiterA);
+    await service.store.putImmutable(delimiterB);
+    await expect(service.store.get("a:b", "c")).resolves.toEqual(delimiterA);
+    await expect(service.store.get("a", "b:c")).resolves.toEqual(delimiterB);
+    await service.store.revoke("a:b", "c", "2026-08-03T10:01:00.000Z");
+    await expect(service.store.get("a", "b:c")).resolves.toEqual(delimiterB);
+  });
 });

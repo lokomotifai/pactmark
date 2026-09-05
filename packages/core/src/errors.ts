@@ -73,6 +73,12 @@ export const KAF_ERROR_REGISTRY = {
     message: "The registered agent definition does not match the accepted run.",
     documentationSlug: "runtime-agent-definition-mismatch",
   },
+  KAF_RUNTIME_MODEL_EMPTY: {
+    retryable: false,
+    httpStatus: 422,
+    message: "The model completed without a runtime emission.",
+    documentationSlug: "runtime-model-empty",
+  },
   KAF_EFFECT_INVALID_TRANSITION: {
     retryable: false,
     httpStatus: 409,
@@ -156,6 +162,12 @@ export const KAF_ERROR_REGISTRY = {
     httpStatus: 409,
     message: "The model adapter does not match the registered model profile.",
     documentationSlug: "model-adapter-mismatch",
+  },
+  KAF_TOOL_EXECUTION_FAILED: {
+    retryable: false,
+    httpStatus: 422,
+    message: "The registered tool execution failed.",
+    documentationSlug: "tool-execution-failed",
   },
   KAF_VERIFICATION_REQUIRED: {
     retryable: false,

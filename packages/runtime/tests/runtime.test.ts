@@ -6,14 +6,17 @@ import {
   defineModelSecurityProfile,
   digestBytes,
   digestCanonicalJson,
+  EvidenceRecordSchema,
   KafError,
   ModelCredentialRefSchema,
   ResolvedModelCredential,
+  VerificationResultSchema,
   protectedEffectResultAad,
   type AcceptedWorkOrder,
   type AgentDefinition,
   type Artifact,
   type AuthorityContext,
+  type AuthorizationReservation,
   type CommandContext,
   type CommandRecord,
   type CommandScope,
@@ -92,6 +95,7 @@ class MemoryCommandUnitOfWork implements RunCommandUnitOfWork {
   readonly transactionDomain = "memory.process-local";
   readonly atomicCommandAndWakeup: boolean;
   readonly enqueuedWakeups: unknown[] = [];
+  readonly authorizationReservations = new Map<string, AuthorizationReservation>();
   readonly effectRecords = new Map<string, EffectRecord>();
   readonly effectResults = new Map<string, ProtectedEffectResultRecord>();
   readonly #commands = new Map<
@@ -162,22 +166,39 @@ class MemoryCommandUnitOfWork implements RunCommandUnitOfWork {
       putDecisionChallenge: (
         challenge: Parameters<RunCommandTransaction["putDecisionChallenge"]>[0],
       ) => stores.decisionStore.putChallenge(challenge),
-      consumeDecisionChallenge: (challengeId: string, commandId: string, consumedAt: string) =>
-        stores.decisionStore.consumeChallenge(challengeId, commandId, consumedAt),
+      consumeDecisionChallenge: (
+        tenantId: string,
+        challengeId: string,
+        commandId: string,
+        consumedAt: string,
+      ) => stores.decisionStore.consumeChallenge(tenantId, challengeId, commandId, consumedAt),
       putApproval: (approval: Parameters<RunCommandTransaction["putApproval"]>[0]) =>
         stores.decisionStore.putApproval(approval),
       putDecisionRejection: (
         rejection: Parameters<RunCommandTransaction["putDecisionRejection"]>[0],
       ) => stores.decisionStore.putRejection(rejection),
-      reserveCapabilityGrantUse: async (grantId: string, authorizationKey: string, at: string) => {
+      reserveCapabilityGrantUse: async (
+        _tenantId: string,
+        grantId: string,
+        authorizationKey: string,
+        at: string,
+      ) => {
         await Promise.resolve();
         return { schemaVersion: "1", grantId, authorizationKey, useNumber: 1, claimedAt: at };
       },
-      claimApproval: async (approvalId: string, authorizationKey: string, at: string) => {
+      claimApproval: async (
+        _tenantId: string,
+        approvalId: string,
+        authorizationKey: string,
+        at: string,
+      ) => {
         await Promise.resolve();
         return { schemaVersion: "1", approvalId, authorizationKey, claimedAt: at };
       },
-      putAuthorizationReservation: () => Promise.resolve(),
+      putAuthorizationReservation: async (reservation: AuthorizationReservation) => {
+        await Promise.resolve();
+        this.authorizationReservations.set(reservation.authorizationReservationId, reservation);
+      },
       putEffectRecord: async (record: EffectRecord) => {
         await Promise.resolve();
         this.effectRecords.set(record.effectId, record);
@@ -358,6 +379,8 @@ function productionModelServicesFixture(
     repeatResolution?: boolean;
     emptyEmission?: boolean;
     trustedUsage?: boolean;
+    classifierResult?: unknown;
+    classifierThrows?: boolean;
     transformRef?: (ref: ModelCredentialRef) => unknown;
     onIssue?: (request: ModelCredentialIssueRequest) => Promise<void>;
   }> = {},
@@ -486,6 +509,16 @@ function productionModelServicesFixture(
                 if (options.emptyEmission) return;
                 yield { type: "final", value: { title: "Sealed", body: "Bound" } };
               },
+              ...(options.classifierResult === undefined && options.classifierThrows !== true
+                ? {}
+                : {
+                    classifyError: () => {
+                      if (options.classifierThrows === true) {
+                        throw new Error("secret-production-classifier-failure");
+                      }
+                      return options.classifierResult as never;
+                    },
+                  }),
               ...(options.trustedUsage === false
                 ? {}
                 : { trustedUsage: () => ({ inputTokens: 12, outputTokens: 3 }) }),
@@ -569,12 +602,15 @@ const request = {
 interface FixtureOptions {
   readonly policyDecision?: "deny" | "allow_with_grant" | "require_approval";
   readonly policyDecisionSequence?: readonly ("deny" | "allow_with_grant" | "require_approval")[];
+  readonly policyResult?: unknown;
   readonly policyTargetDigest?: string;
   readonly modelEmission?: (invocation: number, signal: AbortSignal, input?: JsonValue) => unknown;
   readonly toolRegistration?: ToolRegistrationContract | null;
   readonly toolResult?: JsonValue;
   readonly verifierAvailable?: boolean;
   readonly verificationStatus?: VerificationResult["status"];
+  readonly verifierResult?: unknown;
+  readonly evidenceResult?: unknown;
   readonly resolveDefinition?: boolean;
   readonly monotonicMilliseconds?: () => number;
   readonly wakeupScheduler?: WakeupScheduler;
@@ -622,15 +658,17 @@ interface FixtureOptions {
   readonly activeExecutionServices?: RuntimeKernelConfig["activeExecutionServices"];
   readonly modelErrorClassification?:
     "aborted" | "timed_out" | "retryable" | "non_retryable" | "uncertain";
+  readonly modelClassifierThrows?: boolean;
   readonly toolErrorClassification?:
     "aborted" | "timed_out" | "retryable" | "non_retryable" | "uncertain";
   readonly toolExecution?: (invocation: number, signal: AbortSignal) => Promise<JsonValue>;
+  readonly generateId?: (kind: string) => string;
 }
 
 function fixture(options: FixtureOptions = {}) {
   const registeredAgentDefinition = options.agentDefinition ?? definition;
   let id = 0;
-  const ids = { generate: (kind: string) => `${kind}-${String(++id)}` };
+  const ids = { generate: options.generateId ?? ((kind: string) => `${kind}-${String(++id)}`) };
   const clock = {
     now: options.clockNow ?? (() => now),
     monotonicMilliseconds: options.monotonicMilliseconds ?? (() => id),
@@ -743,7 +781,7 @@ function fixture(options: FixtureOptions = {}) {
           type: "user" as const,
           id: options.approvalBindingMismatch ? "user-2" : "user-1",
         },
-        authenticationStrength: "multi_factor" as const,
+        authenticationStrength: options.authenticationStrength ?? "multi_factor",
         createdAt: clock.now(),
         expiresAt: new Date(Date.parse(clock.now()) + 300_000).toISOString(),
         maximumUses: 1 as const,
@@ -833,6 +871,9 @@ function fixture(options: FixtureOptions = {}) {
                 argumentsDigest: effectRequest.argumentsDigest,
                 normalizedTargetDigest: effectRequest.normalizedTargetDigest,
                 grantId: "grant-effect",
+                ...(effectRequest.approvalId === undefined
+                  ? {}
+                  : { approvalId: effectRequest.approvalId }),
                 secretRefIds: [],
                 purposeCode: effectRequest.workOrder.purpose.code,
                 purposeRegistryVersion: effectRequest.workOrder.purpose.registryVersion,
@@ -847,31 +888,36 @@ function fixture(options: FixtureOptions = {}) {
   const verifyArtifact = vi.fn(
     async (_id: string, artifact: Artifact): Promise<VerificationResult> => {
       await Promise.resolve();
-      return {
+      if (options.verifierResult !== undefined) return options.verifierResult as never;
+      const findings =
+        options.verificationStatus === "fail"
+          ? [
+              {
+                schemaVersion: "1" as const,
+                code: "fixture_verification_failed",
+                severity: "error" as const,
+                safeMessage: "Fixture verification failed.",
+              },
+            ]
+          : [];
+      const material = {
         schemaVersion: "1",
         status: options.verificationStatus ?? "pass",
         verificationId: "verification-1",
-        verificationDigest: d("f"),
         verifierId: d("7"),
         verifierVersion: "1",
         verifierRegistrationDigest: d("7"),
         method: "deterministic",
         artifactDigest: artifact.artifactDigest,
-        findings:
-          options.verificationStatus === "fail"
-            ? [
-                {
-                  schemaVersion: "1",
-                  code: "fixture_verification_failed",
-                  severity: "error",
-                  safeMessage: "Fixture verification failed.",
-                },
-              ]
-            : [],
+        findings,
         rubricVersion: "1",
         rubricDigest: d("1"),
         verifiedAt: now,
       };
+      return VerificationResultSchema.parse({
+        ...material,
+        verificationDigest: digestCanonicalJson(material),
+      });
     },
   );
   const agentRegistry = {
@@ -910,7 +956,12 @@ function fixture(options: FixtureOptions = {}) {
           decisionPreviewer: {
             async preview() {
               await Promise.resolve();
-              return { schemaVersion: "1" as const, previewDigest: d("a") };
+              const preview = options.effectStrategy === undefined ? undefined : effectPreview();
+              return {
+                schemaVersion: "1" as const,
+                previewDigest: preview?.previewDigest ?? d("a"),
+                ...(preview === undefined ? {} : { contentDigest: preview.contentDigest }),
+              };
             },
           },
         }),
@@ -956,9 +1007,16 @@ function fixture(options: FixtureOptions = {}) {
       : { compensationServices: options.compensationServices }),
     modelDriver: {
       capabilities: caps,
-      ...(options.modelErrorClassification === undefined
+      ...(options.modelErrorClassification === undefined && options.modelClassifierThrows !== true
         ? {}
-        : { classifyError: () => options.modelErrorClassification! }),
+        : {
+            classifyError: () => {
+              if (options.modelClassifierThrows === true) {
+                throw new Error("secret-classifier-failure");
+              }
+              return options.modelErrorClassification!;
+            },
+          }),
       async *invoke({ input, signal }) {
         await Promise.resolve();
         modelInvocation += 1;
@@ -1010,6 +1068,7 @@ function fixture(options: FixtureOptions = {}) {
     policyEngine: {
       async evaluate(input) {
         await Promise.resolve();
+        if (options.policyResult !== undefined) return options.policyResult as never;
         const sequence = options.policyDecisionSequence;
         const sequencedDecision =
           sequence === undefined || sequence.length === 0
@@ -1047,12 +1106,89 @@ function fixture(options: FixtureOptions = {}) {
     evidenceBuilder: {
       async build(input) {
         await Promise.resolve();
-        const evidenceDigest = digestCanonicalJson(input);
-        evidenceDigests.set(input.run.runId, evidenceDigest);
-        return {
-          evidenceRecordId: `evidence-${evidenceDigest.slice("sha256:".length)}`,
+        if (options.evidenceResult !== undefined) return options.evidenceResult as never;
+        const inputDigest = digestCanonicalJson(input);
+        const recordWithoutDigest = {
+          schemaVersion: "1" as const,
+          evidenceRecordId: `evidence-${inputDigest.slice("sha256:".length)}`,
+          tenantId: input.run.tenantId,
           runId: input.run.runId,
-        } as never;
+          executionDefinition: input.run.executionDefinition,
+          executionDefinitionDigest: input.run.executionDefinitionDigest,
+          workOrderBindingDigest: input.run.workOrderBindingDigest,
+          claim: {
+            statement: "The fixture run produced the recorded artifact.",
+            claimType: "fixture_execution",
+            scope: "single deterministic fixture run",
+          },
+          supports: ["The referenced artifact passed the recorded verifier set."],
+          doesNotProve: ["This fixture does not prove production provider behavior."],
+          context: {
+            roleFamily: "research",
+            workflowId: "brief",
+            riskClass: "low" as const,
+            purposeCode: "service_delivery",
+          },
+          workSplit: {
+            ai: { kind: "unavailable" as const, reason: "not_collected" as const },
+            human: { kind: "unavailable" as const, reason: "not_collected" as const },
+            description: "Fixture metrics are intentionally not collected.",
+          },
+          artifactRefs: input.artifacts.map(({ artifactId, artifactDigest }) => ({
+            artifactId,
+            artifactDigest,
+          })),
+          eventRefs: input.events.map(({ eventId, sequence }) => ({ eventId, sequence })),
+          approvalRefs: [],
+          verificationRefs: input.verifications.map(
+            ({
+              verificationId,
+              verificationDigest,
+              status,
+              artifactDigest,
+              verifierId,
+              verifierVersion,
+              verifierRegistrationDigest,
+              method,
+              rubricVersion,
+              rubricDigest,
+            }) => ({
+              verificationId,
+              verificationDigest,
+              status,
+              artifactDigest,
+              verifierId,
+              verifierVersion,
+              verifierRegistrationDigest,
+              method,
+              rubricVersion,
+              rubricDigest,
+            }),
+          ),
+          verificationExceptionRefs: [],
+          permission: {
+            purposeCode: "service_delivery",
+            purposeRegistryVersion: "general@1",
+            visibility: "private" as const,
+            dataClass: input.run.dataClass,
+            retention: { mode: "session" as const },
+          },
+          freshness: { observedAt: now, validAt: now },
+          observation: {
+            firstObservedAt: now,
+            lastObservedAt: now,
+            count: 1,
+            repetitionStatus: "single" as const,
+            independentObservationIds: [],
+          },
+          createdAt: now,
+        };
+        const evidence = EvidenceRecordSchema.parse({
+          ...recordWithoutDigest,
+          evidenceDigest: digestCanonicalJson(recordWithoutDigest),
+        });
+        evidenceDigests.set(input.run.runId, evidence.evidenceDigest);
+        return evidence;
       },
     },
     clock,
@@ -1638,6 +1774,7 @@ describe("runtime effect validation", () => {
       { ...reservation, authorizationKey: "changed" },
       { ...reservation, createdAt: "2026-08-03T12:00:00.001Z" },
       { ...reservation, expiresAt: now },
+      { ...reservation, consumedAt: now },
       { ...reservation, secretRefIds: ["secret-ref"] },
     ]) {
       expect(() =>
@@ -1657,6 +1794,8 @@ describe("runtime effect validation", () => {
       runId: "run-1",
       effectKey: "effect-key",
       toolRegistrationDigest: writeTool.toolRegistrationDigest,
+      strategy: "native" as const,
+      strategyRegistrationDigest: writeTool.effectStrategyRegistrationDigest,
       argumentsDigest: digestCanonicalJson(existingEffectInput),
       normalizedTargetDigest: effectTargetDigest,
     };
@@ -1875,6 +2014,56 @@ describe("AgentRuntime", () => {
     );
     expect(toolEvents.filter((event) => event.eventType === "ToolCallRequested")).toHaveLength(1);
     expect(toolEvents.filter((event) => event.eventType === "RetryScheduled")).toHaveLength(1);
+  });
+
+  it("does not share uncertain local model calls between equal run and step IDs in two tenants", async () => {
+    let generated = 0;
+    const value = fixture({
+      crashAfterTransition: "ModelCallStarted#2",
+      modelErrorClassification: "non_retryable",
+      generateId: (kind) =>
+        kind === "run" || kind === "work_order"
+          ? `shared-${kind}`
+          : `${kind}-${String(++generated)}`,
+      modelEmission: (invocation) => {
+        if (invocation === 1) throw new Error("tenant-a model outcome unknown");
+        return { type: "final", value: { tenant: "b" } };
+      },
+    });
+    const tenantBAuthority = value.authorityIssuer.issue({
+      actor: { type: "user", id: "user-2" },
+      tenant: { id: "tenant-2" },
+      authenticatedAt: now,
+      authenticationStrength: "multi_factor",
+      decisionRoles: ["owner"],
+      requestCorrelationId: "request-2",
+      issuedAt: "2026-08-03T11:00:00.000Z",
+      expiresAt: "2026-08-03T13:00:00.000Z",
+    });
+    const tenantARun = await value.runtime.start(
+      value.authority,
+      definition,
+      request,
+      commandFor("run.start", request, "31".repeat(16)),
+    );
+    await expect(value.runtime.execute(value.authority, tenantARun.runId)).resolves.toMatchObject({
+      status: "failed",
+    });
+    const tenantBRun = await value.runtime.start(
+      tenantBAuthority,
+      definition,
+      request,
+      commandFor("run.start", request, "32".repeat(16)),
+    );
+    expect(tenantBRun.runId).toBe(tenantARun.runId);
+    await expect(value.runtime.execute(tenantBAuthority, tenantBRun.runId)).rejects.toThrow(
+      "simulated crash after committed ModelCallStarted",
+    );
+    await expect(value.runtime.execute(tenantBAuthority, tenantBRun.runId)).resolves.toEqual({
+      runId: tenantBRun.runId,
+      status: "completed",
+    });
+    expect(value.getModelInvocationCount()).toBe(2);
   });
 
   it("recovers a persisted scheduled backoff on a fresh runtime", async () => {
@@ -2126,8 +2315,168 @@ describe("AgentRuntime", () => {
         commandFor("run.start", boundedRequest, suffix),
       );
       const execution = value.runtime.execute(value.authority, started.runId);
-      if (code === undefined) await expect(execution).rejects.toThrow("classified retry failure");
-      else await expect(execution).rejects.toMatchObject({ code });
+      if (code === undefined) {
+        await expect(execution).resolves.toMatchObject({ status: "failed" });
+        expect(
+          (await collectEvents(value.stores.eventStore, "tenant-1", started.runId)).at(-1),
+        ).toMatchObject({
+          eventType: "RunFailed",
+          payload: {
+            errorCode: "KAF_MODEL_ADAPTER_MISMATCH",
+            safeDetails: { reason: "model_call_failed_without_safe_result" },
+          },
+        });
+      } else await expect(execution).rejects.toMatchObject({ code });
+    },
+  );
+
+  it("records malformed model emissions as a stable terminal run failure", async () => {
+    const value = fixture({
+      modelEmission: () => ({ type: "malformed", value: { secret: "must-not-leak" } }),
+    });
+    const started = await value.runtime.start(value.authority, definition, request, value.command);
+    await expect(value.runtime.execute(value.authority, started.runId)).resolves.toEqual({
+      runId: started.runId,
+      status: "failed",
+    });
+    const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
+    expect(events.at(-1)).toMatchObject({
+      eventType: "RunFailed",
+      payload: {
+        errorCode: "KAF_MODEL_ADAPTER_MISMATCH",
+        safeDetails: {
+          reason: "model_emission_schema_invalid",
+        },
+      },
+    });
+    expect(JSON.stringify(events)).not.toContain("must-not-leak");
+  });
+
+  it("records explicitly non-retryable tool failures without persisting the raw error", async () => {
+    const value = fixture({
+      toolErrorClassification: "non_retryable",
+      toolExecution: () => Promise.reject(new Error("secret-tool-failure")),
+    });
+    const started = await value.runtime.start(value.authority, definition, request, value.command);
+    await expect(value.runtime.execute(value.authority, started.runId)).resolves.toEqual({
+      runId: started.runId,
+      status: "failed",
+    });
+    const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
+    expect(events.at(-1)).toMatchObject({
+      eventType: "RunFailed",
+      payload: {
+        errorCode: "KAF_TOOL_EXECUTION_FAILED",
+        safeDetails: {
+          reason: "tool_call_failed_without_safe_result",
+          retryClassification: "non_retryable",
+        },
+      },
+    });
+    expect(JSON.stringify(events)).not.toContain("secret-tool-failure");
+  });
+
+  it("fails a malformed policy result closed before tool dispatch", async () => {
+    const value = fixture({
+      policyResult: {
+        decision: "bogus",
+        reasonCode: "unsafe-policy-result",
+        normalizedResources: [],
+        normalizedTargetDigest: d("2"),
+      },
+    });
+    const started = await value.runtime.start(value.authority, definition, request, value.command);
+    await expect(value.runtime.execute(value.authority, started.runId)).resolves.toEqual({
+      runId: started.runId,
+      status: "failed",
+    });
+    expect(value.executeTool).not.toHaveBeenCalled();
+    const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
+    expect(events.at(-1)).toMatchObject({
+      eventType: "RunFailed",
+      payload: {
+        errorCode: "KAF_POLICY_DENIED",
+        safeDetails: { reason: "policy_result_invalid" },
+      },
+    });
+    expect(JSON.stringify(events)).not.toContain("unsafe-policy-result");
+  });
+
+  it.each([
+    ["invalid", { modelErrorClassification: "invalid" as never }],
+    ["throwing", { modelClassifierThrows: true }],
+  ])("parks an uncertain model failure when its classifier is %s", async (_name, options) => {
+    const value = fixture({
+      ...options,
+      modelEmission: () => {
+        throw new Error("secret-unclassified-model-failure");
+      },
+    });
+    const started = await value.runtime.start(value.authority, definition, request, value.command);
+    await expect(value.runtime.execute(value.authority, started.runId)).resolves.toEqual({
+      runId: started.runId,
+      status: "parked",
+    });
+    const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
+    expect(events.at(-1)).toMatchObject({
+      eventType: "RunSuspended",
+      payload: { reasonCode: "model_call_outcome_uncertain" },
+    });
+    expect(JSON.stringify(events)).not.toContain("secret-");
+  });
+
+  it("parks an uncertain tool failure when its classifier output is invalid", async () => {
+    const value = fixture({
+      toolErrorClassification: "invalid" as never,
+      toolExecution: () => Promise.reject(new Error("secret-unclassified-tool-failure")),
+    });
+    const started = await value.runtime.start(value.authority, definition, request, value.command);
+    await expect(value.runtime.execute(value.authority, started.runId)).resolves.toEqual({
+      runId: started.runId,
+      status: "parked",
+    });
+    const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
+    expect(events.at(-1)).toMatchObject({
+      eventType: "RunSuspended",
+      payload: { reasonCode: "tool_call_outcome_uncertain" },
+    });
+    expect(JSON.stringify(events)).not.toContain("secret-unclassified-tool-failure");
+  });
+
+  it.each([
+    [
+      "verifier",
+      { verifierResult: { status: "malformed", secret: "verifier-canary" } },
+      "KAF_VERIFICATION_REQUIRED",
+      "verifier_result_invalid",
+    ],
+    [
+      "evidence builder",
+      { evidenceResult: { evidenceRecordId: "forged-evidence", secret: "evidence-canary" } },
+      "KAF_EVIDENCE_INVALID_REFERENCE",
+      "evidence_record_invalid",
+    ],
+  ])(
+    "records a malformed %s result as a stable terminal failure",
+    async (_name, options, errorCode, reason) => {
+      const value = fixture(options);
+      const started = await value.runtime.start(
+        value.authority,
+        definition,
+        request,
+        value.command,
+      );
+      await expect(value.runtime.execute(value.authority, started.runId)).resolves.toEqual({
+        runId: started.runId,
+        status: "failed",
+      });
+      const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
+      expect(events.at(-1)).toMatchObject({
+        eventType: "RunFailed",
+        payload: { errorCode, safeDetails: { reason } },
+      });
+      expect(JSON.stringify(events)).not.toContain("canary");
+      expect(JSON.stringify(events)).not.toContain("forged-evidence");
     },
   );
 
@@ -2622,7 +2971,7 @@ describe("AgentRuntime", () => {
       commandFor("run.start", productionRequest, "efefefefefefefefefefefefefefefef"),
     );
     await expect(value.runtime.execute(value.authority, started.runId)).resolves.toMatchObject({
-      status: "failed",
+      status: "parked",
     });
     expect(model.resolve).toHaveBeenCalledOnce();
     expect(model.markUncertain).toHaveBeenCalledOnce();
@@ -2631,10 +2980,54 @@ describe("AgentRuntime", () => {
     const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
     expect(JSON.stringify(events)).not.toContain("credential-canary-value");
     expect(events.at(-1)).toMatchObject({
-      eventType: "RunFailed",
-      payload: { errorCode: "KAF_RUNTIME_CAPABILITY_MISSING" },
+      eventType: "RunSuspended",
+      payload: { reasonCode: "model_call_outcome_uncertain" },
     });
   });
+
+  it.each([
+    ["invalid", { classifierResult: "invalid" }],
+    ["throwing", { classifierThrows: true }],
+  ])(
+    "parks a dispatched production call when its adapter classifier is %s",
+    async (_name, classifierOptions) => {
+      const model = productionModelServicesFixture({
+        throwAfterResolution: true,
+        ...classifierOptions,
+      });
+      const value = fixture({
+        agentDefinition: productionDefinition,
+        productionModelServices: model.services,
+      });
+      const productionRequest = {
+        ...request,
+        agent: { id: productionDefinition.id, version: productionDefinition.version },
+      };
+      const started = await value.runtime.start(
+        value.authority,
+        productionDefinition,
+        productionRequest,
+        commandFor(
+          "run.start",
+          productionRequest,
+          _name === "invalid"
+            ? "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+            : "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        ),
+      );
+      await expect(value.runtime.execute(value.authority, started.runId)).resolves.toMatchObject({
+        status: "parked",
+      });
+      expect(model.markUncertain).toHaveBeenCalledOnce();
+      const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
+      expect(events.at(-1)).toMatchObject({
+        eventType: "RunSuspended",
+        payload: { reasonCode: "model_call_outcome_uncertain" },
+      });
+      expect(JSON.stringify(events)).not.toContain("classifier-failure");
+      expect(JSON.stringify(events)).not.toContain("credential-canary-value");
+    },
+  );
 
   it.each([
     ["missing credential resolution", { skipResolution: true }],
@@ -2656,7 +3049,7 @@ describe("AgentRuntime", () => {
       commandFor("run.start", productionRequest, "abababababababababababababababab"),
     );
     await expect(value.runtime.execute(value.authority, started.runId)).resolves.toMatchObject({
-      status: "failed",
+      status: "parked",
     });
     expect(model.markUncertain).toHaveBeenCalledOnce();
     expect(model.settle).not.toHaveBeenCalled();
@@ -2764,7 +3157,6 @@ describe("AgentRuntime", () => {
               value: {
                 toolRegistrationDigest: writeTool.toolRegistrationDigest,
                 input: { value: "bounded" },
-                targetDigest: effectTargetDigest,
               },
             }
           : { type: "final", value: { ok: true } },
@@ -2780,6 +3172,13 @@ describe("AgentRuntime", () => {
       status: "completed",
     });
     expect(dispatch).toHaveBeenCalledOnce();
+    expect([...(value.effectUnitOfWork?.authorizationReservations.values() ?? [])]).toEqual([
+      expect.objectContaining({
+        state: "consumed",
+        consumedAt: now,
+        normalizedTargetDigest: effectTargetDigest,
+      }),
+    ]);
     const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
     expect(events.map((event) => event.eventType)).toEqual(
       expect.arrayContaining(["EffectPrepared", "EffectDispatched", "EffectAcknowledged"]),
@@ -2927,6 +3326,7 @@ describe("AgentRuntime", () => {
           effectExistingRecord: (key, tenantId, runId) =>
             ledgerRecord(key, tenantId, runId, "abandoned"),
         },
+        expectedStatus: "failed",
       },
       {
         suffix: "d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6",
@@ -2949,6 +3349,7 @@ describe("AgentRuntime", () => {
             operationKey: () => "",
           },
         },
+        expectedStatus: "failed",
       },
     ];
     for (const candidate of candidates) {
@@ -2974,7 +3375,10 @@ describe("AgentRuntime", () => {
   });
 
   it("rejects authorization binding, secret, and missing R4 approval before dispatch", async () => {
-    const r4Tool = { ...writeTool, security: { ...writeTool.security, riskClass: "R4" as const } };
+    const r4Tool = {
+      ...writeTool,
+      security: { ...writeTool.security, riskClass: "R4" as const, maxCallsPerRun: 1 },
+    };
     const transforms = [
       (reservation: Record<string, unknown>) => ({ ...reservation, authorizationKey: "changed" }),
       (reservation: Record<string, unknown>) => ({
@@ -2998,14 +3402,14 @@ describe("AgentRuntime", () => {
         effectRequest,
         commandFor("run.start", effectRequest, suffix),
       );
-      await expect(value.runtime.execute(value.authority, started.runId)).rejects.toMatchObject({
-        code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      await expect(value.runtime.execute(value.authority, started.runId)).resolves.toMatchObject({
+        status: "failed",
       });
       expect(dispatch).not.toHaveBeenCalled();
     }
   });
 
-  it("atomically claims a configured approval with the effect authorization", async () => {
+  it("rejects an arbitrary approval ID that was not recorded for the effect", async () => {
     const dispatch = vi.fn(async () => Promise.resolve());
     const r4Tool = { ...writeTool, security: { ...writeTool.security, riskClass: "R4" as const } };
     const value = fixture({
@@ -3024,9 +3428,9 @@ describe("AgentRuntime", () => {
       commandFor("run.start", effectRequest, "dddddddddddddddddddddddddddddddd"),
     );
     await expect(value.runtime.execute(value.authority, started.runId)).resolves.toMatchObject({
-      status: "completed",
+      status: "failed",
     });
-    expect(dispatch).toHaveBeenCalledOnce();
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it("creates and executes a separately authorized model-less compensation run", async () => {
@@ -3119,7 +3523,17 @@ describe("AgentRuntime", () => {
           kind === killedCompensationRegistration?.kind &&
           digest === killedCompensationRegistration.digest,
       },
-      modelEmission: effectEmission,
+      modelEmission: (_invocation, _signal, input) =>
+        typeof input === "object" && input !== null && "toolResult" in input
+          ? { type: "final", value: { ok: true } }
+          : {
+              type: "tool_call",
+              value: {
+                toolRegistrationDigest: writeTool.toolRegistrationDigest,
+                input: existingEffectInput,
+                targetDigest: effectTargetDigest,
+              },
+            },
     });
     const original = await value.runtime.start(
       value.authority,
@@ -3385,13 +3799,6 @@ describe("AgentRuntime", () => {
     await expect(
       value.runtime.execute(compensationAuthority, requested.compensationRunId),
     ).rejects.toMatchObject({ code: "KAF_STORAGE_CONCURRENCY_CONFLICT" });
-    const aborted = new AbortController();
-    aborted.abort("fixture cancellation");
-    await expect(
-      value.runtime.execute(compensationAuthority, requested.compensationRunId, {
-        signal: aborted.signal,
-      }),
-    ).rejects.toMatchObject({ name: "AbortError" });
     await expect(
       value.runtime.execute(compensationAuthority, requested.compensationRunId),
     ).resolves.toMatchObject({ status: "completed" });
@@ -3405,6 +3812,53 @@ describe("AgentRuntime", () => {
     expect(events.map((event) => event.eventType)).toContain("CompensationRequested");
     expect(events.some((event) => event.eventType.startsWith("Model"))).toBe(false);
     expect(events.some((event) => event.eventType === "PlanningStarted")).toBe(false);
+
+    const cancelledOriginal = await value.runtime.start(
+      value.authority,
+      definition,
+      effectRequest,
+      commandFor("run.start", effectRequest, "f1".repeat(16)),
+    );
+    await expect(
+      value.runtime.execute(value.authority, cancelledOriginal.runId),
+    ).resolves.toMatchObject({ status: "completed" });
+    const cancelledEffect = [...(value.effectUnitOfWork?.effectRecords.values() ?? [])].find(
+      (record) => record.runId === cancelledOriginal.runId && record.state === "acknowledged",
+    );
+    if (cancelledEffect === undefined) throw new Error("second acknowledged effect missing");
+    compensationTarget = `effect:${cancelledEffect.effectDigest}`;
+    const cancelledCompensation = await value.runtime.requestCompensation(
+      compensationAuthority,
+      cancelledOriginal.runId,
+      cancelledEffect.effectId,
+      compensationRequest,
+      scopedCommand(
+        "run.request_compensation",
+        compensationRequest,
+        [cancelledOriginal.runId, cancelledEffect.effectId],
+        "f2".repeat(16),
+      ),
+    );
+    const aborted = new AbortController();
+    aborted.abort("fixture cancellation");
+    await expect(
+      value.runtime.execute(compensationAuthority, cancelledCompensation.compensationRunId, {
+        signal: aborted.signal,
+      }),
+    ).resolves.toMatchObject({ status: "cancelled" });
+    expect(
+      await value.runtime.getRun(compensationAuthority, cancelledCompensation.compensationRunId),
+    ).toMatchObject({ status: "cancelled" });
+    expect(compensationDispatch).toHaveBeenCalledOnce();
+    expect(
+      (
+        await collectEvents(
+          value.stores.eventStore,
+          "tenant-1",
+          cancelledCompensation.compensationRunId,
+        )
+      ).at(-1),
+    ).toMatchObject({ eventType: "RunCancelled" });
   });
 
   it("fails compensation readiness closed without one transactional storage domain", async () => {
@@ -3523,6 +3977,13 @@ describe("AgentRuntime", () => {
     });
     expect(lookup).toHaveBeenCalledOnce();
     expect(dispatch).toHaveBeenCalledOnce();
+    const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
+    const dispatchedEvents = events.filter(
+      (event): event is Extract<RunEvent, { eventType: "EffectDispatched" }> =>
+        event.eventType === "EffectDispatched",
+    );
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0]?.payload.attempt).toBe(1);
   });
 
   it("parks unknown reconcilable lookup and recovers applied lookup without redispatch", async () => {
@@ -3566,6 +4027,59 @@ describe("AgentRuntime", () => {
         status: status === "unknown" ? "parked" : "completed",
       });
       expect(lookup).toHaveBeenCalledOnce();
+      expect(dispatch).not.toHaveBeenCalled();
+    }
+  });
+
+  it("rejects malformed reconciliation status and durable strategy or operation-key drift before redispatch", async () => {
+    for (const failure of ["lookup", "operation_key", "strategy"] as const) {
+      const dispatch = vi.fn(async () => Promise.resolve());
+      const reconcilableTool = { ...writeTool, effectStrategyKind: "reconcilable" as const };
+      const base = reconcilableEffectStrategy({ dispatch, lookup: vi.fn() });
+      const strategy = {
+        ...base,
+        ...(failure === "lookup"
+          ? { lookup: async () => Promise.resolve({ status: "typo" }) }
+          : { operationKey: () => "operation:changed" }),
+      } as RuntimeExecutableEffectStrategy;
+      const value = fixture({
+        toolRegistration: reconcilableTool,
+        effectStrategy: strategy,
+        effectExistingRecord: (key, tenantId, runId) =>
+          ledgerRecord(
+            key,
+            tenantId,
+            runId,
+            "dispatched",
+            failure === "strategy" ? "native" : "reconcilable",
+          ),
+        modelEmission: effectEmission,
+      });
+      const started = await value.runtime.start(
+        value.authority,
+        definition,
+        effectRequest,
+        commandFor(
+          "run.start",
+          effectRequest,
+          failure === "lookup"
+            ? "dededededededededededededededede"
+            : failure === "operation_key"
+              ? "dfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdf"
+              : "e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0",
+        ),
+      );
+      await expect(value.runtime.execute(value.authority, started.runId)).rejects.toMatchObject({
+        code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+        details: {
+          reason:
+            failure === "lookup"
+              ? "effect_lookup_result_invalid"
+              : failure === "operation_key"
+                ? "effect_operation_key_changed"
+                : "effect_ledger_binding_mismatch",
+        },
+      });
       expect(dispatch).not.toHaveBeenCalled();
     }
   });
@@ -3687,6 +4201,159 @@ describe("AgentRuntime", () => {
       "RunSuspended",
       "EffectNeedsReconciliation",
     ]);
+  });
+
+  it("parks a native effect after a dispatch-boundary crash without an explicit replay proof", async () => {
+    const dispatch = vi.fn(async () => Promise.resolve());
+    const value = fixture({
+      toolRegistration: writeTool,
+      effectStrategy: nativeEffectStrategy(dispatch),
+      effectCrashAfterTransition: "EffectDispatched",
+      modelEmission: () => ({
+        type: "tool_call",
+        value: {
+          toolRegistrationDigest: writeTool.toolRegistrationDigest,
+          input: { value: "uncertain-native" },
+          targetDigest: effectTargetDigest,
+        },
+      }),
+    });
+    const started = await value.runtime.start(
+      value.authority,
+      definition,
+      effectRequest,
+      commandFor("run.start", effectRequest, "c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9"),
+    );
+    await expect(value.runtime.execute(value.authority, started.runId)).rejects.toThrow(
+      "simulated crash after committed EffectDispatched",
+    );
+    expect(dispatch).not.toHaveBeenCalled();
+
+    await expect(value.restart().execute(value.authority, started.runId)).resolves.toEqual({
+      runId: started.runId,
+      status: "parked",
+    });
+    expect(dispatch).not.toHaveBeenCalled();
+    const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
+    expect(events.filter((event) => event.eventType === "EffectDispatched")).toHaveLength(1);
+    expect(events.find((event) => event.eventType === "EffectUncertain")).toMatchObject({
+      payload: { uncertaintyCode: "native_replay_safety_unproven" },
+    });
+  });
+
+  it("records a fresh dispatch attempt after reconciliation proves the prior attempt was not applied", async () => {
+    const dispatch = vi.fn(async () => Promise.resolve());
+    const lookup = vi.fn(async () => Promise.resolve());
+    const holder: { value?: ReturnType<typeof fixture> } = {};
+    const activeExecutionServices: NonNullable<RuntimeKernelConfig["activeExecutionServices"]> = {
+      transactionDomain: "memory.process-local",
+      durable: true,
+      reader: {
+        get(tenantId, runId, stepId, boundary, boundaryKey) {
+          const current = holder.value;
+          if (current === undefined) throw new Error("fixture unavailable");
+          return Promise.resolve(
+            current.stores.activeExecutionReservationStore.get(
+              tenantId,
+              runId,
+              stepId,
+              boundary,
+              boundaryKey,
+            ),
+          );
+        },
+      },
+      maximumChargeMilliseconds: () => 1,
+    };
+    const reconcilableTool = { ...writeTool, effectStrategyKind: "reconcilable" as const };
+    const base = reconcilableEffectStrategy({ dispatch, lookup });
+    const strategy: RuntimeExecutableEffectStrategy = {
+      ...base,
+      dispatch: async (_value, operationKey, context) => {
+        await dispatch();
+        return acknowledgedExecution(context, operationKey);
+      },
+      lookup: async () => {
+        await lookup();
+        return { status: "not_applied" as const };
+      },
+    };
+    const value = fixture({
+      toolRegistration: reconcilableTool,
+      effectStrategy: strategy,
+      effectCrashAfterTransition: "EffectDispatched",
+      activeExecutionServices,
+      modelEmission: (_invocation, _signal, input) =>
+        typeof input === "object" &&
+        input !== null &&
+        !Array.isArray(input) &&
+        "toolResult" in input
+          ? { type: "final", value: { title: "Recovered", body: "Continued" } }
+          : {
+              type: "tool_call",
+              value: {
+                toolRegistrationDigest: reconcilableTool.toolRegistrationDigest,
+                input: { value: "reconciled-retry" },
+                targetDigest: effectTargetDigest,
+              },
+            },
+    });
+    holder.value = value;
+    const started = await value.runtime.start(
+      value.authority,
+      definition,
+      effectRequest,
+      commandFor("run.start", effectRequest, "cacacacacacacacacacacacacacacaca"),
+    );
+    await expect(value.runtime.execute(value.authority, started.runId)).rejects.toThrow(
+      "simulated crash after committed EffectDispatched",
+    );
+    expect(dispatch).not.toHaveBeenCalled();
+    value.stores.activeExecutionReservationStore.putInTransaction(
+      {
+        schemaVersion: "1",
+        id: "prior-effect-dispatch",
+        tenant: { id: "tenant-1" },
+        runId: started.runId,
+        stepId: "step-1",
+        boundary: "tool",
+        boundaryKey: "tool-call-step-1:effect-dispatch:1",
+        leaseId: "prior-lease",
+        fencingToken: 1,
+        startedAtServerTime: now,
+        maxChargeMs: 1,
+        state: "reserved",
+        expiresAt: "2026-08-03T12:00:00.001Z",
+      },
+      request.budget.maxActiveExecutionMs,
+    );
+
+    await expect(value.restart().execute(value.authority, started.runId)).resolves.toEqual({
+      runId: started.runId,
+      status: "completed",
+    });
+    expect(lookup).toHaveBeenCalledOnce();
+    expect(dispatch).toHaveBeenCalledOnce();
+    const events = await collectEvents(value.stores.eventStore, "tenant-1", started.runId);
+    expect(
+      events
+        .filter((event) => event.eventType === "EffectDispatched")
+        .map((event) => event.payload.attempt),
+    ).toEqual([1, 2]);
+    expect(
+      value.stores.activeExecutionReservationStore
+        .snapshot()
+        .map(([, reservation]) => reservation)
+        .filter((reservation) => reservation.boundaryKey.includes("effect-dispatch")),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ boundaryKey: "tool-call-step-1:effect-dispatch:1" }),
+        expect.objectContaining({
+          boundaryKey: "tool-call-step-1:effect-dispatch:2",
+          state: "settled",
+        }),
+      ]),
+    );
   });
 
   it("treats a lost or invalid dispatch acknowledgement as uncertain instead of success", async () => {
@@ -4094,6 +4761,79 @@ describe("AgentRuntime", () => {
     ).rejects.toMatchObject({ code: "KAF_SCHEMA_INVALID" });
   });
 
+  it("isolates in-process cancellation for equal run IDs in different tenants", async () => {
+    let generatedId = 0;
+    let firstStarted!: () => void;
+    let bothStarted!: () => void;
+    const firstModelStarted = new Promise<void>((resolve) => {
+      firstStarted = resolve;
+    });
+    const bothModelsStarted = new Promise<void>((resolve) => {
+      bothStarted = resolve;
+    });
+    const pending: Array<{
+      signal: AbortSignal;
+      resolve: (emission: unknown) => void;
+    }> = [];
+    const value = fixture({
+      generateId: (kind) => (kind === "run" ? "shared-run" : `${kind}-${String(++generatedId)}`),
+      modelEmission: (_invocation, signal) =>
+        new Promise((resolve) => {
+          pending.push({ signal, resolve });
+          if (pending.length === 1) firstStarted();
+          if (pending.length === 2) bothStarted();
+        }),
+    });
+    const tenantTwoAuthority = value.authorityIssuer.issue({
+      actor: { type: "user", id: "user-2" },
+      tenant: { id: "tenant-2" },
+      authenticatedAt: now,
+      authenticationStrength: "multi_factor",
+      decisionRoles: ["owner"],
+      requestCorrelationId: "request-2",
+      issuedAt: "2026-08-03T11:00:00.000Z",
+      expiresAt: "2026-08-03T13:00:00.000Z",
+    });
+    const tenantOneRun = await value.runtime.start(
+      value.authority,
+      definition,
+      request,
+      value.command,
+    );
+    const tenantTwoRun = await value.runtime.start(
+      tenantTwoAuthority,
+      definition,
+      request,
+      value.command,
+    );
+    expect(tenantOneRun.runId).toBe("shared-run");
+    expect(tenantTwoRun.runId).toBe("shared-run");
+
+    const tenantOneExecution = value.runtime.execute(value.authority, "shared-run");
+    await firstModelStarted;
+    const tenantTwoExecution = value.runtime.execute(tenantTwoAuthority, "shared-run");
+    await bothModelsStarted;
+    await value.runtime.cancel(
+      value.authority,
+      "shared-run",
+      commandFor("run.cancel", { runId: "shared-run" }, "13131313131313131313131313131313"),
+    );
+    expect(pending[0]?.signal.aborted).toBe(true);
+    expect(pending[1]?.signal.aborted).toBe(false);
+
+    for (const invocation of pending) {
+      invocation.resolve({ type: "final", value: { tenantSafe: true } });
+    }
+    await expect(tenantOneExecution).resolves.toEqual({
+      runId: "shared-run",
+      status: "cancelled",
+    });
+    await expect(tenantTwoExecution).resolves.toEqual({
+      runId: "shared-run",
+      status: "completed",
+    });
+  });
+
   it("fails closed on policy denial without calling the tool executor", async () => {
     const { runtime, authority, command, executeTool } = fixture({ policyDecision: "deny" });
     const started = await runtime.start(authority, definition, request, command);
@@ -4158,11 +4898,16 @@ describe("AgentRuntime", () => {
     expect(challenge?.binding.targetDigest).not.toBe(modelTarget);
   });
 
-  it("resumes an approved effect from a fresh runtime through the exact approval suffix", async () => {
+  it("resumes an approved R4 effect while policy continues requiring approval", async () => {
     const dispatch = vi.fn(async () => Promise.resolve());
+    const r4Tool = {
+      ...writeTool,
+      security: { ...writeTool.security, riskClass: "R4" as const, maxCallsPerRun: 1 },
+    };
     const value = fixture({
-      policyDecisionSequence: ["require_approval", "allow_with_grant"],
-      toolRegistration: writeTool,
+      policyDecision: "require_approval",
+      authenticationStrength: "phishing_resistant",
+      toolRegistration: r4Tool,
       effectStrategy: nativeEffectStrategy(dispatch),
       modelEmission: effectEmission,
     });
@@ -4587,6 +5332,35 @@ describe("AgentRuntime", () => {
         replacementCommand,
       ),
     ).resolves.toMatchObject({ inputSubmissionRecordId: first.inputSubmissionRecordId });
+
+    const wrongWorkOrderAuthority = value.authorityIssuer.issue({
+      actor: { type: "user", id: "user-1" },
+      tenant: { id: "tenant-1" },
+      authenticatedAt: now,
+      authenticationStrength: "multi_factor",
+      decisionRoles: ["owner"],
+      requestCorrelationId: "request-wrong-work-order",
+      issuedAt: "2026-08-03T11:00:00.000Z",
+      expiresAt: "2026-08-03T13:00:00.000Z",
+      runScope: { runId: started.runId, workOrderId: "work-order-other" },
+    });
+    await expect(
+      value.runtime.submitInput(
+        wrongWorkOrderAuthority,
+        started.runId,
+        "request-input",
+        inputValue,
+        scopedCommand(
+          "run.submit_input",
+          inputValue,
+          [started.runId, "request-input"],
+          "98989898989898989898989898989898",
+        ),
+      ),
+    ).rejects.toMatchObject({
+      code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      details: { reason: "run_scope_mismatch", operation: "run.load" },
+    });
 
     const changedValue = { answer: "changed" };
     await expect(
@@ -5219,9 +5993,6 @@ describe("AgentRuntime", () => {
     );
     await expect(
       interrupted.runtime.execute(interrupted.authority, interruptedStarted.runId),
-    ).rejects.toThrow("host disappeared");
-    await expect(
-      interrupted.runtime.execute(interrupted.authority, interruptedStarted.runId),
     ).resolves.toEqual({ runId: interruptedStarted.runId, status: "parked" });
     expect(
       (await interrupted.runtime.getRun(interrupted.authority, interruptedStarted.runId)).status,
@@ -5245,9 +6016,6 @@ describe("AgentRuntime", () => {
       },
     });
     const started = await value.runtime.start(value.authority, definition, request, value.command);
-    await expect(value.runtime.execute(value.authority, started.runId)).rejects.toThrow(
-      "second host boundary disappeared",
-    );
     await expect(value.runtime.execute(value.authority, started.runId)).resolves.toEqual({
       runId: started.runId,
       status: "parked",
@@ -5310,6 +6078,124 @@ describe("AgentRuntime", () => {
     });
     const stream = value.runtime.events(value.authority, "missing")[Symbol.asyncIterator]();
     await expect(stream.next()).rejects.toMatchObject({ code: "KAF_STORAGE_NOT_FOUND" });
+  });
+
+  it("confines run-scoped authority to its exact run and work order", async () => {
+    const value = fixture();
+    const first = await value.runtime.start(value.authority, definition, request, value.command);
+    const secondRequest = { ...request, goal: "Research a separate bounded topic" };
+    const second = await value.runtime.start(
+      value.authority,
+      definition,
+      secondRequest,
+      commandFor("run.start", secondRequest, "abababababababababababababababab"),
+    );
+    const scopedAuthority = value.authorityIssuer.issue({
+      actor: { type: "system_worker", id: "worker-1" },
+      subject: { type: "user", id: "user-1" },
+      tenant: { id: "tenant-1" },
+      authenticatedAt: now,
+      authenticationStrength: "phishing_resistant",
+      decisionRoles: [],
+      requestCorrelationId: "scheduler-receipt-1",
+      issuedAt: "2026-08-03T11:00:00.000Z",
+      expiresAt: "2026-08-03T13:00:00.000Z",
+      runScope: { runId: first.runId, workOrderId: first.workOrderId },
+    });
+
+    await expect(value.runtime.getRun(scopedAuthority, first.runId)).resolves.toMatchObject({
+      runId: first.runId,
+      workOrderId: first.workOrderId,
+    });
+    await expect(
+      value.runtime.cancel(
+        scopedAuthority,
+        first.runId,
+        commandFor("run.cancel", { runId: first.runId }, "adadadadadadadadadadadadadadadad"),
+      ),
+    ).rejects.toMatchObject({
+      code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      details: { reason: "run_scope_operation_denied", operation: "run.cancel" },
+    });
+    await expect(value.runtime.execute(scopedAuthority, first.runId)).resolves.toMatchObject({
+      runId: first.runId,
+      status: "completed",
+    });
+    await expect(value.runtime.getRun(scopedAuthority, second.runId)).rejects.toMatchObject({
+      code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      details: { reason: "run_scope_mismatch", operation: "run.get" },
+    });
+    const eventStream = value.runtime.events(scopedAuthority, second.runId)[Symbol.asyncIterator]();
+    await expect(eventStream.next()).rejects.toMatchObject({
+      code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      details: { reason: "run_scope_mismatch", operation: "run.events" },
+    });
+    await expect(
+      value.runtime.cancel(
+        scopedAuthority,
+        second.runId,
+        commandFor("run.cancel", { runId: second.runId }, "acacacacacacacacacacacacacacacac"),
+      ),
+    ).rejects.toMatchObject({
+      code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      details: { reason: "run_scope_mismatch", operation: "run.cancel" },
+    });
+    await expect(
+      value.runtime.start(scopedAuthority, definition, request, value.command),
+    ).rejects.toMatchObject({
+      code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      details: { reason: "run_scope_cannot_create_run", operation: "run.start" },
+    });
+    await expect(value.runtime.getRun(value.authority, second.runId)).resolves.toMatchObject({
+      runId: second.runId,
+      status: "accepted",
+    });
+
+    const cancelCommand = commandFor(
+      "run.cancel",
+      { runId: second.runId },
+      "aeaeaeaeaeaeaeaeaeaeaeaeaeaeaeae",
+    );
+    await expect(
+      value.runtime.cancel(value.authority, second.runId, cancelCommand),
+    ).resolves.toMatchObject({
+      runId: second.runId,
+      status: "cancelled",
+    });
+    const replayWithWrongWorkOrderAuthority = value.authorityIssuer.issue({
+      actor: { type: "user", id: "user-1" },
+      tenant: { id: "tenant-1" },
+      authenticatedAt: now,
+      authenticationStrength: "multi_factor",
+      decisionRoles: ["owner"],
+      requestCorrelationId: "request-replay-wrong-work-order",
+      issuedAt: "2026-08-03T11:00:00.000Z",
+      expiresAt: "2026-08-03T13:00:00.000Z",
+      runScope: { runId: second.runId, workOrderId: first.workOrderId },
+    });
+    await expect(
+      value.runtime.cancel(replayWithWrongWorkOrderAuthority, second.runId, cancelCommand),
+    ).rejects.toMatchObject({
+      code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      details: { reason: "run_scope_mismatch", operation: "run.load" },
+    });
+
+    const wrongWorkOrderAuthority = value.authorityIssuer.issue({
+      actor: { type: "system_worker", id: "worker-2" },
+      subject: { type: "user", id: "user-1" },
+      tenant: { id: "tenant-1" },
+      authenticatedAt: now,
+      authenticationStrength: "phishing_resistant",
+      decisionRoles: [],
+      requestCorrelationId: "scheduler-receipt-2",
+      issuedAt: "2026-08-03T11:00:00.000Z",
+      expiresAt: "2026-08-03T13:00:00.000Z",
+      runScope: { runId: first.runId, workOrderId: second.workOrderId },
+    });
+    await expect(value.runtime.getRun(wrongWorkOrderAuthority, first.runId)).rejects.toMatchObject({
+      code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      details: { reason: "run_scope_mismatch", operation: "run.load" },
+    });
   });
 
   it("atomically enqueues durable starts and resumes without calling a scheduler out of band", async () => {

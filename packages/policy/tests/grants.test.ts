@@ -92,12 +92,17 @@ describe("grant issuance and resolution", () => {
       status: "active",
       usesRemaining: 1,
     });
-    const first = await store.reserveUse(grant.id, "effect-1", "2026-08-03T10:02:00.000Z");
+    const first = await store.reserveUse(
+      grant.tenant.id,
+      grant.id,
+      "effect-1",
+      "2026-08-03T10:02:00.000Z",
+    );
     await expect(
-      store.reserveUse(grant.id, "effect-1", "2026-08-03T10:03:00.000Z"),
+      store.reserveUse(grant.tenant.id, grant.id, "effect-1", "2026-08-03T10:03:00.000Z"),
     ).resolves.toEqual(first);
     await expect(
-      store.reserveUse(grant.id, "effect-2", "2026-08-03T10:03:00.000Z"),
+      store.reserveUse(grant.tenant.id, grant.id, "effect-2", "2026-08-03T10:03:00.000Z"),
     ).rejects.toMatchObject({
       code: "KAF_POLICY_GRANT_EXHAUSTED",
     });
@@ -126,19 +131,49 @@ describe("grant issuance and resolution", () => {
     await expect(store.revoke("tenant-2", grant.id, grant.issuedAt)).rejects.toMatchObject({
       code: "KAF_POLICY_GRANT_MISSING",
     });
-    await expect(store.reserveUse("missing", "key", grant.issuedAt)).rejects.toMatchObject({
+    await expect(
+      store.reserveUse("tenant-2", grant.id, "cross-tenant", grant.issuedAt),
+    ).rejects.toMatchObject({ code: "KAF_POLICY_GRANT_MISSING" });
+    await expect(
+      store.reserveUse(grant.tenant.id, "missing", "key", grant.issuedAt),
+    ).rejects.toMatchObject({
       code: "KAF_POLICY_GRANT_MISSING",
     });
     const expiredStore = createMemoryCapabilityGrantStore();
     await expiredStore.issue(grant);
-    await expect(expiredStore.reserveUse(grant.id, "key", grant.expiresAt)).rejects.toMatchObject({
+    await expect(
+      expiredStore.reserveUse(grant.tenant.id, grant.id, "key", grant.expiresAt),
+    ).rejects.toMatchObject({
       code: "KAF_POLICY_GRANT_EXPIRED",
     });
     const revokedStore = createMemoryCapabilityGrantStore();
     await revokedStore.issue(grant);
     await revokedStore.revoke(grant.tenant.id, grant.id, grant.issuedAt);
-    await expect(revokedStore.reserveUse(grant.id, "key", grant.issuedAt)).rejects.toMatchObject({
+    await expect(
+      revokedStore.reserveUse(grant.tenant.id, grant.id, "key", grant.issuedAt),
+    ).rejects.toMatchObject({
       code: "KAF_POLICY_GRANT_REVOKED",
     });
+  });
+
+  it("isolates equal grant IDs and use claims between tenants", async () => {
+    const store = createMemoryCapabilityGrantStore();
+    const tenantAGrant = makeGrant("R1");
+    const tenantBGrant = {
+      ...tenantAGrant,
+      tenant: { id: "tenant-2" },
+    };
+    await store.issue(tenantAGrant);
+    await store.issue(tenantBGrant);
+    await expect(
+      store.reserveUse("tenant-1", tenantAGrant.id, "same-effect", tenantAGrant.issuedAt),
+    ).resolves.toMatchObject({ useNumber: 1 });
+    await expect(
+      store.reserveUse("tenant-2", tenantBGrant.id, "same-effect", tenantBGrant.issuedAt),
+    ).resolves.toMatchObject({ useNumber: 1 });
+    await store.revoke("tenant-1", tenantAGrant.id, tenantAGrant.issuedAt);
+    await expect(
+      store.resolve(tenantBGrant.id, bindingOf(tenantBGrant), tenantBGrant.issuedAt),
+    ).resolves.toMatchObject({ status: "exhausted" });
   });
 });

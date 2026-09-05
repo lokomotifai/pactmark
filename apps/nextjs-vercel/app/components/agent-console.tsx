@@ -23,16 +23,16 @@ function workOrder(item: string) {
   return {
     schemaVersion: "1",
     agent: { id: "nextjs-vercel-agent", version: "0.1.0" },
-    goal: "Check the deterministic preview fixture.",
+    goal: "Approve and reserve the deterministic preview fixture item.",
     input: { item },
-    context: { roleFamily: "operations", workflowId: "vercel-preview", riskClass: "low" },
+    context: { roleFamily: "operations", workflowId: "vercel-preview", riskClass: "high" },
     workMode: "assist",
     autonomyMode: "assist",
     decisionOwner: { mode: "requesting_principal" },
     purpose: { code: "service_delivery", registryVersion: "general@1" },
     dataClass: "public",
     retention: { mode: "session" },
-    requestedCapabilities: ["fixture:read"],
+    requestedCapabilities: ["fixture:reserve"],
     resourceScopeCeiling: [
       {
         kind: "tenant",
@@ -98,7 +98,7 @@ export function AgentConsole() {
     if (event.runId !== undefined) setRunId(event.runId);
     setStatus(event.eventType ?? "Event received");
     if (event.eventType?.includes("Tool") === true) setToolRequest(event.payload);
-    if (event.eventType?.includes("Decision") === true && event.payload !== undefined) {
+    if (event.eventType === "ApprovalRequested" && event.payload !== undefined) {
       const safePreview: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(event.payload)) {
         if (key !== "challengeProof") safePreview[key] = value;
@@ -130,6 +130,9 @@ export function AgentConsole() {
     setEvents([]);
     setRunId(undefined);
     setToolRequest(undefined);
+    setApprovalPreview(undefined);
+    setChallengeReady(false);
+    challengeVaultRef.current?.clear();
     setArtifact(undefined);
     setVerification(undefined);
     setEvidence(undefined);
@@ -220,15 +223,31 @@ export function AgentConsole() {
           cache: "no-store",
           headers: { "content-type": "application/json", "idempotency-key": commandId() },
           body: JSON.stringify({
-            ...approvalPreview,
             decision,
             decisionId,
             challengeProof: challenge.challengeProof,
+            ...(decision === "reject" ? { reasonCode: "preview_user_rejected" } : {}),
           }),
         },
       );
       if (!response.ok) throw new TypeError(`KAF_UI_DECISION_${String(response.status)}`);
+      const result = (await response.json()) as Readonly<Record<string, unknown>>;
       setStatus(`Decision submitted: ${decision}.`);
+      if (decision === "approve" && result["automaticResume"] !== true) {
+        const resume = await fetch(`/api/agent/v1/runs/${encodeURIComponent(runId)}/resume`, {
+          method: "POST",
+          cache: "no-store",
+          headers: { "content-type": "application/json", "idempotency-key": commandId() },
+          body: "{}",
+        });
+        if (!resume.ok) throw new TypeError(`KAF_UI_RESUME_${String(resume.status)}`);
+      }
+      const after = events.at(-1)?.sequence ?? 0;
+      await stream(
+        `/api/agent/v1/runs/${encodeURIComponent(runId)}/events?after=${String(after)}`,
+        { headers: { accept: "text/event-stream" } },
+      );
+      setApprovalPreview(undefined);
     } catch (error) {
       setSafeError(toSafeText(error instanceof Error ? error.message : error, 500));
     } finally {
@@ -302,7 +321,9 @@ export function AgentConsole() {
         <section className="panel" aria-labelledby="approval-preview-title">
           <h2 id="approval-preview-title">Approval preview</h2>
           <pre tabIndex={0}>
-            {approvalPreview === undefined ? "No approval requested." : toSafeText(approvalPreview)}
+            {approvalPreview === undefined
+              ? "No approval requested."
+              : toSafeText(approvalPreview["approvalDisplay"] ?? approvalPreview)}
           </pre>
           <div className="button-row">
             <button

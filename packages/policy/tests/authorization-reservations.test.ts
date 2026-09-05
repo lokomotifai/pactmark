@@ -86,7 +86,7 @@ describe("authorization reservation claims", () => {
 
   it("fails closed for expired, missing-limit, duplicate-ID, and missing reservations", async () => {
     const store = createMemoryAuthorizationReservationStore({
-      grantMaximumUses: (id) => (id === "grant-1" ? 2 : undefined),
+      grantMaximumUses: (_tenantId, id) => (id === "grant-1" ? 2 : undefined),
       approvalMaximumUses: () => 2,
       secretRefMaximumUses: () => 2,
     });
@@ -157,5 +157,32 @@ describe("authorization reservation claims", () => {
         "2026-08-03T10:03:00.000Z",
       ),
     ).resolves.toMatchObject({ authorizationReservationId: "authorization-3" });
+  });
+
+  it("isolates delimiter-colliding keys and equal claim IDs between tenants", async () => {
+    const observedGrantLookups: string[] = [];
+    const store = createMemoryAuthorizationReservationStore({
+      grantMaximumUses: (tenantId) => {
+        observedGrantLookups.push(tenantId);
+        return 1;
+      },
+      approvalMaximumUses: () => 1,
+      secretRefMaximumUses: () => 1,
+    });
+    const tenantA = reservation({
+      tenantId: "a:b",
+      authorizationKey: "c",
+      effectKey: "c",
+    });
+    const tenantB = reservation({
+      tenantId: "a",
+      authorizationKey: "b:c",
+      effectKey: "b:c",
+    });
+    await expect(store.reserve(tenantA, "2026-08-03T10:01:00.000Z")).resolves.toEqual(tenantA);
+    await expect(store.reserve(tenantB, "2026-08-03T10:01:00.000Z")).resolves.toEqual(tenantB);
+    await expect(store.get("a:b", "c")).resolves.toEqual(tenantA);
+    await expect(store.get("a", "b:c")).resolves.toEqual(tenantB);
+    expect(observedGrantLookups).toEqual(["a:b", "a"]);
   });
 });

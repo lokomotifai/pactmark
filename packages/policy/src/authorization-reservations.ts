@@ -29,18 +29,24 @@ export interface AuthorizationReservationStore {
 
 type ClaimIndex = Map<string, Map<string, string>>;
 
+function claimSubjectKey(tenantId: string, subjectId: string): string {
+  return canonicalJsonStringify([tenantId, subjectId]);
+}
+
 function sameReservation(left: AuthorizationReservation, right: AuthorizationReservation): boolean {
   return canonicalJsonStringify(left) === canonicalJsonStringify(right);
 }
 
 function reserveClaim(
   index: ClaimIndex,
+  tenantId: string,
   subjectId: string,
   authorizationKey: string,
   reservationId: string,
   maximumUses: number,
 ): void {
-  const claims = index.get(subjectId) ?? new Map<string, string>();
+  const subjectKey = claimSubjectKey(tenantId, subjectId);
+  const claims = index.get(subjectKey) ?? new Map<string, string>();
   const replay = claims.get(authorizationKey);
   if (replay !== undefined) {
     if (replay !== reservationId) {
@@ -52,17 +58,18 @@ function reserveClaim(
     throw new AuthorizationReservationError("KAF_POLICY_AUTHORIZATION_CLAIM_EXHAUSTED");
   }
   claims.set(authorizationKey, reservationId);
-  index.set(subjectId, claims);
+  index.set(subjectKey, claims);
 }
 
 function assertClaimAvailable(
   index: ClaimIndex,
+  tenantId: string,
   subjectId: string,
   authorizationKey: string,
   reservationId: string,
   maximumUses: number,
 ): void {
-  const claims = index.get(subjectId);
+  const claims = index.get(claimSubjectKey(tenantId, subjectId));
   const replay = claims?.get(authorizationKey);
   if (replay !== undefined && replay !== reservationId) {
     throw new AuthorizationReservationError("KAF_POLICY_AUTHORIZATION_BINDING_MISMATCH");
@@ -77,11 +84,11 @@ function assertClaimAvailable(
  * claims and their effect/command writes in one database transaction.
  */
 export function createMemoryAuthorizationReservationStore(input: {
-  readonly grantMaximumUses: (grantId: string) => number | undefined;
-  readonly secretRefMaximumUses: (secretRefId: string) => number | undefined;
-  readonly approvalMaximumUses?: (approvalId: string) => number | undefined;
+  readonly grantMaximumUses: (tenantId: string, grantId: string) => number | undefined;
+  readonly secretRefMaximumUses: (tenantId: string, secretRefId: string) => number | undefined;
+  readonly approvalMaximumUses?: (tenantId: string, approvalId: string) => number | undefined;
 }): AuthorizationReservationStore {
-  const reservations = new Map<string, AuthorizationReservation>();
+  const reservations = new Map<string, Map<string, AuthorizationReservation>>();
   const grantClaims: ClaimIndex = new Map();
   const approvalClaims: ClaimIndex = new Map();
   const secretClaims: ClaimIndex = new Map();
@@ -96,8 +103,9 @@ export function createMemoryAuthorizationReservationStore(input: {
         if (Date.parse(at) >= Date.parse(reservation.expiresAt)) {
           throw new AuthorizationReservationError("KAF_POLICY_AUTHORIZATION_EXPIRED");
         }
-        const scopedKey = `${reservation.tenantId}:${reservation.authorizationKey}`;
-        const replay = reservations.get(scopedKey);
+        const tenantReservations =
+          reservations.get(reservation.tenantId) ?? new Map<string, AuthorizationReservation>();
+        const replay = tenantReservations.get(reservation.authorizationKey);
         if (replay !== undefined) {
           if (!sameReservation(replay, reservation)) {
             throw new AuthorizationReservationError("KAF_POLICY_AUTHORIZATION_BINDING_MISMATCH");
@@ -105,7 +113,7 @@ export function createMemoryAuthorizationReservationStore(input: {
           return replay;
         }
         if (
-          [...reservations.values()].some(
+          [...tenantReservations.values()].some(
             (candidate) =>
               candidate.authorizationReservationId === reservation.authorizationReservationId,
           )
@@ -113,14 +121,14 @@ export function createMemoryAuthorizationReservationStore(input: {
           throw new AuthorizationReservationError("KAF_POLICY_AUTHORIZATION_DUPLICATE");
         }
 
-        const grantLimit = input.grantMaximumUses(reservation.grantId);
+        const grantLimit = input.grantMaximumUses(reservation.tenantId, reservation.grantId);
         if (grantLimit === undefined || grantLimit < 1) {
           throw new AuthorizationReservationError("KAF_POLICY_AUTHORIZATION_CLAIM_EXHAUSTED");
         }
         const approvalLimit =
           reservation.approvalId === undefined
             ? undefined
-            : input.approvalMaximumUses?.(reservation.approvalId);
+            : input.approvalMaximumUses?.(reservation.tenantId, reservation.approvalId);
         if (
           reservation.approvalId !== undefined &&
           (approvalLimit === undefined || approvalLimit < 1)
@@ -128,7 +136,7 @@ export function createMemoryAuthorizationReservationStore(input: {
           throw new AuthorizationReservationError("KAF_POLICY_AUTHORIZATION_CLAIM_EXHAUSTED");
         }
         const secretLimits = reservation.secretRefIds.map(
-          (refId) => [refId, input.secretRefMaximumUses(refId)] as const,
+          (refId) => [refId, input.secretRefMaximumUses(reservation.tenantId, refId)] as const,
         );
         if (secretLimits.some(([, limit]) => limit === undefined || limit < 1)) {
           throw new AuthorizationReservationError("KAF_POLICY_AUTHORIZATION_CLAIM_EXHAUSTED");
@@ -136,6 +144,7 @@ export function createMemoryAuthorizationReservationStore(input: {
 
         assertClaimAvailable(
           grantClaims,
+          reservation.tenantId,
           reservation.grantId,
           reservation.authorizationKey,
           reservation.authorizationReservationId,
@@ -144,6 +153,7 @@ export function createMemoryAuthorizationReservationStore(input: {
         if (reservation.approvalId !== undefined && approvalLimit !== undefined) {
           assertClaimAvailable(
             approvalClaims,
+            reservation.tenantId,
             reservation.approvalId,
             reservation.authorizationKey,
             reservation.authorizationReservationId,
@@ -154,6 +164,7 @@ export function createMemoryAuthorizationReservationStore(input: {
           if (limit !== undefined) {
             assertClaimAvailable(
               secretClaims,
+              reservation.tenantId,
               refId,
               reservation.authorizationKey,
               reservation.authorizationReservationId,
@@ -164,6 +175,7 @@ export function createMemoryAuthorizationReservationStore(input: {
 
         reserveClaim(
           grantClaims,
+          reservation.tenantId,
           reservation.grantId,
           reservation.authorizationKey,
           reservation.authorizationReservationId,
@@ -172,6 +184,7 @@ export function createMemoryAuthorizationReservationStore(input: {
         if (reservation.approvalId !== undefined && approvalLimit !== undefined) {
           reserveClaim(
             approvalClaims,
+            reservation.tenantId,
             reservation.approvalId,
             reservation.authorizationKey,
             reservation.authorizationReservationId,
@@ -184,6 +197,7 @@ export function createMemoryAuthorizationReservationStore(input: {
           }
           reserveClaim(
             secretClaims,
+            reservation.tenantId,
             refId,
             reservation.authorizationKey,
             reservation.authorizationReservationId,
@@ -191,18 +205,19 @@ export function createMemoryAuthorizationReservationStore(input: {
           );
         }
         const stored = Object.freeze(reservation);
-        reservations.set(scopedKey, stored);
+        tenantReservations.set(reservation.authorizationKey, stored);
+        reservations.set(reservation.tenantId, tenantReservations);
         return stored;
       });
     },
     get(tenantId, authorizationKey) {
-      return Promise.resolve(reservations.get(`${tenantId}:${authorizationKey}`));
+      return Promise.resolve(reservations.get(tenantId)?.get(authorizationKey));
     },
     consume(tenantId, authorizationKey, consumedAt) {
       return Promise.resolve().then(() => {
-        const scopedKey = `${tenantId}:${authorizationKey}`;
-        const existing = reservations.get(scopedKey);
-        if (existing === undefined) {
+        const tenantReservations = reservations.get(tenantId);
+        const existing = tenantReservations?.get(authorizationKey);
+        if (tenantReservations === undefined || existing === undefined) {
           throw new AuthorizationReservationError("KAF_POLICY_AUTHORIZATION_BINDING_MISMATCH");
         }
         if (existing.state === "consumed") return existing;
@@ -216,7 +231,7 @@ export function createMemoryAuthorizationReservationStore(input: {
             consumedAt,
           }),
         );
-        reservations.set(scopedKey, consumed);
+        tenantReservations.set(authorizationKey, consumed);
         return consumed;
       });
     },

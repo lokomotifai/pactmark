@@ -2,14 +2,20 @@ import {
   AgentDefinitionSchema,
   ArtifactSchema,
   CommandIdSchema,
+  DecisionApprovalSubmissionSchema,
+  DecisionRejectionSubmissionSchema,
   EvidenceRecordSchema,
+  EffectReconciliationResolutionSchema,
   JsonValueSchema,
   KafError,
+  RunCancellationRequestSchema,
+  RuntimeCompensationRequestSchema,
   RuntimeCapabilitiesSchema,
   RuntimeReadinessReportSchema,
   WorkOrderRequestSchema,
   createCommandContext,
   digestCanonicalJson,
+  parseWire,
   type JsonValue,
 } from "@pactmark/core";
 import {
@@ -167,7 +173,7 @@ async function readJson(request: Request, maximumBytes: number): Promise<JsonVal
   } catch {
     throw new HttpFailure(400, "KAF_HTTP_JSON_INVALID");
   }
-  return JsonValueSchema.parse(parsed);
+  return parseWire(JsonValueSchema, parsed);
 }
 
 function assertCookieBoundary(request: Request, authentication: AuthenticatedRequest): void {
@@ -534,12 +540,14 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
           throw new HttpFailure(503, "KAF_RUNTIME_SCHEDULER_REQUIRED");
         }
         const payload = await readJson(request, maximumBodyBytes);
-        const workOrder = WorkOrderRequestSchema.parse(payload);
+        const workOrder = parseWire(WorkOrderRequestSchema, payload);
         const agent = await config.resolveAgent(workOrder.agent, authentication);
         if (agent === undefined) throw new HttpFailure(404, "KAF_HTTP_AGENT_NOT_FOUND");
         AgentDefinitionSchema.parse(agent);
         const definition = agent;
-        const command = commandFor(request, "run.start", payload, [definition.id]);
+        const command = commandFor(request, "run.start", JsonValueSchema.parse(workOrder), [
+          definition.id,
+        ]);
         const result = await config.runtime.start(
           authentication.authority,
           definition,
@@ -767,11 +775,26 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
         if (action !== "approve" && action !== "reject") {
           throw new HttpFailure(400, "KAF_HTTP_DECISION_INVALID");
         }
-        const command = commandFor(request, `run.${action}`, payload, [runId, decisionId]);
+        const parsedDecision =
+          action === "approve"
+            ? parseWire(DecisionApprovalSubmissionSchema, payload)
+            : parseWire(DecisionRejectionSubmissionSchema, payload);
+        const decisionPayload = JsonValueSchema.parse(parsedDecision);
+        const command = commandFor(request, `run.${action}`, decisionPayload, [runId, decisionId]);
         return jsonResponse(
           action === "approve"
-            ? await config.runtime.approve(authentication.authority, runId, payload, command)
-            : await config.runtime.reject(authentication.authority, runId, payload, command),
+            ? await config.runtime.approve(
+                authentication.authority,
+                runId,
+                decisionPayload,
+                command,
+              )
+            : await config.runtime.reject(
+                authentication.authority,
+                runId,
+                decisionPayload,
+                command,
+              ),
         );
       }
       const effect = /^\/v1\/runs\/([^/]+)\/effects\/([^/]+)\/(reconcile|compensate)$/u.exec(path);
@@ -782,21 +805,26 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
         const operation =
           action === "reconcile" ? "run.reconcile_effect" : "run.request_compensation";
         await authorize(config, authentication, operation, runId, effectId);
-        const command = commandFor(request, operation, payload, [runId, effectId]);
+        const parsedEffectRequest =
+          action === "reconcile"
+            ? parseWire(EffectReconciliationResolutionSchema, payload)
+            : parseWire(RuntimeCompensationRequestSchema, payload);
+        const effectRequestPayload = JsonValueSchema.parse(parsedEffectRequest);
+        const command = commandFor(request, operation, effectRequestPayload, [runId, effectId]);
         return jsonResponse(
           action === "reconcile"
             ? await config.runtime.reconcileEffect(
                 authentication.authority,
                 runId,
                 effectId,
-                payload,
+                effectRequestPayload,
                 command,
               )
             : await config.runtime.requestCompensation(
                 authentication.authority,
                 runId,
                 effectId,
-                payload,
+                effectRequestPayload,
                 command,
               ),
         );
@@ -805,14 +833,10 @@ export function createAgentFetchHandler(config: AgentFetchHandlerConfig): AgentF
       if (cancel !== null) {
         const runId = safeIdentifier(cancel[1] ?? "");
         await authorize(config, authentication, "run.cancel", runId);
-        const reason =
-          isJsonObject(payload) && typeof payload["reason"] === "string"
-            ? payload["reason"]
-            : undefined;
-        if (reason === undefined) throw new HttpFailure(400, "KAF_HTTP_CANCEL_REASON_INVALID");
+        const { reason } = parseWire(RunCancellationRequestSchema, payload);
         const command = commandFor(request, "run.cancel", { runId, reason }, [runId]);
         return jsonResponse(
-          await config.runtime.cancel(authentication.authority, runId, payload, command),
+          await config.runtime.cancel(authentication.authority, runId, reason, command),
         );
       }
       throw new HttpFailure(404, "KAF_HTTP_NOT_FOUND");

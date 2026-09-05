@@ -26,6 +26,7 @@ import {
   POSTGRES_PROTECTED_REFERENCE_DIGESTS_SCHEMA_SQL,
   POSTGRES_TENANT_ROW_LEVEL_SECURITY_SCHEMA_SQL,
   POSTGRES_RESOURCE_RESERVATIONS_SCHEMA_SQL,
+  POSTGRES_WORK_ORDER_RETENTION_BINDINGS_SCHEMA_SQL,
   POSTGRES_WORKER_QUEUE_METADATA_SCHEMA_SQL,
 } from "../src/migrations.js";
 import {
@@ -320,7 +321,7 @@ describe("migration constraints", () => {
         readFileSync(new URL("../migrations/008_evidence_records.sql", import.meta.url), "utf8"),
       ).trim(),
     ).toBe(POSTGRES_EVIDENCE_RECORDS_SCHEMA_SQL.trim());
-    expect(POSTGRES_MIGRATIONS.at(-4)).toMatchObject({ version: "008", reversibleSafe: false });
+    expect(POSTGRES_MIGRATIONS.at(-5)).toMatchObject({ version: "008", reversibleSafe: false });
   });
 
   it("adds protected immutable acknowledged effect results in migration 009", () => {
@@ -354,7 +355,7 @@ describe("migration constraints", () => {
         ),
       ).trim(),
     ).toBe(POSTGRES_ACKNOWLEDGED_EFFECT_RESULTS_SCHEMA_SQL.trim());
-    expect(POSTGRES_MIGRATIONS.at(-3)).toMatchObject({ version: "009", reversibleSafe: false });
+    expect(POSTGRES_MIGRATIONS.at(-4)).toMatchObject({ version: "009", reversibleSafe: false });
   });
 
   it("replaces unbounded protected refs with tenant-scoped ciphertext digest indexes", () => {
@@ -382,7 +383,7 @@ describe("migration constraints", () => {
         ),
       ).trim(),
     ).toBe(POSTGRES_PROTECTED_REFERENCE_DIGESTS_SCHEMA_SQL.trim());
-    expect(POSTGRES_MIGRATIONS.at(-2)).toMatchObject({ version: "010", reversibleSafe: false });
+    expect(POSTGRES_MIGRATIONS.at(-3)).toMatchObject({ version: "010", reversibleSafe: false });
   });
 
   it("enables fail-closed tenant RLS policies for non-owner runtime roles", () => {
@@ -399,7 +400,29 @@ describe("migration constraints", () => {
         ),
       ).trim(),
     ).toBe(POSTGRES_TENANT_ROW_LEVEL_SECURITY_SCHEMA_SQL.trim());
-    expect(POSTGRES_MIGRATIONS.at(-1)).toMatchObject({ version: "011", reversibleSafe: true });
+    expect(POSTGRES_MIGRATIONS.at(-2)).toMatchObject({ version: "011", reversibleSafe: true });
+  });
+
+  it("preserves immutable run bindings while allowing protected WorkOrder retention", () => {
+    expect(POSTGRES_WORK_ORDER_RETENTION_BINDINGS_SCHEMA_SQL).toContain("FOR KEY SHARE");
+    expect(POSTGRES_WORK_ORDER_RETENTION_BINDINGS_SCHEMA_SQL).toContain(
+      "pactmark_run_work_orders_require_parent",
+    );
+    expect(POSTGRES_WORK_ORDER_RETENTION_BINDINGS_SCHEMA_SQL).toContain(
+      "DROP CONSTRAINT pactmark_run_work_orders_tenant_id_work_order_id_fkey",
+    );
+    expect(POSTGRES_WORK_ORDER_RETENTION_BINDINGS_SCHEMA_SQL).toContain(
+      "REFERENCES pactmark_run_work_orders(tenant_id,run_id,work_order_id)",
+    );
+    expect(
+      normalizeLineEndings(
+        readFileSync(
+          new URL("../migrations/012_work_order_retention_bindings.sql", import.meta.url),
+          "utf8",
+        ),
+      ).trim(),
+    ).toBe(POSTGRES_WORK_ORDER_RETENTION_BINDINGS_SCHEMA_SQL.trim());
+    expect(POSTGRES_MIGRATIONS.at(-1)).toMatchObject({ version: "012", reversibleSafe: false });
   });
 });
 

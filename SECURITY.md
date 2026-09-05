@@ -99,6 +99,8 @@ production isolation, or certification. Deployers remain responsible for
 identity, tenancy, secrets, least privilege, network policy, retention, backup,
 provider terms, monitoring, and incident response.
 
-The detailed boundaries are documented in the
-[security model](https://pactmark-docs.lokomotif.ai/security/security-model)
-and [threat model](https://pactmark-docs.lokomotif.ai/security/threat-model).
+The detailed, version-controlled boundaries are documented in the local
+[security model](docs/security/security-model.md) and
+[threat model](docs/security/threat-model.md). The
+[public security index](docs/security/README.md) links the remaining response,
+sandbox, and supply-chain records; no private-repository access is required.

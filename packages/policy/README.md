@@ -51,6 +51,15 @@ registration verifies the executable shape and declared identity; runtime must
 still provide the restricted strategy-specific execution context, validate
 results and acknowledgements, and drive crash recovery/reconciliation.
 
+### v0.3 reference-store migration
+
+The `grantMaximumUses`, `approvalMaximumUses`, and `secretRefMaximumUses`
+callbacks passed to `createMemoryAuthorizationReservationStore` now receive
+`tenantId` before the subject ID. Hosts upgrading from v0.2 must use both values
+for limit lookup. This prevents equal tenant-local IDs from sharing a claim
+budget; ignoring `tenantId` in a host callback would reintroduce that
+availability and isolation defect outside the reference store.
+
 ## Local verification
 
 ```sh

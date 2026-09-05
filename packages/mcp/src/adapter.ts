@@ -53,7 +53,7 @@ const MCPToolPageSchema = z
   .loose();
 const MCPCallResultSchema = z
   .object({
-    content: JsonValueSchema,
+    content: z.array(JsonValueSchema),
     structuredContent: JsonObjectSchema.optional(),
     isError: z.boolean().optional(),
   })
@@ -64,7 +64,7 @@ interface DiscoveredTool {
   readonly inputSchemaDigest: Digest;
   readonly outputSchemaDigest: Digest;
   readonly inputSchema: Readonly<Record<string, JsonValue>>;
-  readonly outputSchema: Readonly<Record<string, JsonValue>>;
+  readonly outputSchema?: Readonly<Record<string, JsonValue>>;
 }
 
 export interface MCPExposedTool {
@@ -92,7 +92,7 @@ export interface MCPAdapterConfig {
 
 interface BoundMCPTool extends MCPExposedTool {
   readonly inputValidator: z.ZodType;
-  readonly outputValidator: z.ZodType;
+  readonly outputValidator?: z.ZodType;
 }
 
 function assertServerActive(config: MCPAdapterConfig, serverIdentityDigest: Digest): void {
@@ -120,6 +120,13 @@ export function mcpToolSchemaDigest(schema: JsonValue): Digest {
     identityFormat: "pactmark.mcp-json-schema@1",
     schema,
   });
+}
+
+/** Pins output-schema absence distinctly from every declared JSON Schema. */
+export function mcpToolOutputSchemaDigest(schema: JsonValue | undefined): Digest {
+  return schema === undefined
+    ? digestCanonicalJson({ identityFormat: "pactmark.mcp-output-schema-absent@1" })
+    : mcpToolSchemaDigest(schema);
 }
 
 function audit(
@@ -272,9 +279,9 @@ async function discoverTools(
         Object.freeze({
           name: tool.name,
           inputSchemaDigest: mcpToolSchemaDigest(tool.inputSchema),
-          outputSchemaDigest: mcpToolSchemaDigest(tool.outputSchema ?? { type: "object" }),
+          outputSchemaDigest: mcpToolOutputSchemaDigest(tool.outputSchema),
           inputSchema: tool.inputSchema,
-          outputSchema: tool.outputSchema ?? { type: "object" },
+          ...(tool.outputSchema === undefined ? {} : { outputSchema: tool.outputSchema }),
         }),
       );
       if (tools.length > profile.maxTools) {
@@ -371,7 +378,9 @@ async function exposeTools(
         pinDigest: pin.mcpToolPinDigest,
         grantId: authorization.grantId,
         inputValidator: validatorFromJsonSchema(discoveredTool.inputSchema, "input"),
-        outputValidator: validatorFromJsonSchema(discoveredTool.outputSchema, "output"),
+        ...(discoveredTool.outputSchema === undefined
+          ? {}
+          : { outputValidator: validatorFromJsonSchema(discoveredTool.outputSchema, "output") }),
       }),
     );
   }
@@ -565,7 +574,7 @@ export async function connectMCPServer(
           );
         }
         const output = JsonValueSchema.parse(result.data.structuredContent ?? result.data.content);
-        if (!tool.outputValidator.safeParse(output).success) {
+        if (tool.outputValidator !== undefined && !tool.outputValidator.safeParse(output).success) {
           throw new MCPAdapterError(
             "KAF_MCP_TOOL_OUTPUT_INVALID",
             "MCP tool output does not match the pinned output schema",

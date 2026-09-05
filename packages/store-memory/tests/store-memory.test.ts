@@ -6,6 +6,7 @@ import {
   KafError,
   protectedEffectResultAad,
   type AcceptedAgentWorkOrder,
+  type Approval,
   type AuthorizationReservation,
   type Artifact,
   type CapabilityGrant,
@@ -18,6 +19,7 @@ import {
   type ProtectedValueRef,
   type ProtectedEffectResultAadRecord,
   type ProtectedEffectResultRecord,
+  type ProposedEffectBinding,
   type RunEvent,
 } from "@pactmark/core";
 import { describe, expect, it } from "vitest";
@@ -97,11 +99,74 @@ function authorizationReservation(
     secretRefIds: [],
     purposeCode: "support",
     purposeRegistryVersion: "1",
-    state: "reserved",
+    state: "consumed",
     createdAt: instant,
     expiresAt: "2026-08-03T11:00:00.000Z",
+    consumedAt: instant,
     ...overrides,
   };
+}
+
+function approvalFixture(): Readonly<{
+  challenge: Parameters<
+    ReturnType<typeof createMemoryStoreSuite>["decisionStore"]["putChallenge"]
+  >[0];
+  approval: Approval;
+}> {
+  const accepted = workOrder();
+  const binding: ProposedEffectBinding = {
+    schemaVersion: "1",
+    tenant: accepted.tenant,
+    principal: accepted.principal,
+    runId: "run-1",
+    stepId: "step-approval",
+    decisionId: "decision-1",
+    workOrderBindingDigest: accepted.workOrderBindingDigest,
+    executionDefinition,
+    executionDefinitionDigest,
+    toolId: "demo.mutate@1",
+    toolVersion: "1.0.0",
+    toolRegistrationDigest: digest("tool-registration"),
+    argumentsDigest: digest("arguments"),
+    targetDigest: digest("target"),
+    previewDigest: digest("preview"),
+    purpose: accepted.purpose,
+    policyRegistrationDigest: digest("policy-registration"),
+  };
+  const challenge = {
+    schemaVersion: "1" as const,
+    id: "challenge-approval",
+    issuerId: "fixture-issuer",
+    proofDigest: digest("challenge-proof"),
+    binding,
+    requiredAuthenticationStrength: "phishing_resistant" as const,
+    issuedAt: instant,
+    expiresAt: "2026-08-03T11:00:00.000Z",
+    consumingCommandId: commandId,
+    consumedAt: instant,
+  };
+  const approval: Approval = {
+    schemaVersion: "1",
+    id: "approval-1",
+    issuerId: "fixture-issuer",
+    challengeId: challenge.id,
+    challengeProofDigest: challenge.proofDigest,
+    binding,
+    approvedBy: accepted.principal,
+    authenticationStrength: "phishing_resistant",
+    createdAt: instant,
+    expiresAt: "2026-08-03T11:00:00.000Z",
+    maximumUses: 1,
+  };
+  return { challenge, approval };
+}
+
+function legacyReservedAuthorization(): AuthorizationReservation {
+  const { consumedAt, ...reservation } = authorizationReservation({
+    state: "reserved",
+  });
+  void consumedAt;
+  return reservation;
 }
 
 function preparedEffect(overrides: Partial<EffectRecord> = {}): EffectRecord {
@@ -579,6 +644,104 @@ async function collect<T>(input: AsyncIterable<T>): Promise<T[]> {
 }
 
 describe("MemoryRunCommandUnitOfWork", () => {
+  it("atomically claims one exact approval use and rolls claims back with the transaction", async () => {
+    const stores = createMemoryStoreSuite({ now: () => instant });
+    const { challenge, approval } = approvalFixture();
+    await stores.decisionStore.putChallenge(challenge);
+    await stores.decisionStore.putApproval(approval);
+    const transition = (transitionKey: string) => ({
+      schemaVersion: "1" as const,
+      tenantId: "tenant-a",
+      runId: "run-1",
+      transitionKind: "approval-claim-test",
+      transitionKey,
+      workOrderBindingDigest: workOrder().workOrderBindingDigest,
+      executionDefinitionDigest,
+    });
+    const claim = (authorizationKey: string) =>
+      stores.runCommandUnitOfWork.transactTransition(
+        transition(`claim-${authorizationKey}`),
+        (transaction) =>
+          transaction.claimApproval("tenant-a", approval.id, authorizationKey, instant),
+      );
+
+    await expect(claim("authorization-1")).resolves.toMatchObject({
+      approvalId: approval.id,
+      authorizationKey: "authorization-1",
+    });
+    await expect(
+      stores.runCommandUnitOfWork.transactTransition(
+        transition("same-authorization-replay"),
+        (transaction) =>
+          transaction.claimApproval("tenant-a", approval.id, "authorization-1", instant),
+      ),
+    ).resolves.toMatchObject({ authorizationKey: "authorization-1" });
+    await expect(claim("authorization-2")).rejects.toMatchObject({
+      code: "KAF_AUTHORIZATION_BINDING_MISMATCH",
+      details: { reason: "approval_already_used" },
+    });
+
+    const rollbackStores = createMemoryStoreSuite({ now: () => instant });
+    await rollbackStores.decisionStore.putChallenge(challenge);
+    await rollbackStores.decisionStore.putApproval(approval);
+    await expect(
+      rollbackStores.runCommandUnitOfWork.transactTransition(
+        transition("rolled-back-claim"),
+        async (transaction) => {
+          await transaction.claimApproval("tenant-a", approval.id, "rolled-back", instant);
+          throw new Error("rollback approval claim");
+        },
+      ),
+    ).rejects.toThrow("rollback approval claim");
+    await expect(
+      rollbackStores.runCommandUnitOfWork.transactTransition(
+        transition("replacement-claim"),
+        (transaction) => transaction.claimApproval("tenant-a", approval.id, "replacement", instant),
+      ),
+    ).resolves.toMatchObject({ authorizationKey: "replacement" });
+  });
+
+  it("requires the transaction tenant on identifier-only authorization methods", async () => {
+    const unit = createMemoryStoreSuite().runCommandUnitOfWork;
+    const transition = (transitionKey: string) => ({
+      schemaVersion: "1" as const,
+      tenantId: "tenant-a",
+      runId: "run-1",
+      transitionKind: "tenant-port-check",
+      transitionKey,
+      workOrderBindingDigest: workOrder().workOrderBindingDigest,
+      executionDefinitionDigest,
+    });
+    const attempts = [
+      (transaction: Parameters<Parameters<typeof unit.transactTransition>[1]>[0]) =>
+        transaction.reserveCapabilityGrantUse("tenant-b", "grant-1", "authorization-1", instant),
+      (transaction: Parameters<Parameters<typeof unit.transactTransition>[1]>[0]) =>
+        transaction.consumeDecisionChallenge("tenant-b", "challenge-1", commandId, instant),
+      (transaction: Parameters<Parameters<typeof unit.transactTransition>[1]>[0]) =>
+        transaction.claimApproval("tenant-b", "approval-1", "authorization-1", instant),
+    ];
+    for (const [index, attempt] of attempts.entries()) {
+      await expect(
+        unit.transactTransition(transition(`attempt-${String(index)}`), attempt),
+      ).rejects.toMatchObject({ code: "KAF_STORAGE_CONCURRENCY_CONFLICT" });
+    }
+  });
+
+  it("reserves equal grant IDs independently by explicit tenant", async () => {
+    const store = createMemoryStoreSuite().capabilityGrantStore;
+    await store.issue(capabilityGrant());
+    await store.issue(capabilityGrant({ tenant: { id: "tenant-b" } }));
+    await expect(
+      store.reserveUse("tenant-a", "grant-1", "authorization-1", instant),
+    ).resolves.toMatchObject({ grantId: "grant-1", useNumber: 1 });
+    await expect(
+      store.reserveUse("tenant-b", "grant-1", "authorization-1", instant),
+    ).resolves.toMatchObject({ grantId: "grant-1", useNumber: 1 });
+    await expect(
+      store.reserveUse("tenant-c", "grant-1", "authorization-1", instant),
+    ).rejects.toMatchObject({ code: "KAF_AUTHORIZATION_BINDING_MISMATCH" });
+  });
+
   it("rolls back accepted work, grants, events, and wakeups as one process-local unit", async () => {
     const stores = createMemoryStoreSuite({ now: () => instant });
     const scope = commandScope();
@@ -720,7 +883,45 @@ describe("MemoryRunCommandUnitOfWork", () => {
     ).toMatchObject({ effectId: "effect-1", state: "prepared" });
     expect(
       await stores.effectLedger.getAuthorizationReservation("tenant-a", "authorization-1"),
-    ).toMatchObject({ authorizationKey: "effect-key-1", state: "reserved" });
+    ).toMatchObject({ authorizationKey: "effect-key-1", state: "consumed" });
+  });
+
+  it("resumes a v0.2 prepared effect whose authorization is still reserved", async () => {
+    const stores = createMemoryStoreSuite();
+    const transition = (transitionKind: "EffectPrepared" | "EffectDispatched") => ({
+      schemaVersion: "1" as const,
+      tenantId: "tenant-a",
+      runId: "run-1",
+      transitionKind,
+      transitionKey: `effect-1:${transitionKind}`,
+      workOrderBindingDigest: workOrder().workOrderBindingDigest,
+      executionDefinitionDigest,
+      leaseId: "lease-1",
+      fencingToken: 4,
+    });
+    await stores.runCommandUnitOfWork.transactTransition(
+      transition("EffectPrepared"),
+      async (transaction) => {
+        await transaction.putAuthorizationReservation(legacyReservedAuthorization());
+        await transaction.putEffectRecord(preparedEffect());
+        return null;
+      },
+    );
+    await stores.runCommandUnitOfWork.transactTransition(
+      transition("EffectDispatched"),
+      async (transaction) => {
+        await transaction.putEffectRecord({
+          ...preparedEffect(),
+          state: "dispatched",
+          dispatchedAt: "2026-08-03T10:00:01.000Z",
+          updatedAt: "2026-08-03T10:00:01.000Z",
+        });
+        return null;
+      },
+    );
+    await expect(
+      stores.effectLedger.getByEffectId("tenant-a", "run-1", "effect-1"),
+    ).resolves.toMatchObject({ state: "dispatched" });
   });
 
   it("rolls back authorization and effect writes on crash and rejects binding drift", async () => {

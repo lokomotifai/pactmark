@@ -5,6 +5,7 @@
 ```ts
 
 import { AgentDefinition } from '@pactmark/core';
+import { ApprovalPreviewDisplay } from '@pactmark/core';
 import { Artifact } from '@pactmark/core';
 import { AuthenticationStrength } from '@pactmark/core';
 import { AuthorityContext } from '@pactmark/core';
@@ -97,7 +98,8 @@ export function createRuntime(input: CreateRuntimeInput): RuntimeFacade;
 export interface CreateRuntimeInput extends RuntimeKernelConfig {
     // (undocumented)
     readonly contextStore: ContextStore;
-    readonly egressBroker: EgressBroker;
+    // @deprecated (undocumented)
+    readonly egressBroker?: EgressBroker;
     // (undocumented)
     readonly evidenceReader?: Readonly<{
         get(tenantId: string, runId: string): Promise<EvidenceRecord | undefined>;
@@ -249,6 +251,7 @@ export type DefineToolWriteOperation<I extends z.ZodType, O extends z.ZodType> =
     kind: "write";
     reversibility: "compensatable" | "irreversible";
     materialConsequence?: string;
+    approvalPreview?: (input: z.output<I>) => Pick<ApprovalPreviewDisplay, "title" | "summary" | "fields">;
     execute(input: z.output<I>, context: ToolExecutionContext): Promise<z.input<O>>;
 }>;
 

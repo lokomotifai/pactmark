@@ -103,7 +103,7 @@ export interface HttpRuntimeSurface {
   cancel(
     authority: AuthorityContext,
     runId: string,
-    reason: JsonValue,
+    reason: string,
     command: CommandContext,
   ): Promise<unknown>;
   getCapabilities(): RuntimeCapabilities;

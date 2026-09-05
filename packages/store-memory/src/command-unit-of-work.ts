@@ -81,14 +81,6 @@ type MemoryUowSnapshot = Readonly<{
   acknowledgedEffectResults: ReturnType<MemoryAcknowledgedEffectResultStore["transactionSnapshot"]>;
 }>;
 
-function unsupported(): Promise<never> {
-  return Promise.reject(
-    new KafError("KAF_RUNTIME_CAPABILITY_MISSING", {
-      details: { requiredCapability: "memory_transaction_operation" },
-    }),
-  );
-}
-
 /**
  * Process-local command serialization and replay for the ephemeral profile.
  * It never advertises durable or atomic wake-up behavior.
@@ -210,13 +202,15 @@ export class MemoryRunCommandUnitOfWork implements RunCommandUnitOfWork {
         if (grant.tenant.id !== tenantId) return this.#crossTenant("capability_grant");
         return this.#stores.capabilityGrantStore.issue(grant);
       },
-      reserveCapabilityGrantUse: (grantId, authorizationKey, at) =>
-        this.#stores.capabilityGrantStore.reserveUseForTenant(
+      reserveCapabilityGrantUse: (requestedTenantId, grantId, authorizationKey, at) => {
+        if (requestedTenantId !== tenantId) return this.#crossTenant("capability_grant_use");
+        return this.#stores.capabilityGrantStore.reserveUse(
           tenantId,
           grantId,
           authorizationKey,
           at,
-        ),
+        );
+      },
       appendRunEvent: async (event) => {
         if (event.tenantId !== tenantId) await this.#crossTenant("event");
         await this.#stores.eventStore.append(event, event.sequence - 1);
@@ -251,15 +245,18 @@ export class MemoryRunCommandUnitOfWork implements RunCommandUnitOfWork {
         if (parsed.tenantId !== tenantId) await this.#crossTenant("decision_gate");
         await this.#stores.decisionStore.putGateOnce(parsed);
       },
-      consumeDecisionChallenge: async (challengeId, commandId, consumedAt) => {
+      consumeDecisionChallenge: async (requestedTenantId, challengeId, commandId, consumedAt) => {
+        if (requestedTenantId !== tenantId) {
+          await this.#crossTenant("decision_challenge_consumption");
+        }
         if (boundCommandId === undefined || commandId !== boundCommandId) {
           await this.#crossTenant("decision_command_binding");
         }
         await this.#stores.decisionStore.consumeChallenge(
+          tenantId,
           challengeId,
           commandId,
           consumedAt,
-          tenantId,
         );
         consumedChallenges.set(challengeId, commandId);
       },
@@ -281,7 +278,10 @@ export class MemoryRunCommandUnitOfWork implements RunCommandUnitOfWork {
         if (rejection.tenantId !== tenantId) return this.#crossTenant("decision_rejection");
         return this.#stores.decisionStore.putRejection(rejection);
       },
-      claimApproval: unsupported,
+      claimApproval: (requestedTenantId, approvalId, authorizationKey, at) => {
+        if (requestedTenantId !== tenantId) return this.#crossTenant("approval_claim");
+        return this.#stores.decisionStore.claimApproval(tenantId, approvalId, authorizationKey, at);
+      },
       putAuthorizationReservation: (input) => {
         const reservation = AuthorizationReservationSchema.parse(input);
         if (reservation.tenantId !== tenantId) {

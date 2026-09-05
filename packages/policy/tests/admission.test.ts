@@ -91,6 +91,42 @@ describe("memory admission reference", () => {
     );
   });
 
+  it("isolates equal reservation IDs and delimiter-colliding scopes between tenants", async () => {
+    now = "2026-08-03T10:00:00.000Z";
+    let generatedIds = 0;
+    const { controller, quotaStore } = createMemoryAdmissionController({
+      clock,
+      idGenerator: {
+        generate: () => (++generatedIds <= 2 ? "shared-admission-id" : "next-admission-id"),
+      },
+      limits: [{ category: "active_run", maximum: 1, retryAfterSeconds: 5 }],
+    });
+    const tenantA = request({
+      tenant: { id: "a:user:b" },
+      principal: { type: "user", id: "c" },
+    });
+    const tenantB = request({
+      tenant: { id: "a" },
+      principal: { type: "user", id: "b:user:c" },
+    });
+    const first = await controller.evaluate(tenantA);
+    const second = await controller.evaluate(tenantB);
+    expect(first).toMatchObject({ admitted: true });
+    expect(second).toMatchObject({ admitted: true });
+    if (!first.admitted || !second.admitted) throw new Error("fixture must be admitted");
+    await quotaStore.release(
+      tenantA.tenant.id,
+      first.reservation.id,
+      first.reservation.fencingToken,
+      now,
+    );
+    await expect(controller.evaluate(tenantA)).resolves.toMatchObject({ admitted: true });
+    await expect(controller.evaluate(tenantB)).resolves.toMatchObject({
+      admitted: false,
+      code: "KAF_POLICY_ADMISSION_LIMIT",
+    });
+  });
+
   it("denies unconfigured categories and invalid configuration", async () => {
     const { controller } = createMemoryAdmissionController({
       clock,

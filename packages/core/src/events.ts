@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ExecutionDefinitionRefSchema } from "./agent.js";
-import { KafError } from "./errors.js";
+import { KafError, KafErrorCodeSchema } from "./errors.js";
 import { EffectAcknowledgementSchema, EffectStrategyKindSchema } from "./effects.js";
 import {
   type RunProjection,
@@ -11,6 +11,7 @@ import {
   TerminalRunStatusSchema,
 } from "./run.js";
 import { DigestSchema, JsonValueSchema } from "./serialization.js";
+import { ApprovalPreviewDisplaySchema } from "./tool.js";
 import { DataClassSchema } from "./work-order.js";
 
 const EventBaseSchema = z.object({
@@ -148,6 +149,7 @@ export const RunEventSchema = z.discriminatedUnion("eventType", [
         decisionId: z.string().min(1),
         decisionGateDigest: DigestSchema,
         proposedEffectDigest: DigestSchema,
+        approvalDisplay: ApprovalPreviewDisplaySchema.optional(),
       })
       .strict(),
   ),
@@ -341,7 +343,7 @@ export const RunEventSchema = z.discriminatedUnion("eventType", [
     z
       .object({
         stepId: z.string().min(1).optional(),
-        errorCode: z.string().regex(/^KAF_[A-Z0-9_]+$/),
+        errorCode: KafErrorCodeSchema,
         safeDetails: z.record(z.string(), JsonValueSchema).optional(),
       })
       .strict(),

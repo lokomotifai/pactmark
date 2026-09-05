@@ -1,35 +1,48 @@
 import { describe, expect, it } from "vitest";
-import { evaluatePurchaseBoundary, observedDispatchCount } from "../src/example.js";
 
-describe("approval boundary", () => {
-  it("binds the exact preview and performs zero external writes", () => {
-    const result = evaluatePurchaseBoundary({
-      sku: "P-100",
-      quantity: 2,
-      unitPriceMinor: 1250,
-      currency: "USD",
-      targetAccount: " Demo-Merchant ",
-    });
+import { runPurchaseDecision } from "../src/example.js";
+
+const request = {
+  sku: "P-100",
+  quantity: 2,
+  unitPriceMinor: 1250,
+  currency: "USD" as const,
+  targetAccount: "Demo-Merchant",
+};
+
+describe("approval purchase boundary", () => {
+  it("dispatches exactly once after the facade records an exact approval", async () => {
+    const result = await runPurchaseDecision(request, "approve");
     expect(result).toMatchObject({
-      status: "blocked",
-      code: "KAF_EXAMPLE_APPROVAL_SURFACE_UNAVAILABLE",
-      dispatchCount: 0,
+      status: "completed",
+      dispatchCount: 1,
+      challengeProofPersisted: false,
       productionClaim: false,
     });
-    expect(result.preview.normalizedTarget).toBe("demo-merchant");
-    expect(result.preview.contentDigest).toMatch(/^sha256:[0-9a-f]{64}$/u);
-    expect(observedDispatchCount()).toBe(0);
+    expect(result.eventTypes).toEqual(
+      expect.arrayContaining([
+        "ApprovalRequested",
+        "ApprovalRecorded",
+        "EffectPrepared",
+        "EffectAcknowledged",
+        "RunCompleted",
+      ]),
+    );
   });
 
-  it("rejects malformed price authority before preview", () => {
-    expect(() =>
-      evaluatePurchaseBoundary({
-        sku: "P-100",
-        quantity: 0,
-        unitPriceMinor: 1,
-        currency: "USD",
-        targetAccount: "merchant",
-      }),
-    ).toThrow("KAF_EXAMPLE_PURCHASE_QUANTITY_INVALID");
+  it("records rejection and performs no simulated purchase write", async () => {
+    const result = await runPurchaseDecision(request, "reject");
+    expect(result).toMatchObject({
+      status: "failed",
+      dispatchCount: 0,
+      challengeProofPersisted: false,
+      productionClaim: false,
+    });
+    expect(result.eventTypes).toContain("ApprovalRejected");
+    expect(result.eventTypes).not.toContain("EffectPrepared");
+  });
+
+  it("rejects malformed purchase authority before starting a run", async () => {
+    await expect(runPurchaseDecision({ ...request, quantity: 0 }, "approve")).rejects.toBeDefined();
   });
 });

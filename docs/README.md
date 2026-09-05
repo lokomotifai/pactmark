@@ -13,10 +13,13 @@ release the framework:
 - `architecture/` records dependency and product-boundary rationale.
 - `community/` records contributor and RFC processes.
 - `releases/` records release gates and observable evidence.
-- `security/` records threat models, response procedures, and security drills.
+- [`security/`](./security/README.md) is the public, self-contained security
+  model: trust boundaries, threats, residual risks, supply-chain controls,
+  response procedures, and drills.
 
-Product guides, API references, deployment instructions, examples, and
-translations belong in the canonical documentation site. Changes to that
-material should be made in the private
-`lokomotifai/pactmark-documentation` source repository and verified on the
-published site.
+Product guides, API references, and translations are also published on the
+canonical documentation site. That separate site may be more convenient, but
+it is not authoritative for source-level security review: the repository's
+[`SECURITY.md`](../SECURITY.md), [`AGENTS.md`](../AGENTS.md), security records,
+ADRs, executable tests, and release-readiness record remain available to every
+Apache-2.0 contributor.

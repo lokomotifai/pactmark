@@ -1,5 +1,6 @@
 import { jsonSchema, streamText, tool, type LanguageModel, type ToolSet } from "ai";
 import aiPackage from "ai/package.json" with { type: "json" };
+import adapterPackage from "../package.json" with { type: "json" };
 
 import {
   JsonValueSchema,
@@ -38,6 +39,7 @@ export function assertSupportedAiSdkVersion(version: string): string {
 }
 
 const AI_SDK_VERSION = assertSupportedAiSdkVersion(aiPackage.version);
+const ADAPTER_VERSION = adapterPackage.version;
 
 const previewCapabilities: RuntimeCapabilities = Object.freeze({
   schemaVersion: "1",
@@ -277,43 +279,34 @@ function createDriver(
           throw resourceError("maxStreamedOutputBytesPerCall");
         }
       };
-      if (advertised.length === 0) {
-        for await (const delta of result.textStream) {
-          countEvent();
-          countOutputBytes(utf8Bytes(delta));
-          text += delta;
+      for await (const part of result.stream) {
+        countEvent();
+        if (part.type === "error") throw part.error;
+        if (part.type === "abort") throw request.signal.reason ?? new Error("aborted");
+        if (part.type === "text-delta") {
+          countOutputBytes(utf8Bytes(part.text));
+          text += part.text;
+          continue;
         }
-      } else {
-        for await (const part of result.stream) {
-          countEvent();
-          if (part.type === "error") throw part.error;
-          if (part.type === "abort") throw request.signal.reason ?? new Error("aborted");
-          if (part.type === "text-delta") {
-            countOutputBytes(utf8Bytes(part.text));
-            text += part.text;
-            continue;
-          }
-          if (part.type === "tool-call") {
-            const entry = advertised.find((candidate) => candidate.providerName === part.toolName);
-            if (entry === undefined) {
-              throw new KafError("KAF_MODEL_ADAPTER_MISMATCH", {
-                details: { reason: "unadvertised_tool_proposal" },
-              });
-            }
-            const proposedInput = JsonValueSchema.parse(part.input);
-            countOutputBytes(utf8Bytes(canonicalJsonStringify(proposedInput)));
-            // The host discards this digest as authority and re-resolves the
-            // normalized target itself; it is required wire shape only.
-            yield Object.freeze({
-              type: "tool_call",
-              value: {
-                toolRegistrationDigest: entry.toolRegistrationDigest,
-                input: proposedInput,
-                targetDigest: digestCanonicalJson(proposedInput),
-              },
+        if (part.type === "tool-call") {
+          const entry = advertised.find((candidate) => candidate.providerName === part.toolName);
+          if (entry === undefined) {
+            throw new KafError("KAF_MODEL_ADAPTER_MISMATCH", {
+              details: { reason: "unadvertised_tool_proposal" },
             });
-            return;
           }
+          const proposedInput = JsonValueSchema.parse(part.input);
+          countOutputBytes(utf8Bytes(canonicalJsonStringify(proposedInput)));
+          // The host derives the authoritative normalized target from the
+          // validated input; adapters do not supply target authority.
+          yield Object.freeze({
+            type: "tool_call",
+            value: {
+              toolRegistrationDigest: entry.toolRegistrationDigest,
+              input: proposedInput,
+            },
+          });
+          return;
         }
       }
       if (outputBytes > profile.maxRunModelOutputBytes) {
@@ -343,7 +336,11 @@ export function fromAISDK(
     options.resourceProfile ?? defaultResourceProfile(identity),
   );
   enforceProfileBinding(identity, securityProfile);
-  const artifactDigest = digestCanonicalJson({ package: "ai", version: AI_SDK_VERSION });
+  const artifactDigest = digestCanonicalJson({
+    package: "@pactmark/ai-sdk",
+    version: ADAPTER_VERSION,
+    providerPackage: { package: "ai", version: AI_SDK_VERSION },
+  });
   const providerArtifactDigest = digestCanonicalJson({
     provider: identity.provider,
     modelId: identity.modelId,
@@ -351,7 +348,7 @@ export function fromAISDK(
   });
   const registration = defineModelAdapterRegistration({
     id: `ai-sdk.${identity.provider}@1`,
-    implementationVersion: AI_SDK_VERSION,
+    implementationVersion: ADAPTER_VERSION,
     securityProfile,
     resourceProfile,
     credentialSlot: securityProfile.credentialSlot,
@@ -360,7 +357,7 @@ export function fromAISDK(
     adapterArtifact: {
       packageName: "@pactmark/ai-sdk",
       exportName: "fromAISDK",
-      packageVersion: "0.1.0",
+      packageVersion: ADAPTER_VERSION,
       artifactDigest,
     },
     providerArtifact: {
@@ -379,7 +376,8 @@ export function fromAISDK(
   });
   const modelConfig = JsonValueSchema.parse({
     adapter: "ai-sdk",
-    adapterVersion: AI_SDK_VERSION,
+    adapterVersion: ADAPTER_VERSION,
+    providerSdkVersion: AI_SDK_VERSION,
     provider: identity.provider,
     modelId: identity.modelId,
     credentialMode: "ambient_preview",

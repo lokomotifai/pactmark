@@ -24,6 +24,11 @@ export interface PostgresDatabase {
   end?(): Promise<void>;
 }
 
+export interface PostgresMaintenanceDatabase extends PostgresDatabase {
+  /** Explicit host assertion that this connection uses the operator maintenance role. */
+  readonly operatorMaintenance: true;
+}
+
 export function createPostgresDatabase(config: PoolConfig): PostgresDatabase {
   const pool = new Pool(config);
   return {
@@ -37,6 +42,18 @@ export function createPostgresDatabase(config: PoolConfig): PostgresDatabase {
     connect: async () => wrapClient(await pool.connect()),
     end: async () => pool.end(),
   };
+}
+
+/**
+ * Creates the explicitly privileged database boundary used only for migrations
+ * and cross-tenant maintenance. Application requests and workers must use
+ * `createPostgresDatabase` with a non-owner role instead.
+ */
+export function createPostgresMaintenanceDatabase(config: PoolConfig): PostgresMaintenanceDatabase {
+  return Object.freeze({
+    ...createPostgresDatabase(config),
+    operatorMaintenance: true as const,
+  });
 }
 
 function wrapClient(client: PoolClient): PostgresClient {

@@ -12,7 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@pactmark/core": "workspace:*"
+    "@pactmark/agent": "workspace:*",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

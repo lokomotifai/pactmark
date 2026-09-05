@@ -63,8 +63,8 @@ function descriptor(inputLease = lease()) {
     schemaVersion: "1" as const,
     actor: { type: "system_worker" as const, id: "worker-1" },
     initiatingPrincipal: { type: "user" as const, id: "person-1" },
-    tenant: { id: "tenant-1" },
-    runId: "run-1",
+    tenant: { id: inputLease.tenantId },
+    runId: inputLease.runId,
     workOrderId: "work-1",
     workOrderBindingDigest: digest,
     executionDefinition: {
@@ -94,7 +94,12 @@ describe("delegated worker authority", () => {
     expect(issuer.verifyDelegated(authority, new Date(now))).toMatchObject({ valid: true });
     expect(issuer.verify(authority, new Date(now))).toMatchObject({
       valid: true,
-      claims: { actor: { type: "system_worker" }, subject: { id: "person-1" } },
+      claims: {
+        actor: { type: "system_worker" },
+        subject: { id: "person-1" },
+        authenticationStrength: "single_factor",
+        decisionRoles: [],
+      },
     });
 
     issuer.observeLease(lease({ fencingToken: 2 }));
@@ -120,6 +125,22 @@ describe("delegated worker authority", () => {
       valid: false,
       reason: "lease_mismatch",
     });
+  });
+
+  it("does not alias delimiter-bearing tenant and run lease tuples", () => {
+    const issuer = createWorkerDelegatingAuthorityIssuer("worker-issuer");
+    const first = lease({ tenantId: "a\u0000b", runId: "c", leaseId: "lease-a" });
+    const second = lease({ tenantId: "a", runId: "b\u0000c", leaseId: "lease-b" });
+    issuer.observeLease(first);
+    issuer.observeLease(second);
+    expect(
+      issuer.verifyDelegated(issuer.issueDelegated(descriptor(first)), new Date(now)),
+    ).toMatchObject({
+      valid: true,
+    });
+    expect(
+      issuer.verifyDelegated(issuer.issueDelegated(descriptor(second)), new Date(now)),
+    ).toMatchObject({ valid: true });
   });
 
   it("rejects unobserved and invalidated scheduler authority", () => {

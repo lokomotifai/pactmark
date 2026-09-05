@@ -9,33 +9,57 @@ Changesets to prepare release notes and coordinated package versions.
 
 ### Added
 
-- `@pactmark/ai-sdk` now advertises an agent's tools to AI SDK v7 providers as
-  schema-only definitions and maps provider tool calls to governed `tool_call`
-  proposals; the host still revalidates every proposed input and target before
-  policy and dispatch. Omitted model profiles compile to explicit
-  `unreviewed-local-preview` claims.
-- `@pactmark/agent` accepts raw Zod schemas, string instructions, a default
-  deny-everything R0/R1 policy, and default verifiers; `createLocalRuntime`
-  gains an optional local authority issuer and a `run()` convenience for the
-  ephemeral profile. Defaulted definitions produce byte-identical registration
-  digests to their explicit equivalents.
-- Facade `defineTool` supports governed R2 write operations dispatched through
-  deterministic previews, one-use capability grants, bound authorization, and
-  the effect ledger; R3+ still requires kernel-level composition.
-- `examples/quickstart-agent` demonstrates the ~30-line agent surface with a
-  provider-shaped deterministic model and one governed R2 write.
+- The local facade now supports complete, process-local R4 approval: exact
+  previews, one-use challenges and approvals, approve/reject, and explicit
+  resume. R3 compensation and production R5 user presence remain host-owned.
+- The approval-purchase example and explicit-preview Next.js fixture exercise
+  real facade approval paths without persisting raw challenge proof.
+- PostgreSQL has an operator-only global retention boundary and non-owner-role
+  RLS coverage; ordinary expiry stays tenant-scoped.
+- Generated starters execute a real governed R1 read tool, the portable example
+  derives its claims from a real runtime trail, and the quickstart includes an
+  explicitly opt-in live-provider smoke path.
+- Public security documentation now has a self-contained local index and no
+  longer requires access to a private documentation repository.
 
 ### Changed
 
-- The `@pactmark/ai-sdk` exact `ai@7.0.48` guard became a tested-range guard
-  (`>=7.0.48 <8`); the installed version is recorded in the adapter
-  registration digest.
+- Delegated authority is bound to the exact run and WorkOrder. Production input
+  is parsed by the selected agent's exact schema before admission.
+- Native effects redispatch only when the registered strategy proves replay is
+  safe; uncertain boundaries park for reconciliation.
+- Canonical JSON, HTTP, MCP, AI SDK, cancellation, authorization reservation,
+  tool-credential, and tenant-qualified storage boundaries now fail closed on
+  malformed or mismatched state.
+- Deterministic advisory evidence no longer expires by wall clock, but remains
+  integrity-protected and bound to the exact lockfile. Protected release jobs
+  still run a live network audit.
+- CLI, HTTP, AI SDK adapter, MCP client, and in-process executor identities now
+  derive their versions from checked-in package metadata.
+- The coordinated Changesets group and protected release workflow now derive
+  and verify one exact package version instead of embedding `0.2.0`.
+- PostgreSQL's deletion capability now documents its record-level scope:
+  lifecycle-managed protected records are deletable, while run truth and
+  immutable evidence remain append-only.
 
 ### Fixed
 
-- `validateEffectExecution` no longer rejects kind-`none` effect strategies:
-  the canonical acknowledgement comparison omits an absent operation key
-  instead of serializing undefined.
+- Runtime-owned failures now produce stable terminal or parked event truth
+  instead of escaping with a nonterminal run.
+- Local approval recovery requires the exact recorded decision, preview,
+  arguments, target, principal, and approval ID before effect dispatch.
+- Each facade tool gets its own egress broker; an approved R4 tool cannot borrow
+  a sibling tool's origin or HTTP method.
+- The Next.js static bearer fixture is single-factor and cannot satisfy R4
+  phishing-resistant approval.
+- Durable worker delegation no longer manufactures phishing-resistant human
+  authentication strength from scheduler and lease metadata.
+- `RunFailed` events reject error codes outside the public KAF registry.
+- The placeholder gate now detects and self-tests unfinished, skipped, and
+  focused markers across the tracked release surface. Knip now scans package
+  sources, and unused size tooling was removed.
+- Repository scanners ignore tracked paths deleted in the working tree, and
+  generated API reports use CR-aware whitespace checks.
 
 ## 0.2.0 - 2026-08-15
 

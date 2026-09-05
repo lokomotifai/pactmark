@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -43,7 +43,10 @@ export function gitFiles(): readonly string[] {
       cwd: repositoryRoot,
       encoding: "utf8",
     });
-    return output.split("\n").filter(Boolean).sort();
+    return output
+      .split("\n")
+      .filter((path) => path.length > 0 && existsSync(join(repositoryRoot, path)))
+      .sort();
   } catch {
     return walkFiles().map(relativePath);
   }

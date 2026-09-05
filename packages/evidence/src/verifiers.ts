@@ -31,6 +31,10 @@ export type VerifierReferenceIdentity = Readonly<
   >
 >;
 
+function verifierVersionKey(id: string, version: string): string {
+  return digestCanonicalJson([id, version]);
+}
+
 function result(
   definition: VerifierDefinition,
   artifact: Artifact,
@@ -72,7 +76,7 @@ export class VerifierRegistry {
   readonly #definitions = new Map<string, VerifierDefinition>();
 
   register(definition: VerifierDefinition): void {
-    const key = `${definition.id}\u0000${definition.version}`;
+    const key = verifierVersionKey(definition.id, definition.version);
     const current = this.#definitions.get(key);
     if (
       current !== undefined &&
@@ -85,7 +89,7 @@ export class VerifierRegistry {
   }
 
   has(id: string, version: string): boolean {
-    return this.#definitions.has(`${id}\u0000${version}`);
+    return this.#definitions.has(verifierVersionKey(id, version));
   }
 
   verify(
@@ -95,7 +99,7 @@ export class VerifierRegistry {
     content: Uint8Array,
     context: Readonly<{ verifiedAt: string; verificationId: string; reviewerId?: string }>,
   ): VerificationResult {
-    const definition = this.#definitions.get(`${id}\u0000${version}`);
+    const definition = this.#definitions.get(verifierVersionKey(id, version));
     if (definition === undefined) throw new TypeError("KAF_VERIFIER_NOT_REGISTERED");
     return result(
       definition,

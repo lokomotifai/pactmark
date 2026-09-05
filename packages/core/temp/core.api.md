@@ -807,6 +807,24 @@ export interface AgentRegistry {
 export type Approval = z.infer<typeof ApprovalSchema>;
 
 // @public (undocumented)
+export type ApprovalPreviewDisplay = z.infer<typeof ApprovalPreviewDisplaySchema>;
+
+// @public (undocumented)
+export const ApprovalPreviewDisplaySchema: z.ZodObject<{
+    title: z.ZodString;
+    summary: z.ZodString;
+    materialConsequence: z.ZodString;
+    reversibility: z.ZodEnum<{
+        compensatable: "compensatable";
+        irreversible: "irreversible";
+    }>;
+    fields: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        label: z.ZodString;
+        value: z.ZodString;
+    }, z.core.$strict>>>;
+}, z.core.$strict>;
+
+// @public (undocumented)
 export const ApprovalSchema: z.ZodObject<{
     schemaVersion: z.ZodLiteral<"1">;
     id: z.ZodString;
@@ -1410,7 +1428,7 @@ export interface CapabilityGrantStore {
     // (undocumented)
     issue(grant: CapabilityGrant): Promise<void>;
     // (undocumented)
-    reserveUse(grantId: string, authorizationKey: string, at: string): Promise<CapabilityGrantUseClaim>;
+    reserveUse(tenantId: string, grantId: string, authorizationKey: string, at: string): Promise<CapabilityGrantUseClaim>;
     // (undocumented)
     resolve(grantId: string, binding: CapabilityGrantBinding, at: string): Promise<CapabilityGrantResolution>;
     // (undocumented)
@@ -2018,6 +2036,19 @@ export const DecisionPreviewReferenceSchema: z.ZodObject<{
     schemaVersion: z.ZodLiteral<"1">;
     previewDigest: z.ZodString;
     contentDigest: z.ZodOptional<z.ZodString>;
+    approvalDisplay: z.ZodOptional<z.ZodObject<{
+        title: z.ZodString;
+        summary: z.ZodString;
+        materialConsequence: z.ZodString;
+        reversibility: z.ZodEnum<{
+            compensatable: "compensatable";
+            irreversible: "irreversible";
+        }>;
+        fields: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            label: z.ZodString;
+            value: z.ZodString;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>;
 }, z.core.$strict>;
 
 // @public (undocumented)
@@ -2114,7 +2145,7 @@ export const DecisionRoleSchema: z.ZodString;
 // @public
 export interface DecisionStore {
     // (undocumented)
-    consumeChallenge(challengeId: string, commandId: string, consumedAt: string): Promise<void>;
+    consumeChallenge(tenantId: string, challengeId: string, commandId: string, consumedAt: string): Promise<void>;
     // (undocumented)
     getActiveChallenge(tenantId: string, runId: string, decisionId: string): Promise<DecisionSubmissionChallenge | undefined>;
     // (undocumented)
@@ -2487,6 +2518,19 @@ export const EffectPreviewSchema: z.ZodObject<{
         irreversible: "irreversible";
     }>;
     materialConsequence: z.ZodString;
+    approvalDisplay: z.ZodOptional<z.ZodObject<{
+        title: z.ZodString;
+        summary: z.ZodString;
+        materialConsequence: z.ZodString;
+        reversibility: z.ZodEnum<{
+            compensatable: "compensatable";
+            irreversible: "irreversible";
+        }>;
+        fields: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            label: z.ZodString;
+            value: z.ZodString;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>;
     diffDigest: z.ZodOptional<z.ZodString>;
     previewDigest: z.ZodString;
 }, z.core.$strict>;
@@ -2929,9 +2973,9 @@ export type EvidenceAvailability = z.infer<typeof EvidenceAvailabilitySchema>;
 // @public (undocumented)
 export const EvidenceAvailabilitySchema: z.ZodEnum<{
     unknown: "unknown";
+    not_applicable: "not_applicable";
     not_collected: "not_collected";
     not_permitted: "not_permitted";
-    not_applicable: "not_applicable";
 }>;
 
 // @public (undocumented)
@@ -2954,9 +2998,9 @@ export const EvidenceMetricValueSchema: z.ZodUnion<readonly [z.ZodObject<{
     kind: z.ZodLiteral<"unavailable">;
     reason: z.ZodEnum<{
         unknown: "unknown";
+        not_applicable: "not_applicable";
         not_collected: "not_collected";
         not_permitted: "not_permitted";
-        not_applicable: "not_applicable";
     }>;
 }, z.core.$strict>]>;
 
@@ -3014,9 +3058,9 @@ export const EvidenceRecordSchema: z.ZodObject<{
             kind: z.ZodLiteral<"unavailable">;
             reason: z.ZodEnum<{
                 unknown: "unknown";
+                not_applicable: "not_applicable";
                 not_collected: "not_collected";
                 not_permitted: "not_permitted";
-                not_applicable: "not_applicable";
             }>;
         }, z.core.$strict>]>;
         human: z.ZodUnion<readonly [z.ZodObject<{
@@ -3027,9 +3071,9 @@ export const EvidenceRecordSchema: z.ZodObject<{
             kind: z.ZodLiteral<"unavailable">;
             reason: z.ZodEnum<{
                 unknown: "unknown";
+                not_applicable: "not_applicable";
                 not_collected: "not_collected";
                 not_permitted: "not_permitted";
-                not_applicable: "not_applicable";
             }>;
         }, z.core.$strict>]>;
         description: z.ZodString;
@@ -3388,6 +3432,12 @@ export const KAF_ERROR_REGISTRY: {
         readonly message: "The registered agent definition does not match the accepted run.";
         readonly documentationSlug: "runtime-agent-definition-mismatch";
     };
+    readonly KAF_RUNTIME_MODEL_EMPTY: {
+        readonly retryable: false;
+        readonly httpStatus: 422;
+        readonly message: "The model completed without a runtime emission.";
+        readonly documentationSlug: "runtime-model-empty";
+    };
     readonly KAF_EFFECT_INVALID_TRANSITION: {
         readonly retryable: false;
         readonly httpStatus: 409;
@@ -3472,6 +3522,12 @@ export const KAF_ERROR_REGISTRY: {
         readonly message: "The model adapter does not match the registered model profile.";
         readonly documentationSlug: "model-adapter-mismatch";
     };
+    readonly KAF_TOOL_EXECUTION_FAILED: {
+        readonly retryable: false;
+        readonly httpStatus: 422;
+        readonly message: "The registered tool execution failed.";
+        readonly documentationSlug: "tool-execution-failed";
+    };
     readonly KAF_VERIFICATION_REQUIRED: {
         readonly retryable: false;
         readonly httpStatus: 409;
@@ -3548,6 +3604,7 @@ export const KafErrorCodeSchema: z.ZodEnum<{
     KAF_RUNTIME_EVENT_SEQUENCE: "KAF_RUNTIME_EVENT_SEQUENCE";
     KAF_RUNTIME_EVENT_BINDING: "KAF_RUNTIME_EVENT_BINDING";
     KAF_RUNTIME_AGENT_DEFINITION_MISMATCH: "KAF_RUNTIME_AGENT_DEFINITION_MISMATCH";
+    KAF_RUNTIME_MODEL_EMPTY: "KAF_RUNTIME_MODEL_EMPTY";
     KAF_EFFECT_INVALID_TRANSITION: "KAF_EFFECT_INVALID_TRANSITION";
     KAF_EFFECT_ABANDONED_UNCERTAIN: "KAF_EFFECT_ABANDONED_UNCERTAIN";
     KAF_AUTHORIZATION_BINDING_MISMATCH: "KAF_AUTHORIZATION_BINDING_MISMATCH";
@@ -3562,6 +3619,7 @@ export const KafErrorCodeSchema: z.ZodEnum<{
     KAF_MODEL_RESOURCE_LIMIT_EXCEEDED: "KAF_MODEL_RESOURCE_LIMIT_EXCEEDED";
     KAF_MODEL_CREDENTIAL_REQUIRED: "KAF_MODEL_CREDENTIAL_REQUIRED";
     KAF_MODEL_ADAPTER_MISMATCH: "KAF_MODEL_ADAPTER_MISMATCH";
+    KAF_TOOL_EXECUTION_FAILED: "KAF_TOOL_EXECUTION_FAILED";
     KAF_VERIFICATION_REQUIRED: "KAF_VERIFICATION_REQUIRED";
     KAF_EVIDENCE_INVALID_REFERENCE: "KAF_EVIDENCE_INVALID_REFERENCE";
     KAF_PATTERN_INSUFFICIENT_EVIDENCE: "KAF_PATTERN_INSUFFICIENT_EVIDENCE";
@@ -3588,6 +3646,7 @@ export const KafPublicErrorSchema: z.ZodObject<{
         KAF_RUNTIME_EVENT_SEQUENCE: "KAF_RUNTIME_EVENT_SEQUENCE";
         KAF_RUNTIME_EVENT_BINDING: "KAF_RUNTIME_EVENT_BINDING";
         KAF_RUNTIME_AGENT_DEFINITION_MISMATCH: "KAF_RUNTIME_AGENT_DEFINITION_MISMATCH";
+        KAF_RUNTIME_MODEL_EMPTY: "KAF_RUNTIME_MODEL_EMPTY";
         KAF_EFFECT_INVALID_TRANSITION: "KAF_EFFECT_INVALID_TRANSITION";
         KAF_EFFECT_ABANDONED_UNCERTAIN: "KAF_EFFECT_ABANDONED_UNCERTAIN";
         KAF_AUTHORIZATION_BINDING_MISMATCH: "KAF_AUTHORIZATION_BINDING_MISMATCH";
@@ -3602,6 +3661,7 @@ export const KafPublicErrorSchema: z.ZodObject<{
         KAF_MODEL_RESOURCE_LIMIT_EXCEEDED: "KAF_MODEL_RESOURCE_LIMIT_EXCEEDED";
         KAF_MODEL_CREDENTIAL_REQUIRED: "KAF_MODEL_CREDENTIAL_REQUIRED";
         KAF_MODEL_ADAPTER_MISMATCH: "KAF_MODEL_ADAPTER_MISMATCH";
+        KAF_TOOL_EXECUTION_FAILED: "KAF_TOOL_EXECUTION_FAILED";
         KAF_VERIFICATION_REQUIRED: "KAF_VERIFICATION_REQUIRED";
         KAF_EVIDENCE_INVALID_REFERENCE: "KAF_EVIDENCE_INVALID_REFERENCE";
         KAF_PATTERN_INSUFFICIENT_EVIDENCE: "KAF_PATTERN_INSUFFICIENT_EVIDENCE";
@@ -3624,6 +3684,7 @@ export const KafPublicErrorSchema: z.ZodObject<{
         KAF_RUNTIME_EVENT_SEQUENCE: "KAF_RUNTIME_EVENT_SEQUENCE";
         KAF_RUNTIME_EVENT_BINDING: "KAF_RUNTIME_EVENT_BINDING";
         KAF_RUNTIME_AGENT_DEFINITION_MISMATCH: "KAF_RUNTIME_AGENT_DEFINITION_MISMATCH";
+        KAF_RUNTIME_MODEL_EMPTY: "KAF_RUNTIME_MODEL_EMPTY";
         KAF_EFFECT_INVALID_TRANSITION: "KAF_EFFECT_INVALID_TRANSITION";
         KAF_EFFECT_ABANDONED_UNCERTAIN: "KAF_EFFECT_ABANDONED_UNCERTAIN";
         KAF_AUTHORIZATION_BINDING_MISMATCH: "KAF_AUTHORIZATION_BINDING_MISMATCH";
@@ -3638,6 +3699,7 @@ export const KafPublicErrorSchema: z.ZodObject<{
         KAF_MODEL_RESOURCE_LIMIT_EXCEEDED: "KAF_MODEL_RESOURCE_LIMIT_EXCEEDED";
         KAF_MODEL_CREDENTIAL_REQUIRED: "KAF_MODEL_CREDENTIAL_REQUIRED";
         KAF_MODEL_ADAPTER_MISMATCH: "KAF_MODEL_ADAPTER_MISMATCH";
+        KAF_TOOL_EXECUTION_FAILED: "KAF_TOOL_EXECUTION_FAILED";
         KAF_VERIFICATION_REQUIRED: "KAF_VERIFICATION_REQUIRED";
         KAF_EVIDENCE_INVALID_REFERENCE: "KAF_EVIDENCE_INVALID_REFERENCE";
         KAF_PATTERN_INSUFFICIENT_EVIDENCE: "KAF_PATTERN_INSUFFICIENT_EVIDENCE";
@@ -4717,14 +4779,22 @@ export const RUN_TRANSITIONS: {
     readonly cancelled: readonly [];
 };
 
+// @public (undocumented)
+export type RunCancellationRequest = z.infer<typeof RunCancellationRequestSchema>;
+
+// @public (undocumented)
+export const RunCancellationRequestSchema: z.ZodObject<{
+    reason: z.ZodString;
+}, z.core.$strict>;
+
 // @public
 export interface RunCommandTransaction {
     // (undocumented)
     appendRunEvent(event: RunEvent): Promise<void>;
     // (undocumented)
-    claimApproval(approvalId: string, authorizationKey: string, at: string): Promise<ApprovalUseClaim>;
+    claimApproval(tenantId: string, approvalId: string, authorizationKey: string, at: string): Promise<ApprovalUseClaim>;
     // (undocumented)
-    consumeDecisionChallenge(challengeId: string, commandId: string, consumedAt: string): Promise<void>;
+    consumeDecisionChallenge(tenantId: string, challengeId: string, commandId: string, consumedAt: string): Promise<void>;
     // (undocumented)
     enqueueWakeup(request: DurableWakeupRequest): Promise<DurableWakeupReceipt>;
     // (undocumented)
@@ -4759,7 +4829,7 @@ export interface RunCommandTransaction {
     // (undocumented)
     reserveAdmission(request: AdmissionRequest): Promise<AdmissionReservation>;
     // (undocumented)
-    reserveCapabilityGrantUse(grantId: string, authorizationKey: string, at: string): Promise<CapabilityGrantUseClaim>;
+    reserveCapabilityGrantUse(tenantId: string, grantId: string, authorizationKey: string, at: string): Promise<CapabilityGrantUseClaim>;
 }
 
 // @public (undocumented)
@@ -5350,6 +5420,19 @@ export const RunEventSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
         decisionId: z.ZodString;
         decisionGateDigest: z.ZodString;
         proposedEffectDigest: z.ZodString;
+        approvalDisplay: z.ZodOptional<z.ZodObject<{
+            title: z.ZodString;
+            summary: z.ZodString;
+            materialConsequence: z.ZodString;
+            reversibility: z.ZodEnum<{
+                compensatable: "compensatable";
+                irreversible: "irreversible";
+            }>;
+            fields: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                label: z.ZodString;
+                value: z.ZodString;
+            }, z.core.$strict>>>;
+        }, z.core.$strict>>;
     }, z.core.$strip>;
 }, z.core.$strict>, z.ZodObject<{
     schemaVersion: z.ZodLiteral<"1">;
@@ -6112,7 +6195,41 @@ export const RunEventSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     eventType: z.ZodLiteral<"RunFailed">;
     payload: z.ZodObject<{
         stepId: z.ZodOptional<z.ZodString>;
-        errorCode: z.ZodString;
+        errorCode: z.ZodEnum<{
+            KAF_SERIALIZATION_INVALID_JSON: "KAF_SERIALIZATION_INVALID_JSON";
+            KAF_SERIALIZATION_DUPLICATE_KEY: "KAF_SERIALIZATION_DUPLICATE_KEY";
+            KAF_SERIALIZATION_INVALID_UNICODE: "KAF_SERIALIZATION_INVALID_UNICODE";
+            KAF_SERIALIZATION_NON_I_JSON_NUMBER: "KAF_SERIALIZATION_NON_I_JSON_NUMBER";
+            KAF_SERIALIZATION_UNSUPPORTED_VALUE: "KAF_SERIALIZATION_UNSUPPORTED_VALUE";
+            KAF_SERIALIZATION_CYCLIC_VALUE: "KAF_SERIALIZATION_CYCLIC_VALUE";
+            KAF_COMMAND_IDEMPOTENCY_EXPIRED: "KAF_COMMAND_IDEMPOTENCY_EXPIRED";
+            KAF_SCHEMA_INVALID: "KAF_SCHEMA_INVALID";
+            KAF_RUNTIME_INVALID_TRANSITION: "KAF_RUNTIME_INVALID_TRANSITION";
+            KAF_RUNTIME_TERMINAL: "KAF_RUNTIME_TERMINAL";
+            KAF_RUNTIME_EVENT_SEQUENCE: "KAF_RUNTIME_EVENT_SEQUENCE";
+            KAF_RUNTIME_EVENT_BINDING: "KAF_RUNTIME_EVENT_BINDING";
+            KAF_RUNTIME_AGENT_DEFINITION_MISMATCH: "KAF_RUNTIME_AGENT_DEFINITION_MISMATCH";
+            KAF_RUNTIME_MODEL_EMPTY: "KAF_RUNTIME_MODEL_EMPTY";
+            KAF_EFFECT_INVALID_TRANSITION: "KAF_EFFECT_INVALID_TRANSITION";
+            KAF_EFFECT_ABANDONED_UNCERTAIN: "KAF_EFFECT_ABANDONED_UNCERTAIN";
+            KAF_AUTHORIZATION_BINDING_MISMATCH: "KAF_AUTHORIZATION_BINDING_MISMATCH";
+            KAF_AUTHORIZATION_EXPIRED: "KAF_AUTHORIZATION_EXPIRED";
+            KAF_POLICY_DENIED: "KAF_POLICY_DENIED";
+            KAF_ADMISSION_DENIED: "KAF_ADMISSION_DENIED";
+            KAF_STORAGE_CONCURRENCY_CONFLICT: "KAF_STORAGE_CONCURRENCY_CONFLICT";
+            KAF_STORAGE_NOT_FOUND: "KAF_STORAGE_NOT_FOUND";
+            KAF_STORAGE_SECURITY_PROFILE: "KAF_STORAGE_SECURITY_PROFILE";
+            KAF_RUNTIME_CAPABILITY_MISSING: "KAF_RUNTIME_CAPABILITY_MISSING";
+            KAF_RUNTIME_NOT_READY: "KAF_RUNTIME_NOT_READY";
+            KAF_MODEL_RESOURCE_LIMIT_EXCEEDED: "KAF_MODEL_RESOURCE_LIMIT_EXCEEDED";
+            KAF_MODEL_CREDENTIAL_REQUIRED: "KAF_MODEL_CREDENTIAL_REQUIRED";
+            KAF_MODEL_ADAPTER_MISMATCH: "KAF_MODEL_ADAPTER_MISMATCH";
+            KAF_TOOL_EXECUTION_FAILED: "KAF_TOOL_EXECUTION_FAILED";
+            KAF_VERIFICATION_REQUIRED: "KAF_VERIFICATION_REQUIRED";
+            KAF_EVIDENCE_INVALID_REFERENCE: "KAF_EVIDENCE_INVALID_REFERENCE";
+            KAF_PATTERN_INSUFFICIENT_EVIDENCE: "KAF_PATTERN_INSUFFICIENT_EVIDENCE";
+            KAF_HTTP_IDEMPOTENCY_CONFLICT: "KAF_HTTP_IDEMPOTENCY_CONFLICT";
+        }>;
         safeDetails: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<JsonValue, unknown, z.core.$ZodTypeInternals<JsonValue, unknown>>>>;
     }, z.core.$strip>;
 }, z.core.$strict>, z.ZodObject<{
@@ -6366,6 +6483,39 @@ export const RuntimeCapabilitiesSchema: z.ZodObject<{
 }, z.core.$strict>;
 
 // @public (undocumented)
+export type RuntimeCompensationRequest = z.infer<typeof RuntimeCompensationRequestSchema>;
+
+// @public (undocumented)
+export const RuntimeCompensationRequestSchema: z.ZodObject<{
+    schemaVersion: z.ZodLiteral<"1">;
+    reason: z.ZodString;
+    budget: z.ZodObject<{
+        maxTurns: z.ZodNumber;
+        maxModelCalls: z.ZodNumber;
+        maxToolCalls: z.ZodNumber;
+        maxActiveExecutionMs: z.ZodNumber;
+        maxModelInputBytesPerCall: z.ZodOptional<z.ZodNumber>;
+        maxModelInputTokensPerCall: z.ZodOptional<z.ZodNumber>;
+        maxModelOutputTokensPerCall: z.ZodOptional<z.ZodNumber>;
+        maxStreamedOutputBytesPerCall: z.ZodOptional<z.ZodNumber>;
+        maxStreamedOutputEventsPerCall: z.ZodOptional<z.ZodNumber>;
+        maxToolResultContextBytesPerCall: z.ZodOptional<z.ZodNumber>;
+        maxContextSnapshotBytes: z.ZodOptional<z.ZodNumber>;
+        maxRunModelInputBytes: z.ZodOptional<z.ZodNumber>;
+        maxRunModelOutputBytes: z.ZodOptional<z.ZodNumber>;
+        maxRunModelInputTokens: z.ZodOptional<z.ZodNumber>;
+        maxRunModelOutputTokens: z.ZodOptional<z.ZodNumber>;
+        maxRunToolResultContextBytes: z.ZodOptional<z.ZodNumber>;
+        monetaryCeiling: z.ZodOptional<z.ZodObject<{
+            amount: z.ZodNumber;
+            currency: z.ZodString;
+            maximumPriceBoundVersion: z.ZodString;
+            maximumPriceBoundExpiresAt: z.ZodISODateTime;
+        }, z.core.$strict>>;
+    }, z.core.$strict>;
+}, z.core.$strict>;
+
+// @public (undocumented)
 export type RuntimeReadinessCheck = z.infer<typeof RuntimeReadinessCheckSchema>;
 
 // @public (undocumented)
@@ -6375,8 +6525,8 @@ export const RuntimeReadinessCheckSchema: z.ZodObject<{
     status: z.ZodEnum<{
         warning: "warning";
         fail: "fail";
-        pass: "pass";
         not_applicable: "not_applicable";
+        pass: "pass";
     }>;
     code: z.ZodString;
     safeMessage: z.ZodString;
@@ -6449,8 +6599,8 @@ export const RuntimeReadinessReportSchema: z.ZodObject<{
         status: z.ZodEnum<{
             warning: "warning";
             fail: "fail";
-            pass: "pass";
             not_applicable: "not_applicable";
+            pass: "pass";
         }>;
         code: z.ZodString;
         safeMessage: z.ZodString;
@@ -6690,7 +6840,7 @@ export const SkillManifestSchema: z.ZodObject<{
     requiredCapabilities: z.ZodOptional<z.ZodArray<z.ZodString>>;
 }, z.core.$strict>;
 
-// @public (undocumented)
+// @public
 export type StorageSecurityProfile = z.infer<typeof StorageSecurityProfileSchema>;
 
 // @public (undocumented)
@@ -6938,9 +7088,9 @@ export const ToolRegistrationContractSchema: z.ZodObject<{
     effectStrategyKind: z.ZodEnum<{
         native: "native";
         none: "none";
+        read: "read";
         transactional: "transactional";
         reconcilable: "reconcilable";
-        read: "read";
     }>;
     effectStrategyRegistrationDigest: z.ZodString;
     compensationStrategyRegistrationDigest: z.ZodOptional<z.ZodString>;

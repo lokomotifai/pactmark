@@ -8,6 +8,10 @@ import { describe, expect, it } from "vitest";
 
 import { verifyAdvisorySnapshot } from "../../tooling/advisory-snapshot.mjs";
 import { auditReleaseCommands } from "../../tooling/audit-release-commands.mjs";
+import {
+  checkRepositoryPlaceholders,
+  scanPlaceholderContents,
+} from "../../tooling/check-placeholders.mjs";
 import { canonicalJson, sha256Bytes } from "../../tooling/lib/release-integrity.mjs";
 import { repositoryRoot } from "../../tooling/lib/repository.mjs";
 import { finalizeReleaseCandidate } from "../../tooling/finalize-release-candidate.mjs";
@@ -15,6 +19,10 @@ import { generateReleaseArtifacts } from "../../tooling/release-artifacts.mjs";
 import verifyManifestJson from "../../tooling/verify-gates.json" with { type: "json" };
 import { parseVerifyGateManifest, verifyGateScripts } from "../../tooling/verify-gate-manifest.mjs";
 import { prepareOidcPublicationConfig } from "../../tooling/prepare-oidc-publication.mjs";
+import {
+  coordinatedReleaseMetadata,
+  verifyRequestedReleaseVersion,
+} from "../../tooling/release-version.mjs";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -55,6 +63,23 @@ function withTemporary(run: (directory: string) => void): void {
   }
 }
 
+describe("release placeholder audit", () => {
+  it.each([
+    [["TO", "DO"].join(""), "unfinished marker"],
+    [["T", "BD"].join(""), "unfinished marker"],
+    [["FIX", "ME"].join(""), "unfinished marker"],
+    [["it", ".skip("].join(""), "skipped test"],
+    [["test", ".todo("].join(""), "skipped test"],
+    [["describe", ".only("].join(""), "focused test"],
+  ])("detects the %s release marker", (content, label) => {
+    expect(scanPlaceholderContents([["fixture.ts", content]])).toEqual([`fixture.ts: ${label}`]);
+  });
+
+  it("scans the complete tracked release surface without matching its own fixtures", () => {
+    expect(checkRepositoryPlaceholders()).toEqual([]);
+  });
+});
+
 describe("release command audit", () => {
   it("detects executable registry mutations while excluding the named negative fixture", () => {
     withTemporary((directory) => {
@@ -82,6 +107,14 @@ describe("release command audit", () => {
 });
 
 describe("deterministic release artifacts", () => {
+  it("derives one coordinated release version and package set from public manifests", () => {
+    expect(coordinatedReleaseMetadata()).toMatchObject({ version: "0.2.0" });
+    expect(coordinatedReleaseMetadata().packageNames).toHaveLength(19);
+    expect(() => verifyRequestedReleaseVersion("9.9.9")).toThrow(
+      "KAF_RELEASE_REQUESTED_VERSION_MISMATCH",
+    );
+  });
+
   it("prepares a token-free OIDC config only for the exact v0.2.0 package set", () => {
     withTemporary((directory) => {
       const packageNames = [
@@ -111,7 +144,7 @@ describe("deterministic release artifacts", () => {
           status: "attested",
           metadataProfile: "release",
           releaseVersion: "0.2.0",
-          packages: packageNames.map((name) => ({ name })),
+          packages: packageNames.map((name) => ({ name, version: "0.2.0" })),
         })}\n`,
       );
       const config = prepareOidcPublicationConfig(directory, "2026-08-05T12:00:00.000Z");
@@ -327,7 +360,7 @@ function advisoryFiles(
 }
 
 describe("offline advisory snapshot", () => {
-  it("binds checksum, canonical content, exact lockfile and freshness", () => {
+  it("binds checksum, canonical content and the exact lockfile without expiring", () => {
     withTemporary((directory) => {
       const files = advisoryFiles(directory);
       expect(
@@ -335,15 +368,14 @@ describe("offline advisory snapshot", () => {
           snapshotPath: files.snapshot,
           checksumPath: files.checksum,
           lockfilePath: files.lockfile,
-          now: new Date("2026-08-03T00:00:00.000Z"),
-          maximumAgeDays: 7,
+          now: new Date("2036-08-03T00:00:00.000Z"),
         }),
       ).toMatchObject({ advisoryCount: 0 });
     });
   });
 
-  it("fails closed for stale data, changed lockfile, changed checksum and unresolved high findings", () => {
-    for (const attack of ["stale", "lockfile", "checksum", "finding"] as const) {
+  it("fails closed for a future timestamp, changed lockfile, changed checksum and unresolved high findings", () => {
+    for (const attack of ["future", "lockfile", "checksum", "finding"] as const) {
       withTemporary((directory) => {
         const files = advisoryFiles(
           directory,
@@ -357,13 +389,12 @@ describe("offline advisory snapshot", () => {
             checksumPath: files.checksum,
             lockfilePath: files.lockfile,
             now: new Date(
-              attack === "stale" ? "2026-09-03T00:00:00.000Z" : "2026-08-03T00:00:00.000Z",
+              attack === "future" ? "2026-08-01T00:00:00.000Z" : "2026-08-03T00:00:00.000Z",
             ),
-            maximumAgeDays: 7,
           });
         expect(invoke).toThrow(
-          attack === "stale"
-            ? "KAF_ADVISORY_SNAPSHOT_STALE"
+          attack === "future"
+            ? "KAF_ADVISORY_TIMESTAMP_INVALID"
             : attack === "lockfile"
               ? "KAF_ADVISORY_LOCKFILE_MISMATCH"
               : attack === "checksum"

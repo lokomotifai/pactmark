@@ -254,6 +254,12 @@ function assertEffectAuthorizationBinding(
   record: EffectRecord,
   reservation: AuthorizationReservation,
 ): void {
+  // v0.2 persisted prepared effects while their linked reservation was still
+  // `reserved`. New runtime writes consume the reservation atomically with the
+  // prepared effect, but accepting the legacy shape keeps those effects resumable.
+  const hasValidLifecycleState =
+    (reservation.state === "reserved" && reservation.consumedAt === undefined) ||
+    (reservation.state === "consumed" && reservation.consumedAt !== undefined);
   const effectBinding = {
     tenantId: record.tenantId,
     runId: record.runId,
@@ -286,7 +292,7 @@ function assertEffectAuthorizationBinding(
   };
   if (
     reservation.authorizationReservationId !== record.authorizationReservationId ||
-    reservation.state !== "reserved" ||
+    !hasValidLifecycleState ||
     canonicalJsonStringify(effectBinding) !== canonicalJsonStringify(authorizationBinding)
   ) {
     throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {

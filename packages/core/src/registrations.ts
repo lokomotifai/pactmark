@@ -4,6 +4,7 @@ import type { ModelResourceProfileSchema, ModelSecurityProfileSchema } from "./m
 import {
   DigestSchema,
   JsonValueSchema,
+  canonicalJsonStringify,
   digestCanonicalJson,
   type Digest,
 } from "./serialization.js";
@@ -134,6 +135,12 @@ const StorageSecurityProfileMaterialSchema = z
 export const StorageSecurityProfileSchema = StorageSecurityProfileMaterialSchema.extend({
   storageSecurityProfileDigest: DigestSchema,
 }).strict();
+/**
+ * Adapter-wide storage capabilities. `deletionSupport` means that the adapter
+ * exposes a documented deletion boundary for lifecycle-managed record classes;
+ * it is not a promise that append-only run truth or immutable evidence can be
+ * deleted. Concrete adapters must document those record-level semantics.
+ */
 export type StorageSecurityProfile = z.infer<typeof StorageSecurityProfileSchema>;
 
 type MaterialInput<S extends z.ZodObject<z.ZodRawShape>> = Omit<
@@ -281,7 +288,7 @@ export class ImmutableRegistrationRegistry<T extends RegistrationRecord> {
   constructor(private readonly digestOf: (registration: T) => Digest) {}
 
   register(registration: T): T {
-    const key = `${registration.id}\u0000${registration.implementationVersion}`;
+    const key = canonicalJsonStringify([registration.id, registration.implementationVersion]);
     const existing = this.#entries.get(key);
     if (existing && this.digestOf(existing) !== this.digestOf(registration)) {
       throw new RegistrationDriftError(registration.id, registration.implementationVersion);
@@ -293,7 +300,7 @@ export class ImmutableRegistrationRegistry<T extends RegistrationRecord> {
   }
 
   resolve(id: string, implementationVersion: string): T | undefined {
-    return this.#entries.get(`${id}\u0000${implementationVersion}`);
+    return this.#entries.get(canonicalJsonStringify([id, implementationVersion]));
   }
 }
 

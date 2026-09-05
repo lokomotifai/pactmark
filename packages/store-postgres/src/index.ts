@@ -21,12 +21,19 @@ export {
 } from "./data-protector.js";
 export {
   createPostgresDatabase,
+  createPostgresMaintenanceDatabase,
   withTransaction,
   withTenantTransaction,
   type PostgresClient,
   type PostgresDatabase,
+  type PostgresMaintenanceDatabase,
   type SqlResult,
 } from "./database.js";
+export {
+  PostgresRetentionMaintenance,
+  type PostgresRetentionMaintenanceOptions,
+  type PostgresRetentionPurgeResult,
+} from "./retention-maintenance.js";
 export { PostgresEventStore } from "./event-store.js";
 export { PostgresEffectLedger } from "./effect-ledger.js";
 export { PostgresSecretRefStore } from "./secret-ref-store.js";
@@ -47,6 +54,7 @@ export {
   POSTGRES_ACKNOWLEDGED_EFFECT_RESULTS_SCHEMA_SQL,
   POSTGRES_PROTECTED_REFERENCE_DIGESTS_SCHEMA_SQL,
   POSTGRES_TENANT_ROW_LEVEL_SECURITY_SCHEMA_SQL,
+  POSTGRES_WORK_ORDER_RETENTION_BINDINGS_SCHEMA_SQL,
   POSTGRES_MIGRATIONS,
   PostgresMigrationManager,
   type PostgresMigration,

@@ -22,6 +22,16 @@ function compareCodeUnits(left: string, right: string): number {
 import { verifyVerificationExceptionDigest } from "./exceptions.js";
 import type { VerifierReferenceIdentity } from "./verifiers.js";
 
+function verifierKey(reference: VerifierReferenceIdentity): string {
+  return canonicalJsonStringify([
+    reference.id,
+    reference.version,
+    reference.verifierRegistrationDigest,
+    reference.rubricVersion,
+    reference.rubricDigest,
+  ]);
+}
+
 export type EvidenceMaterial = Omit<
   EvidenceRecord,
   | "evidenceDigest"
@@ -136,12 +146,7 @@ export function buildEvidenceRecord(input: BuildEvidenceInput): EvidenceRecord {
       throw new TypeError("KAF_EVIDENCE_INVALID_REFERENCE");
     }
   }
-  const verifierKeys = new Set(
-    input.verifierReferences.map(
-      (reference) =>
-        `${reference.id}\u0000${reference.version}\u0000${reference.verifierRegistrationDigest}\u0000${reference.rubricVersion}\u0000${reference.rubricDigest}`,
-    ),
-  );
+  const verifierKeys = new Set(input.verifierReferences.map((reference) => verifierKey(reference)));
   if (verifierKeys.size !== input.verifierReferences.length) {
     throw new TypeError("KAF_EVIDENCE_INVALID_REFERENCE");
   }
@@ -151,7 +156,13 @@ export function buildEvidenceRecord(input: BuildEvidenceInput): EvidenceRecord {
     const verifiedArtifact = artifacts.find(
       (artifact) => artifact.artifactDigest === verification.artifactDigest,
     );
-    const key = `${verification.verifierId}\u0000${verification.verifierVersion}\u0000${verification.verifierRegistrationDigest}\u0000${verification.rubricVersion}\u0000${verification.rubricDigest}`;
+    const key = verifierKey({
+      id: verification.verifierId,
+      version: verification.verifierVersion,
+      verifierRegistrationDigest: verification.verifierRegistrationDigest,
+      rubricVersion: verification.rubricVersion,
+      rubricDigest: verification.rubricDigest,
+    });
     if (
       verifiedArtifact === undefined ||
       verificationDigest !== digestCanonicalJson(verificationMaterial) ||
@@ -181,10 +192,7 @@ export function buildEvidenceRecord(input: BuildEvidenceInput): EvidenceRecord {
         reference.rubricVersion === exception.rubricVersion &&
         reference.rubricDigest === exception.rubricDigest,
     );
-    const key =
-      verifierReference === undefined
-        ? undefined
-        : `${verifierReference.id}\u0000${verifierReference.version}\u0000${verifierReference.verifierRegistrationDigest}\u0000${verifierReference.rubricVersion}\u0000${verifierReference.rubricDigest}`;
+    const key = verifierReference === undefined ? undefined : verifierKey(verifierReference);
     if (
       exception.tenantId !== input.material.tenantId ||
       exception.runId !== input.material.runId ||

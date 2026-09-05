@@ -1,13 +1,16 @@
-import { evaluatePurchaseBoundary } from "./example.js";
+import { runPurchaseDecision } from "./example.js";
 
 console.log(
   JSON.stringify(
-    evaluatePurchaseBoundary({
-      sku: "P-100",
-      quantity: 2,
-      unitPriceMinor: 1250,
-      currency: "USD",
-      targetAccount: "DEMO-MERCHANT",
-    }),
+    await runPurchaseDecision(
+      {
+        sku: "P-100",
+        quantity: 2,
+        unitPriceMinor: 1250,
+        currency: "USD",
+        targetAccount: "DEMO-MERCHANT",
+      },
+      "approve",
+    ),
   ),
 );

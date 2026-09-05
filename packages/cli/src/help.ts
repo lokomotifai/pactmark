@@ -1,4 +1,6 @@
-export const VERSION = "0.1.0";
+import cliPackage from "../package.json" with { type: "json" };
+
+export const VERSION = cliPackage.version;
 
 const ROOT = `Pactmark ${VERSION}
 

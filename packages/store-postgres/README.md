@@ -77,6 +77,16 @@ role while production requests and workers use a separate non-owner role. The
 package continues to advertise `database_constraint` until the host separately
 attests those role assignments.
 
+Migration `012` keeps retention compatible with durable run truth. A new run
+binding must still find an exact WorkOrder parent with matching binding and
+execution-definition digests; the insert trigger holds a key-share lock so a
+concurrent purge cannot create an invalid new binding. Once accepted, the
+immutable `pactmark_run_work_orders` row becomes the retained identity
+tombstone. Wakeups reference that durable run binding instead of the protected
+WorkOrder row, allowing an expired WorkOrder body/reference to be deleted while
+run and scheduler evidence remain append-only. Missing expired WorkOrders still
+fail closed if a run is later resumed.
+
 ## Security defaults
 
 Production connections accept only `ssl.mode: "verify-full"`. The adapter enables certificate-chain and hostname verification and rejects URL-level SSL overrides before constructing a pool. An explicit `ssl.mode: "disable"` is limited to loopback hosts in the `development` profile; it can never represent production readiness. CA bundles are host configuration and must not be placed in events, artifacts, evidence, or logs.
@@ -86,6 +96,13 @@ Wildcard scope is rejected unless the host opts into
 `allowDevelopmentWildcardScope: true` together with
 `transportMode: "development-plaintext"`; that sentinel cannot satisfy a
 production connection.
+
+The profile's `retentionSupport` and `deletionSupport` flags mean that this
+adapter has explicit lifecycle boundaries for protected WorkOrders, inputs,
+contexts, and artifacts. They are not universal delete capabilities. Run
+events, retained run/worker bindings, evidence, verification, pattern, and
+acknowledged-effect-result records remain append-only or immutable as described
+below. Replicated backup deletion remains an operator responsibility.
 
 Event, work-order routing metadata, and ordinary JSONB columns are not
 application-encrypted. Production operators must provide encrypted PostgreSQL
@@ -186,7 +203,43 @@ The package does not operate managed backups. Operators must configure encrypted
 
 Events are append-only run truth; projections are disposable caches. Never repair an invalid event row in place. Restore a verified backup or use a new, audited compensating event if the domain permits it.
 
-Deleting or expiring a protected WorkOrder, input submission, context snapshot, or artifact is final from this adapter’s perspective. `purgeExpired()` methods accept an injected clock through suite options and emit the configured metadata-only `onDelete` hook; they never emit a body or ciphertext. A suspended run whose required protected record is gone must fail closed; the package does not retain a hidden copy.
+Deleting or expiring a protected WorkOrder, input submission, context snapshot,
+or artifact is final from this adapter's perspective. Each protected record store
+exposes `purgeExpiredForTenant(tenantId)`. That method validates the tenant
+against the storage profile, includes `tenant_id` in the `DELETE`, and uses the
+same transaction-local tenant context as ordinary store access. The former
+ambiguous `purgeExpired()` methods are deprecated and fail closed with
+`KAF_RUNTIME_NOT_READY`; they no longer perform a cross-tenant delete.
+
+Global expiry is available only through `PostgresRetentionMaintenance` and an
+explicitly marked `PostgresMaintenanceDatabase`. The marker is a host assertion,
+not a database privilege escalation: the supplied credentials must already be
+the operator-controlled table-owner/maintenance role. Never create that boundary
+from application-request or worker credentials. RLS is deliberately not forced
+on table owners because the documented maintenance role must cross tenants;
+production application and worker roles must be separate `NOBYPASSRLS`
+non-owners. The real PostgreSQL integration gate exercises unset, same-tenant,
+cross-tenant, and owner-maintenance deletion behavior.
+
+```ts
+import {
+  createPostgresMaintenanceDatabase,
+  PostgresRetentionMaintenance,
+  toPgPoolConfig,
+} from "@pactmark/store-postgres";
+
+const database = createPostgresMaintenanceDatabase(toPgPoolConfig(operatorMaintenanceConnection));
+const retention = new PostgresRetentionMaintenance(database, {
+  onDelete: auditMetadataOnlyDeletion,
+});
+await retention.purgeAllExpired();
+await database.end?.();
+```
+
+Both tenant and maintenance purges accept an injected clock through suite or
+maintenance options and emit the configured metadata-only `onDelete` hook;
+they never emit a body or ciphertext. A suspended run whose required protected
+record is gone must fail closed; the package does not retain a hidden copy.
 
 Backup responsibility remains with the deployer. Backups must include the
 schema migration ledger, nonce/counter tables, events, protected records, and

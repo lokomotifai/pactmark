@@ -101,22 +101,32 @@ function matchesBinding(grant: CapabilityGrant, rawBinding: CapabilityGrantBindi
 }
 
 export function createMemoryCapabilityGrantStore(): CapabilityGrantStore {
-  const grants = new Map<string, StoredGrant>();
+  const grants = new Map<string, Map<string, StoredGrant>>();
+
+  const grantsForTenant = (tenantId: string): Map<string, StoredGrant> => {
+    const existing = grants.get(tenantId);
+    if (existing !== undefined) return existing;
+    const created = new Map<string, StoredGrant>();
+    grants.set(tenantId, created);
+    return created;
+  };
+
+  const getGrant = (tenantId: string, grantId: string): StoredGrant | undefined =>
+    grants.get(tenantId)?.get(grantId);
 
   const store: CapabilityGrantStore = {
     issue(rawGrant: CapabilityGrant) {
       return Promise.resolve().then(() => {
         const grant = Object.freeze(CapabilityGrantSchema.parse(rawGrant));
-        if (grants.has(grant.id)) throw new GrantError("KAF_POLICY_GRANT_DUPLICATE");
-        grants.set(grant.id, { grant, claims: new Map() });
+        const tenantGrants = grantsForTenant(grant.tenant.id);
+        if (tenantGrants.has(grant.id)) throw new GrantError("KAF_POLICY_GRANT_DUPLICATE");
+        tenantGrants.set(grant.id, { grant, claims: new Map() });
       });
     },
     revoke(tenantId: string, grantId: string, revokedAt: string) {
       return Promise.resolve().then(() => {
-        const stored = grants.get(grantId);
-        if (stored === undefined || stored.grant.tenant.id !== tenantId) {
-          throw new GrantError("KAF_POLICY_GRANT_MISSING");
-        }
+        const stored = getGrant(tenantId, grantId);
+        if (stored === undefined) throw new GrantError("KAF_POLICY_GRANT_MISSING");
         stored.revokedAt = revokedAt;
       });
     },
@@ -126,9 +136,12 @@ export function createMemoryCapabilityGrantStore(): CapabilityGrantStore {
       at: string,
     ): Promise<CapabilityGrantResolution> {
       return Promise.resolve().then(() => {
-        const stored = grants.get(grantId);
+        const parsedBinding = CapabilityGrantBindingSchema.parse(binding);
+        const stored = getGrant(parsedBinding.tenant.id, grantId);
         if (stored === undefined) return { status: "missing" } as const;
-        if (!matchesBinding(stored.grant, binding)) return { status: "binding_mismatch" } as const;
+        if (!matchesBinding(stored.grant, parsedBinding)) {
+          return { status: "binding_mismatch" } as const;
+        }
         if (stored.revokedAt !== undefined || stored.grant.revokedAt !== undefined) {
           return { status: "revoked" } as const;
         }
@@ -141,9 +154,9 @@ export function createMemoryCapabilityGrantStore(): CapabilityGrantStore {
           : ({ status: "active", grant: stored.grant, usesRemaining: remaining } as const);
       });
     },
-    reserveUse(grantId: string, authorizationKey: string, at: string) {
+    reserveUse(tenantId: string, grantId: string, authorizationKey: string, at: string) {
       return Promise.resolve().then(() => {
-        const stored = grants.get(grantId);
+        const stored = getGrant(tenantId, grantId);
         if (stored === undefined) throw new GrantError("KAF_POLICY_GRANT_MISSING");
         const replay = stored.claims.get(authorizationKey);
         if (replay !== undefined) return replay;

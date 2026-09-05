@@ -4,6 +4,7 @@ import {
   connectMCPServer,
   defineMCPServerIdentity,
   defineMCPToolPin,
+  mcpToolOutputSchemaDigest,
   mcpToolSchemaDigest,
   type MCPExposureAuthority,
   type MCPProtocolClient,
@@ -449,6 +450,96 @@ describe("guarded MCP discovery and calls", () => {
     await connection.close();
   });
 
+  it("accepts text-only content when the discovered tool declares no output schema", async () => {
+    const profile = stdioProfile();
+    const identity = serverIdentity(profile);
+    const content = [{ type: "text", text: "plain MCP result" }] as const;
+    const pin = defineMCPToolPin({
+      registrationId: "fixture.text_only@1",
+      implementationVersion: "1.0.0",
+      serverIdentityDigest: identity.mcpServerIdentityDigest,
+      toolName: "text_only",
+      safeDescription: "Read a text-only MCP result",
+      inputSchemaDigest: mcpToolSchemaDigest(inputSchema),
+      outputSchemaDigest: mcpToolOutputSchemaDigest(undefined),
+      security: readSecurity,
+      allowedPurposeCodes: ["fixture.read"],
+      effectStrategyKind: "read",
+      effectStrategyRegistrationDigest: digestC,
+    });
+    const connection = await connectMCPServer(
+      {
+        transportProfile: profile,
+        expectedServerIdentity: identity,
+        toolPins: [pin],
+        host: {
+          runtimeProfile: "preview",
+          previewStdioTransportFactory: () =>
+            new FakeMCPServerTransport({
+              tools: [{ name: "text_only", inputSchema }],
+              callResult: { content },
+            }),
+        },
+      },
+      exposure,
+      allowingAuthority(),
+      new AbortController().signal,
+    );
+
+    await expect(
+      connection.callTool(
+        connection.listExposedTools()[0]!.registration.toolRegistrationDigest,
+        { value: "valid" },
+        new AbortController().signal,
+      ),
+    ).resolves.toEqual(content);
+    await connection.close();
+  });
+
+  it("treats adding or removing an output schema as pinned schema drift", async () => {
+    const profile = stdioProfile();
+    const identity = serverIdentity(profile);
+    const textOnlyPin = defineMCPToolPin({
+      registrationId: "fixture.text_only@1",
+      implementationVersion: "1.0.0",
+      serverIdentityDigest: identity.mcpServerIdentityDigest,
+      toolName: "text_only",
+      safeDescription: "Read a text-only MCP result",
+      inputSchemaDigest: mcpToolSchemaDigest(inputSchema),
+      outputSchemaDigest: mcpToolOutputSchemaDigest(undefined),
+      security: readSecurity,
+      allowedPurposeCodes: ["fixture.read"],
+      effectStrategyKind: "read",
+      effectStrategyRegistrationDigest: digestC,
+    });
+    const connect = (
+      tools: readonly Record<string, unknown>[],
+      pins: readonly (typeof textOnlyPin)[],
+    ) =>
+      connectMCPServer(
+        {
+          transportProfile: profile,
+          expectedServerIdentity: identity,
+          toolPins: pins,
+          host: {
+            runtimeProfile: "preview",
+            previewStdioTransportFactory: () =>
+              new FakeMCPServerTransport({ tools: tools as never }),
+          },
+        },
+        exposure,
+        allowingAuthority(),
+        new AbortController().signal,
+      );
+
+    await expect(
+      connect([{ name: "text_only", inputSchema, outputSchema }], [textOnlyPin]),
+    ).rejects.toMatchObject({ code: "KAF_MCP_TOOL_SCHEMA_DRIFT" });
+    await expect(
+      connect([{ name: "fixture_read", inputSchema }], [toolPin(identity)]),
+    ).rejects.toMatchObject({ code: "KAF_MCP_TOOL_SCHEMA_DRIFT" });
+  });
+
   it("enforces call byte limits before protocol dispatch", async () => {
     const profile = stdioProfile({ maxRequestBytes: 256 });
     const identity = serverIdentity(profile);
@@ -751,6 +842,21 @@ describe("guarded MCP discovery and calls", () => {
       ),
     ).rejects.toMatchObject({ code: "KAF_MCP_MALFORMED_RESPONSE" });
     await connection.close();
+
+    const malformedContentConnection = await base(
+      client({
+        callTool: () =>
+          Promise.resolve({ content: { type: "text", text: "not-an-array" } } as never),
+      }),
+    );
+    await expect(
+      malformedContentConnection.callTool(
+        malformedContentConnection.listExposedTools()[0]!.registration.toolRegistrationDigest,
+        { value: "x" },
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({ code: "KAF_MCP_MALFORMED_RESPONSE" });
+    await malformedContentConnection.close();
 
     await expect(base(client(), [toolPin(identity), toolPin(identity)])).rejects.toMatchObject({
       code: "KAF_MCP_IDENTITY_DRIFT",

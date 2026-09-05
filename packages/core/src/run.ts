@@ -22,6 +22,13 @@ export type TerminalRunStatus = z.infer<typeof TerminalRunStatusSchema>;
 export const ResumeTargetSchema = z.enum(["planning", "running", "verifying"]);
 export type ResumeTarget = z.infer<typeof ResumeTargetSchema>;
 
+export const RunCancellationRequestSchema = z
+  .object({
+    reason: z.string().regex(/^[a-z0-9][a-z0-9_:-]{0,127}$/u),
+  })
+  .strict();
+export type RunCancellationRequest = z.infer<typeof RunCancellationRequestSchema>;
+
 export const RUN_TRANSITIONS = {
   created: ["accepted", "failed"],
   accepted: ["planning", "running", "waiting_for_approval", "failed", "cancelled"],

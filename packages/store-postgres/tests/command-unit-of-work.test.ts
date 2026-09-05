@@ -92,11 +92,20 @@ function authorizationReservation(
     secretRefIds: [],
     purposeCode: "support",
     purposeRegistryVersion: "1",
-    state: "reserved",
+    state: "consumed",
     createdAt: instant,
     expiresAt: "2026-08-03T11:00:00.000Z",
+    consumedAt: instant,
     ...overrides,
   };
+}
+
+function legacyReservedAuthorization(): AuthorizationReservation {
+  const { consumedAt, ...reservation } = authorizationReservation({
+    state: "reserved",
+  });
+  void consumedAt;
+  return reservation;
 }
 
 function preparedEffect(overrides: Partial<EffectRecord> = {}): EffectRecord {
@@ -738,7 +747,12 @@ describe("PostgresRunCommandUnitOfWork", () => {
       return unit.transactCommand(commandScope, context, async (transaction) => {
         await transaction.putAcceptedWorkOrder(acceptedWorkOrder());
         await transaction.issueCapabilityGrant(capabilityGrant());
-        await transaction.reserveCapabilityGrantUse("grant-1", "authorization-key-1", instant);
+        await transaction.reserveCapabilityGrantUse(
+          "tenant-a",
+          "grant-1",
+          "authorization-key-1",
+          instant,
+        );
         await transaction.appendRunEvent(runAccepted());
         await transaction.putRunProjection(acceptedProjection());
         await transaction.enqueueWakeup({
@@ -871,9 +885,14 @@ describe("PostgresRunCommandUnitOfWork", () => {
         payload: { decisionId: "decision-1", challengeProof: "reference-only" },
       });
       return unit.transactCommand(commandScope, context, async (transaction) => {
-        await transaction.consumeDecisionChallenge("challenge-1", commandId, instant);
+        await transaction.consumeDecisionChallenge("tenant-a", "challenge-1", commandId, instant);
         await transaction.putApproval(approvalValue);
-        await transaction.claimApproval("approval-1", "authorization-key-approval-1", instant);
+        await transaction.claimApproval(
+          "tenant-a",
+          "approval-1",
+          "authorization-key-approval-1",
+          instant,
+        );
         await transaction.appendRunEvent(approvalEvent);
         await transaction.putRunProjection(approvalProjection);
         await transaction.enqueueWakeup({
@@ -939,7 +958,12 @@ describe("PostgresRunCommandUnitOfWork", () => {
     });
     await expect(
       unit.transactCommand(otherScope, otherContext, async (transaction) => {
-        await transaction.consumeDecisionChallenge("challenge-1", otherCommandId, instant);
+        await transaction.consumeDecisionChallenge(
+          "tenant-a",
+          "challenge-1",
+          otherCommandId,
+          instant,
+        );
         await transaction.putCommandRecord(record(otherScope, otherContext.requestDigest));
         return null;
       }),
@@ -1045,6 +1069,42 @@ describe("PostgresRunCommandUnitOfWork", () => {
       }),
     ).rejects.toMatchObject({ code: "KAF_STORAGE_CONCURRENCY_CONFLICT" });
     expect(database.statements.filter((sql) => sql === "ROLLBACK")).toHaveLength(1);
+  });
+
+  it("rejects a cross-tenant identifier-only operation before resource SQL", async () => {
+    const database = new TransactionDouble();
+    const unit = new PostgresRunCommandUnitOfWork(database, {
+      securityProfile: createPostgresStorageSecurityProfile(),
+    });
+    const commandScope = scope();
+    const context = createCommandContext({
+      commandId,
+      operation: "start",
+      payload: {},
+    });
+    const attempts: Array<(transaction: RunCommandTransaction) => Promise<unknown>> = [
+      (transaction: Parameters<Parameters<typeof unit.transactCommand>[2]>[0]) =>
+        transaction.reserveCapabilityGrantUse("tenant-b", "grant-1", "authorization-1", instant),
+      (transaction: Parameters<Parameters<typeof unit.transactCommand>[2]>[0]) =>
+        transaction.consumeDecisionChallenge("tenant-b", "challenge-1", commandId, instant),
+      (transaction: Parameters<Parameters<typeof unit.transactCommand>[2]>[0]) =>
+        transaction.claimApproval("tenant-b", "approval-1", "authorization-1", instant),
+    ];
+    for (const attempt of attempts) {
+      const statementCount = database.statements.length;
+      await expect(unit.transactCommand(commandScope, context, attempt)).rejects.toMatchObject({
+        code: "KAF_STORAGE_CONCURRENCY_CONFLICT",
+      });
+      const statements = database.statements.slice(statementCount);
+      expect(statements.at(-1)).toBe("ROLLBACK");
+      expect(
+        statements.some((statement) =>
+          /pactmark_(?:capability_grant_use_claims|decision_challenges|approval_use_claims)/u.test(
+            statement,
+          ),
+        ),
+      ).toBe(false);
+    }
   });
 
   it("serializes transitions against the bound run and active fencing token", async () => {
@@ -1153,6 +1213,43 @@ describe("PostgresRunCommandUnitOfWork", () => {
     await expect(ledger.getByEffectKey("tenant-a", "run-1", "effect-key-1")).resolves.toMatchObject(
       { state: "dispatched", dispatchedAt: "2026-08-03T10:00:01.000Z" },
     );
+  });
+
+  it("resumes a v0.2 prepared effect whose authorization is still reserved", async () => {
+    const database = new TransactionDouble();
+    database.projectionRow = acceptedProjection();
+    const unit = new PostgresRunCommandUnitOfWork(database, {
+      securityProfile: createPostgresStorageSecurityProfile(),
+    });
+    const transition = (transitionKind: "EffectPrepared" | "EffectDispatched") => ({
+      schemaVersion: "1" as const,
+      tenantId: "tenant-a",
+      runId: "run-1",
+      transitionKind,
+      transitionKey: `effect-1:${transitionKind}`,
+      workOrderBindingDigest: database.projectionRow!.workOrderBindingDigest,
+      executionDefinitionDigest,
+      leaseId: "lease-1",
+      fencingToken: 9,
+    });
+    await unit.transactTransition(transition("EffectPrepared"), async (transaction) => {
+      await transaction.putAuthorizationReservation(legacyReservedAuthorization());
+      await transaction.putEffectRecord(preparedEffect());
+      return null;
+    });
+    await unit.transactTransition(transition("EffectDispatched"), async (transaction) => {
+      await transaction.putEffectRecord({
+        ...preparedEffect(),
+        state: "dispatched",
+        dispatchedAt: "2026-08-03T10:00:01.000Z",
+        updatedAt: "2026-08-03T10:00:01.000Z",
+      });
+      return null;
+    });
+    const ledger = new PostgresEffectLedger(database, createPostgresStorageSecurityProfile());
+    await expect(ledger.getByEffectId("tenant-a", "run-1", "effect-1")).resolves.toMatchObject({
+      state: "dispatched",
+    });
   });
 
   it("rolls back crash-boundary effect writes and rejects digest, tenant, and key drift", async () => {

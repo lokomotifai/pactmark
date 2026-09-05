@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -26,6 +26,10 @@ describe("repository tooling", () => {
 
   it("keeps private bootstrap roots outside the public file set", () => {
     expect(gitFiles().filter((path) => /^(?:briefs|research)\//u.test(path))).toEqual([]);
+  });
+
+  it("excludes tracked files deleted in the working tree", () => {
+    expect(gitFiles().every((path) => existsSync(join(repositoryRoot, path)))).toBe(true);
   });
 
   it(

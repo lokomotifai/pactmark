@@ -15,6 +15,7 @@ import {
   DecisionRejectionSubmissionSchema,
   DecisionSubmissionChallengeSchema,
   EffectRecordSchema,
+  EvidenceRecordSchema,
   ProtectedEffectResultRecordSchema,
   EffectReconciliationResolutionSchema,
   ApprovalSchema,
@@ -48,7 +49,9 @@ import {
   type ActiveExecutionReservation,
   type AgentDefinition,
   type AgentRegistry,
+  type Approval,
   type AdmissionController,
+  type Artifact,
   type ArtifactStore,
   type AuthorityContext,
   type AuthorityIssuer,
@@ -66,6 +69,7 @@ import {
   type DecisionRejectionSubmission,
   type DecisionStore,
   type EvidenceBuilder,
+  type EvidenceRecord,
   type Digest,
   type EffectAcknowledgement,
   type EffectRecord,
@@ -75,6 +79,7 @@ import {
   type IdGenerator,
   type InputSubmissionStore,
   type JsonValue,
+  type KafErrorCode,
   type ModelCallReservation,
   type ModelDriver,
   type PolicyEngine,
@@ -112,8 +117,10 @@ import { evaluateHostToolCall, resolveHostToolCall } from "./tool-authority.js";
 import {
   assertEffectRecordBinding,
   createEffectKey,
+  markAuthorizationReservationConsumed,
   validateAuthorizationReservation,
   validateEffectExecution,
+  validateEffectLookupResult,
   validateEffectPreview,
   type RuntimeEffectDispatchContext,
   type RuntimeEffectServices,
@@ -140,6 +147,14 @@ export interface RuntimeRegistrationKillSwitches {
 
 export type RuntimeBoundaryErrorClassification =
   "aborted" | "timed_out" | "retryable" | "non_retryable" | "uncertain";
+
+const RuntimeBoundaryErrorClassificationSchema = z.enum([
+  "aborted",
+  "timed_out",
+  "retryable",
+  "non_retryable",
+  "uncertain",
+]);
 
 export interface RuntimeRetryPolicy {
   maximumAttempts(input: Readonly<{ boundary: "model" | "tool" }>): number;
@@ -288,6 +303,44 @@ type VerifiedAuthority =
 
 type LeaseSession = { current: RunLease };
 
+const DELEGATED_WORKER_RUN_OPERATIONS = new Set(["run.execute", "run.get", "run.events"]);
+
+const TERMINAL_RUN_ERROR_CODES = new Set<KafErrorCode>([
+  "KAF_RUNTIME_CAPABILITY_MISSING",
+  "KAF_RUNTIME_TERMINAL",
+  "KAF_POLICY_DENIED",
+  "KAF_EFFECT_ABANDONED_UNCERTAIN",
+  "KAF_MODEL_RESOURCE_LIMIT_EXCEEDED",
+  "KAF_TOOL_EXECUTION_FAILED",
+  "KAF_VERIFICATION_REQUIRED",
+  "KAF_EVIDENCE_INVALID_REFERENCE",
+]);
+
+const TERMINAL_MODEL_ADAPTER_REASONS = new Set([
+  "model_emission_schema_invalid",
+  "model_call_failed_without_safe_result",
+]);
+
+const TERMINAL_EFFECT_AUTHORIZATION_REASONS = new Set([
+  "effect_approval_required",
+  "effect_authorization_reservation_mismatch",
+  "effect_operation_key_empty",
+  "effect_preview_binding_or_determinism_failed",
+  "effect_secret_ref_claim_port_unavailable",
+]);
+
+class RuntimeBoundaryInvocationError extends Error {
+  readonly boundaryError: unknown;
+
+  constructor(boundaryError: unknown) {
+    super(
+      boundaryError instanceof Error ? boundaryError.message : "Runtime boundary invocation failed",
+    );
+    this.name = "RuntimeBoundaryInvocationError";
+    this.boundaryError = boundaryError;
+  }
+}
+
 function defaultSleep(milliseconds: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted === true) {
@@ -304,6 +357,14 @@ function defaultSleep(milliseconds: number, signal?: AbortSignal): Promise<void>
     }, milliseconds);
     signal?.addEventListener("abort", onAbort, { once: true });
   });
+}
+
+function tenantRunKey(tenantId: string, runId: string): string {
+  return canonicalJsonStringify([tenantId, runId]);
+}
+
+function tenantRunStepKey(tenantId: string, runId: string, stepId: string): string {
+  return canonicalJsonStringify([tenantId, runId, stepId]);
 }
 
 export class AgentRuntime {
@@ -510,7 +571,10 @@ export class AgentRuntime {
     requestInput: WorkOrderRequest,
     commandInput: CommandContext,
   ): Promise<Readonly<{ runId: string; workOrderId: string }>> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "unscoped_only",
+      operation: "run.start",
+    });
     const request = WorkOrderRequestSchema.parse(requestInput);
     const definition = AgentDefinitionSchema.parse(definitionInput);
     const command = CommandContextSchema.parse(commandInput);
@@ -691,7 +755,12 @@ export class AgentRuntime {
   ): Promise<
     Readonly<{ inputSubmissionRecordId: string; runId: string; automaticResume: boolean }>
   > {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "run",
+      operation: "run.submit_input",
+      runId,
+    });
+    await this.#assertAuthorityStoredRunScope(claims, runId);
     const command = CommandContextSchema.parse(commandInput);
     this.#assertCommand(command, "run.submit_input", valueInput);
     this.#assertCommandResourceScope(command, [runId, requestId]);
@@ -844,7 +913,11 @@ export class AgentRuntime {
     decisionId: string,
     commandInput: CommandContext,
   ): Promise<Readonly<{ challengeProof: string; expiresAt: string }>> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "run",
+      operation: "run.issue_decision_challenge",
+      runId,
+    });
     const command = CommandContextSchema.parse(commandInput);
     this.#assertCommand(command, "run.issue_decision_challenge", {});
     this.#assertCommandResourceScope(command, [runId, decisionId]);
@@ -965,7 +1038,11 @@ export class AgentRuntime {
     resolutionInput: JsonValue,
     commandInput: CommandContext,
   ): Promise<Readonly<{ runId: string; effectId: string; status: "recovered" | "abandoned" }>> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "run",
+      operation: "run.reconcile_effect",
+      runId,
+    });
     if (!claims.decisionRoles.includes("effect:reconcile")) {
       throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
         details: { reason: "effect_reconcile_role_required" },
@@ -1159,7 +1236,10 @@ export class AgentRuntime {
     requestInput: JsonValue,
     commandInput: CommandContext,
   ): Promise<Readonly<{ compensationRunId: string }>> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "unscoped_only",
+      operation: "run.request_compensation",
+    });
     if (!claims.decisionRoles.includes("effect:compensate")) {
       throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
         details: { reason: "effect_compensate_role_required" },
@@ -1383,9 +1463,10 @@ export class AgentRuntime {
   }
 
   async getRun(authority: AuthorityContext, runId: string): Promise<RunProjection> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, { kind: "run", operation: "run.get", runId });
     const projection = await this.#config.eventStore.getProjection(claims.tenant.id, runId);
     if (projection === undefined) throw new KafError("KAF_STORAGE_NOT_FOUND");
+    this.#assertAuthorityWorkOrderScope(claims, runId, projection.workOrderId);
     return projection;
   }
 
@@ -1394,9 +1475,14 @@ export class AgentRuntime {
     runId: string,
     options: Readonly<{ afterSequence?: number; signal?: AbortSignal }> = {},
   ): AsyncIterable<RunEvent> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "run",
+      operation: "run.events",
+      runId,
+    });
     let projection = await this.#config.eventStore.getProjection(claims.tenant.id, runId);
     if (projection === undefined) throw new KafError("KAF_STORAGE_NOT_FOUND");
+    this.#assertAuthorityWorkOrderScope(claims, runId, projection.workOrderId);
     let cursor = options.afterSequence ?? 0;
     const sleep = this.#config.sleep ?? defaultSleep;
     for (;;) {
@@ -1409,6 +1495,7 @@ export class AgentRuntime {
       }
       projection = await this.#config.eventStore.getProjection(claims.tenant.id, runId);
       if (projection === undefined) throw new KafError("KAF_STORAGE_NOT_FOUND");
+      this.#assertAuthorityWorkOrderScope(claims, runId, projection.workOrderId);
       if (TerminalRunStatusSchema.safeParse(projection.status).success) return;
       if (!observed) {
         try {
@@ -1438,7 +1525,12 @@ export class AgentRuntime {
     reasonOrCommand: string | CommandContext,
     explicitCommand?: CommandContext,
   ): Promise<RunProjection> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "run",
+      operation: "run.cancel",
+      runId,
+    });
+    await this.#assertAuthorityStoredRunScope(claims, runId);
     const reasonCode =
       typeof reasonOrCommand === "string" ? reasonOrCommand : "authenticated_cancellation";
     if (!/^[a-z0-9][a-z0-9_:-]{0,127}$/u.test(reasonCode)) {
@@ -1476,7 +1568,7 @@ export class AgentRuntime {
         return next;
       },
     );
-    this.#abortControllers.get(runId)?.abort(reasonCode);
+    this.#abortControllers.get(tenantRunKey(claims.tenant.id, runId))?.abort(reasonCode);
     return result.value;
   }
 
@@ -1486,7 +1578,12 @@ export class AgentRuntime {
     commandInput: CommandContext,
     options: Readonly<{ signal?: AbortSignal }> = {},
   ): Promise<RuntimeExecutionResult> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "run",
+      operation: "run.resume",
+      runId,
+    });
+    await this.#assertAuthorityStoredRunScope(claims, runId);
     const command = CommandContextSchema.parse(commandInput);
     this.#assertCommand(command, "run.resume", { runId });
     this.#assertCommandWindow(command);
@@ -1540,7 +1637,11 @@ export class AgentRuntime {
     runId: string,
     options: Readonly<{ signal?: AbortSignal }> = {},
   ): Promise<RuntimeExecutionResult> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "run",
+      operation: "run.execute",
+      runId,
+    });
     let projection = await this.getRun(authority, runId);
     if (TerminalRunStatusSchema.safeParse(projection.status).success) {
       return {
@@ -1577,7 +1678,8 @@ export class AgentRuntime {
     };
     if (options.signal?.aborted === true) onAbort();
     else options.signal?.addEventListener("abort", onAbort, { once: true });
-    this.#abortControllers.set(runId, controller);
+    const executionRunKey = tenantRunKey(claims.tenant.id, runId);
+    this.#abortControllers.set(executionRunKey, controller);
     try {
       const history = await this.#readEvents(claims.tenant.id, runId);
       let modelCalls = history.filter((event) => event.eventType === "ModelCallStarted").length;
@@ -1802,7 +1904,7 @@ export class AgentRuntime {
               Math.max(0, this.#config.clock.monotonicMilliseconds() - invocationStartedAt),
           });
           const attempt = checkpoint?.attempt ?? modelCalls + 1;
-          const localModelCallKey = `${projection.runId}\u0000${stepId}`;
+          const localModelCallKey = tenantRunStepKey(workOrder.tenant.id, projection.runId, stepId);
           if (resumedInflight && this.#config.productionModelServices !== undefined) {
             const services = this.#config.productionModelServices;
             let reservation = await services.reservationReader.get(
@@ -1914,8 +2016,10 @@ export class AgentRuntime {
             );
             if (latest !== undefined) projection = latest;
             modelCalls = Math.max(modelCalls, attempt);
-            const classification = this.#classifyBoundaryError("model", error);
-            if (classification === "aborted") throw error;
+            const boundaryError = this.#capturedBoundaryError(error);
+            if (boundaryError === undefined) throw error;
+            const classification = this.#classifyBoundaryError("model", boundaryError);
+            if (classification === "aborted") this.#throwBoundaryError(boundaryError);
             const scheduled = await this.#scheduleRetry({
               workOrder,
               projection,
@@ -1934,7 +2038,23 @@ export class AgentRuntime {
                 verifications: [],
               },
             });
-            if (scheduled === undefined) throw error;
+            if (scheduled === undefined) {
+              if (classification === "uncertain") {
+                projection = await this.#append(
+                  workOrder,
+                  projection,
+                  leaseSession,
+                  "RunSuspended",
+                  {
+                    stepId,
+                    resumeTarget: "planning",
+                    reasonCode: "model_call_outcome_uncertain",
+                  },
+                );
+                return { runId, status: "parked" };
+              }
+              throw this.#normalizeBoundaryFailure("model", boundaryError, classification);
+            }
             projection = scheduled.projection;
             checkpoint = scheduled.checkpoint;
             continue;
@@ -2029,8 +2149,12 @@ export class AgentRuntime {
             );
           }
           ToolRegistrationContractSchema.parse(registration);
-          const callsAlreadyUsed =
+          const persistedCallsForRegistration =
             toolCallsByRegistration.get(registration.toolRegistrationDigest) ?? 0;
+          const callsAlreadyUsed =
+            resumedTool && persistedCallsForRegistration > 0
+              ? persistedCallsForRegistration - 1
+              : persistedCallsForRegistration;
           let resolvedCall: Awaited<ReturnType<typeof resolveHostToolCall>>;
           try {
             resolvedCall = await resolveHostToolCall({
@@ -2137,7 +2261,19 @@ export class AgentRuntime {
               stepId,
               "KAF_POLICY_DENIED",
             );
+          let approvedToolCall: Approval | undefined;
           if (policy.decision === "require_approval") {
+            approvedToolCall = await this.#approvedToolCall({
+              workOrder,
+              projection,
+              definition,
+              registration,
+              stepId,
+              argumentsDigest,
+              normalizedTargetDigest: policy.normalizedTargetDigest,
+            });
+          }
+          if (policy.decision === "require_approval" && approvedToolCall === undefined) {
             const previewer = this.#config.decisionPreviewer;
             const decisionStore = this.#config.decisionStore;
             if (previewer === undefined || decisionStore === undefined) {
@@ -2229,6 +2365,9 @@ export class AgentRuntime {
                 decisionId,
                 decisionGateDigest,
                 proposedEffectDigest: digestCanonicalJson(binding),
+                ...(preview.approvalDisplay === undefined
+                  ? {}
+                  : { approvalDisplay: preview.approvalDisplay }),
               },
               requestingEventId,
               async (transaction) => {
@@ -2248,6 +2387,17 @@ export class AgentRuntime {
           });
           let result: JsonValue;
           if (registration.effectStrategyKind === "read") {
+            if (approvedToolCall !== undefined) {
+              await this.#claimReadApproval({
+                workOrder,
+                lease: leaseSession,
+                approval: approvedToolCall,
+                stepId,
+                toolCallId,
+                argumentsDigest,
+                normalizedTargetDigest: policy.normalizedTargetDigest,
+              });
+            }
             if (
               registration.security.riskClass !== "R0" &&
               registration.security.riskClass !== "R1"
@@ -2271,15 +2421,23 @@ export class AgentRuntime {
                 boundaryKey: `${toolCallId}:${String(toolAttempt)}`,
                 signal: controller.signal,
                 callback: (boundarySignal) =>
-                  this.#config.toolExecutor.execute({
-                    registration,
-                    input: resolvedCall.validatedInput,
-                    signal: boundarySignal,
-                  }),
+                  this.#captureBoundaryInvocation(() =>
+                    this.#config.toolExecutor.execute({
+                      registration,
+                      input: resolvedCall.validatedInput,
+                      signal: boundarySignal,
+                    }),
+                  ),
               });
             } catch (error) {
-              const classification = this.#classifyBoundaryError("tool", error, registration);
-              if (classification === "aborted") throw error;
+              const boundaryError = this.#capturedBoundaryError(error);
+              if (boundaryError === undefined) throw error;
+              const classification = this.#classifyBoundaryError(
+                "tool",
+                boundaryError,
+                registration,
+              );
+              if (classification === "aborted") this.#throwBoundaryError(boundaryError);
               const scheduled = await this.#scheduleRetry({
                 workOrder,
                 projection,
@@ -2300,7 +2458,23 @@ export class AgentRuntime {
                   verifications: [],
                 },
               });
-              if (scheduled === undefined) throw error;
+              if (scheduled === undefined) {
+                if (classification === "uncertain") {
+                  projection = await this.#append(
+                    workOrder,
+                    projection,
+                    leaseSession,
+                    "RunSuspended",
+                    {
+                      stepId,
+                      resumeTarget: "running",
+                      reasonCode: "tool_call_outcome_uncertain",
+                    },
+                  );
+                  return { runId, status: "parked" };
+                }
+                throw this.#normalizeBoundaryFailure("tool", boundaryError, classification);
+              }
               projection = scheduled.projection;
               checkpoint = scheduled.checkpoint;
               continue;
@@ -2316,6 +2490,7 @@ export class AgentRuntime {
               toolCallId,
               value: resolvedCall.validatedInput,
               normalizedTargetDigest: policy.normalizedTargetDigest,
+              ...(approvedToolCall === undefined ? {} : { approval: approvedToolCall }),
               signal: controller.signal,
               checkpoint: {
                 schemaVersion: "1",
@@ -2413,24 +2588,12 @@ export class AgentRuntime {
         }
         return { runId, status: "cancelled" };
       }
-      if (
-        error instanceof KafError &&
-        (error.code === "KAF_RUNTIME_CAPABILITY_MISSING" || error.code === "KAF_RUNTIME_TERMINAL")
-      ) {
-        const latest = await this.#config.eventStore.getProjection(claims.tenant.id, runId);
-        if (latest !== undefined && !TerminalRunStatusSchema.safeParse(latest.status).success) {
-          await this.#append(workOrder, latest, leaseSession, "RunFailed", {
-            ...(latest.currentStepId === null ? {} : { stepId: latest.currentStepId }),
-            errorCode: error.code,
-            safeDetails: error.details ?? {},
-          });
-        }
-        return { runId, status: "failed" };
-      }
+      const terminal = await this.#terminalizeExecutionFailure(workOrder, leaseSession, error);
+      if (terminal !== undefined) return terminal;
       throw error;
     } finally {
       options.signal?.removeEventListener("abort", onAbort);
-      this.#abortControllers.delete(runId);
+      this.#abortControllers.delete(executionRunKey);
       await this.#config.leaseStore.release(leaseSession.current);
     }
   }
@@ -2513,7 +2676,8 @@ export class AgentRuntime {
     };
     if (options.signal?.aborted === true) onAbort();
     else options.signal?.addEventListener("abort", onAbort, { once: true });
-    this.#abortControllers.set(projectionInput.runId, controller);
+    const executionRunKey = tenantRunKey(claims.tenant.id, projectionInput.runId);
+    this.#abortControllers.set(executionRunKey, controller);
     let projection = projectionInput;
     try {
       if (projection.status === "suspended") return { runId: projection.runId, status: "parked" };
@@ -2617,9 +2781,27 @@ export class AgentRuntime {
         outcome.result,
         controller.signal,
       );
+    } catch (error) {
+      if (controller.signal.aborted) {
+        const latest = await this.#config.eventStore.getProjection(
+          claims.tenant.id,
+          projectionInput.runId,
+        );
+        if (latest !== undefined && !TerminalRunStatusSchema.safeParse(latest.status).success) {
+          await this.#append(workOrder, latest, leaseSession, "RunCancelled", {
+            ...(latest.currentStepId === null ? {} : { stepId: latest.currentStepId }),
+            reasonCode: "abort_signal",
+            actorId: claims.actor.id,
+          });
+        }
+        return { runId: projectionInput.runId, status: "cancelled" };
+      }
+      const terminal = await this.#terminalizeExecutionFailure(workOrder, leaseSession, error);
+      if (terminal !== undefined) return terminal;
+      throw error;
     } finally {
       options.signal?.removeEventListener("abort", onAbort);
-      this.#abortControllers.delete(projectionInput.runId);
+      this.#abortControllers.delete(executionRunKey);
       await this.#config.leaseStore.release(leaseSession.current);
     }
   }
@@ -2700,18 +2882,22 @@ export class AgentRuntime {
       const run = this.#asRun(projection);
       let next: RuntimeModelEmission | undefined;
       try {
-        next = await this.#withLeaseHeartbeat(input.lease, input.signal, async (boundarySignal) => {
-          for await (const rawEmission of this.#config.modelDriver.invoke({
-            run,
-            input: input.modelInput,
-            signal: boundarySignal,
-          })) {
-            return RuntimeModelEmissionSchema.parse(rawEmission);
-          }
-          return undefined;
-        });
+        next = await this.#withLeaseHeartbeat(input.lease, input.signal, (boundarySignal) =>
+          this.#captureBoundaryInvocation(async () => {
+            for await (const rawEmission of this.#config.modelDriver.invoke({
+              run,
+              input: input.modelInput,
+              signal: boundarySignal,
+            })) {
+              return this.#parseModelEmission(rawEmission);
+            }
+            return undefined;
+          }),
+        );
       } catch (error) {
-        this.#uncertainLocalModelCalls.add(`${projection.runId}\u0000${input.stepId}`);
+        this.#uncertainLocalModelCalls.add(
+          tenantRunStepKey(input.workOrder.tenant.id, projection.runId, input.stepId),
+        );
         throw error;
       }
       return { projection, reservationId, next, completedEventCommitted: false };
@@ -2973,7 +3159,7 @@ export class AgentRuntime {
             });
           },
         })) {
-          return RuntimeModelEmissionSchema.parse(rawEmission);
+          return this.#parseModelEmission(rawEmission);
         }
         return undefined;
       });
@@ -2983,7 +3169,15 @@ export class AgentRuntime {
         });
       }
     } catch (error) {
-      const retryClassification = adapter.classifyError?.(error) ?? "uncertain";
+      const invalidEmission =
+        error instanceof KafError &&
+        error.code === "KAF_MODEL_ADAPTER_MISMATCH" &&
+        error.details?.["reason"] === "model_emission_schema_invalid";
+      const retryClassification = invalidEmission
+        ? "non_retryable"
+        : adapter.classifyError === undefined
+          ? "uncertain"
+          : this.#safeBoundaryClassification(() => adapter.classifyError?.(error) ?? "uncertain");
       await this.#transitionModelReservation(
         input.workOrder,
         input.lease,
@@ -2996,8 +3190,15 @@ export class AgentRuntime {
           this.#assertModelReservation(uncertain, acceptedReservation, "uncertain");
         },
       );
+      if (invalidEmission) {
+        throw new KafError("KAF_MODEL_ADAPTER_MISMATCH", {
+          details: { reason: "model_emission_schema_invalid", retryClassification },
+          internalCause: error,
+        });
+      }
       throw new KafError("KAF_RUNTIME_CAPABILITY_MISSING", {
         details: { reason: "model_call_failed_after_dispatch", retryClassification },
+        internalCause: error,
       });
     }
     const outputBytes =
@@ -3333,6 +3534,196 @@ export class AgentRuntime {
     );
   }
 
+  async #approvedToolCall(input: {
+    readonly workOrder: AcceptedAgentWorkOrder;
+    readonly projection: RunProjection;
+    readonly definition: Readonly<{ policyRegistrationDigest: Digest }>;
+    readonly registration: ToolRegistrationContract;
+    readonly stepId: string;
+    readonly argumentsDigest: Digest;
+    readonly normalizedTargetDigest: Digest;
+  }): Promise<Approval | undefined> {
+    const store = this.#config.decisionStore;
+    if (store === undefined) return undefined;
+    const events = await this.#readEvents(input.workOrder.tenant.id, input.projection.runId);
+    let recordedIndex = -1;
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (event?.eventType === "ApprovalRecorded" && event.payload.stepId === input.stepId) {
+        recordedIndex = index;
+        break;
+      }
+    }
+    if (recordedIndex < 1) return undefined;
+    const recorded = events[recordedIndex];
+    const requested = events[recordedIndex - 1];
+    if (
+      recorded?.eventType !== "ApprovalRecorded" ||
+      requested?.eventType !== "ApprovalRequested" ||
+      requested.payload.stepId !== input.stepId ||
+      requested.payload.decisionId !== recorded.payload.decisionId
+    ) {
+      throw new KafError("KAF_STORAGE_CONCURRENCY_CONFLICT", {
+        details: { reason: "approval_event_sequence_changed" },
+      });
+    }
+    const gateValue = await store.getGate(
+      input.workOrder.tenant.id,
+      input.projection.runId,
+      recorded.payload.decisionId,
+    );
+    const approvalValue = await store.getApproval(
+      input.workOrder.tenant.id,
+      recorded.payload.approvalId,
+    );
+    if (gateValue === undefined || approvalValue === undefined) {
+      throw new KafError("KAF_STORAGE_NOT_FOUND");
+    }
+    const gate = DecisionGateSchema.parse(gateValue);
+    const approval = ApprovalSchema.parse(approvalValue);
+    if (input.workOrder.decisionOwner.mode !== "principal") {
+      throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+        details: { reason: "approval_owner_changed" },
+      });
+    }
+    this.#assertExactBinding(
+      {
+        decisionId: gate.decisionId,
+        tenantId: gate.tenantId,
+        runId: gate.runId,
+        requestingEventId: gate.requestingEventId,
+        decisionGateDigest: gate.decisionGateDigest,
+        binding: gate.binding,
+      },
+      {
+        decisionId: recorded.payload.decisionId,
+        tenantId: input.workOrder.tenant.id,
+        runId: input.projection.runId,
+        requestingEventId: requested.eventId,
+        decisionGateDigest: requested.payload.decisionGateDigest,
+        binding: gate.binding,
+      },
+      "approved_decision_gate_changed",
+    );
+    if (
+      gate.decisionGateDigest !==
+        digestCanonicalJson({
+          decisionId: gate.decisionId,
+          requestingEventId: gate.requestingEventId,
+          binding: gate.binding,
+          requiredAuthenticationStrength: gate.requiredAuthenticationStrength,
+        }) ||
+      requested.payload.proposedEffectDigest !== digestCanonicalJson(gate.binding)
+    ) {
+      throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+        details: { reason: "approved_decision_gate_digest_changed" },
+      });
+    }
+    const binding = gate.binding;
+    this.#assertExactBinding(
+      {
+        schemaVersion: binding.schemaVersion,
+        tenant: binding.tenant,
+        principal: binding.principal,
+        runId: binding.runId,
+        stepId: binding.stepId,
+        decisionId: binding.decisionId,
+        workOrderBindingDigest: binding.workOrderBindingDigest,
+        executionDefinition: binding.executionDefinition,
+        executionDefinitionDigest: binding.executionDefinitionDigest,
+        toolId: binding.toolId,
+        toolVersion: binding.toolVersion,
+        toolRegistrationDigest: binding.toolRegistrationDigest,
+        argumentsDigest: binding.argumentsDigest,
+        targetDigest: binding.targetDigest,
+        purpose: binding.purpose,
+        policyRegistrationDigest: binding.policyRegistrationDigest,
+      },
+      {
+        schemaVersion: "1",
+        tenant: input.workOrder.tenant,
+        principal: input.workOrder.decisionOwner.principal,
+        runId: input.projection.runId,
+        stepId: input.stepId,
+        decisionId: recorded.payload.decisionId,
+        workOrderBindingDigest: input.workOrder.workOrderBindingDigest,
+        executionDefinition: input.workOrder.executionDefinition,
+        executionDefinitionDigest: input.workOrder.executionDefinitionDigest,
+        toolId: input.registration.id,
+        toolVersion: input.registration.implementationVersion,
+        toolRegistrationDigest: input.registration.toolRegistrationDigest,
+        argumentsDigest: input.argumentsDigest,
+        targetDigest: input.normalizedTargetDigest,
+        purpose: input.workOrder.purpose,
+        policyRegistrationDigest: input.definition.policyRegistrationDigest,
+      },
+      "approved_effect_binding_changed",
+    );
+    this.#assertExactBinding(
+      {
+        id: approval.id,
+        challengeId: approval.challengeId,
+        challengeProofDigest: approval.challengeProofDigest,
+        binding: approval.binding,
+        maximumUses: approval.maximumUses,
+      },
+      {
+        id: recorded.payload.approvalId,
+        challengeId: approval.challengeId,
+        challengeProofDigest: approval.challengeProofDigest,
+        binding: gate.binding,
+        maximumUses: 1,
+      },
+      "recorded_approval_binding_changed",
+    );
+    return approval;
+  }
+
+  async #claimReadApproval(input: {
+    readonly workOrder: AcceptedAgentWorkOrder;
+    readonly lease: LeaseSession;
+    readonly approval: Approval;
+    readonly stepId: string;
+    readonly toolCallId: string;
+    readonly argumentsDigest: Digest;
+    readonly normalizedTargetDigest: Digest;
+  }): Promise<void> {
+    const authorizationKey = `pactmark-read:${digestCanonicalJson({
+      schemaVersion: "1",
+      workOrderBindingDigest: input.workOrder.workOrderBindingDigest,
+      runId: input.lease.current.runId,
+      stepId: input.stepId,
+      toolCallId: input.toolCallId,
+      argumentsDigest: input.argumentsDigest,
+      normalizedTargetDigest: input.normalizedTargetDigest,
+    })}`;
+    input.lease.current = await this.#config.leaseStore.renew(
+      input.lease.current,
+      this.#config.leaseTtlMs ?? 30_000,
+    );
+    await this.#config.runCommandUnitOfWork.transactTransition(
+      {
+        schemaVersion: "1",
+        tenantId: input.workOrder.tenant.id,
+        runId: input.lease.current.runId,
+        transitionKind: "approval_use_claim",
+        transitionKey: authorizationKey,
+        workOrderBindingDigest: input.workOrder.workOrderBindingDigest,
+        executionDefinitionDigest: input.workOrder.executionDefinitionDigest,
+        leaseId: input.lease.current.leaseId,
+        fencingToken: input.lease.current.fencingToken,
+      },
+      async (transaction) => {
+        await transaction.claimApproval(
+          input.workOrder.tenant.id,
+          input.approval.id,
+          authorizationKey,
+          this.#config.clock.now(),
+        );
+      },
+    );
+  }
+
   async #executeWriteEffect(input: {
     readonly workOrder: AcceptedWorkOrder;
     readonly definition: Readonly<{ policyRegistrationDigest: Digest }>;
@@ -3343,6 +3734,7 @@ export class AgentRuntime {
     readonly toolCallId: string;
     readonly value: JsonValue;
     readonly normalizedTargetDigest: Digest;
+    readonly approval?: Approval;
     readonly signal: AbortSignal;
     readonly checkpoint?: RuntimeContextCheckpoint;
   }): Promise<
@@ -3387,6 +3779,8 @@ export class AgentRuntime {
         runId: input.projection.runId,
         effectKey,
         toolRegistrationDigest: input.registration.toolRegistrationDigest,
+        strategy: strategy.kind,
+        strategyRegistrationDigest: strategy.registrationDigest,
         argumentsDigest,
         normalizedTargetDigest: input.normalizedTargetDigest,
       });
@@ -3404,13 +3798,40 @@ export class AgentRuntime {
       dataClass: input.workOrder.dataClass,
       signal: input.signal,
     };
-    await validateEffectPreview({
+    const effectPreview = await validateEffectPreview({
       strategy,
       registration: input.registration,
       value: input.value,
       context,
       normalizedTargetDigest: input.normalizedTargetDigest,
     });
+    if (input.approval !== undefined) {
+      this.#assertExactBinding(
+        {
+          approvalId: input.approval.id,
+          tenantId: input.approval.binding.tenant.id,
+          runId: input.approval.binding.runId,
+          stepId: input.approval.binding.stepId,
+          toolRegistrationDigest: input.approval.binding.toolRegistrationDigest,
+          argumentsDigest: input.approval.binding.argumentsDigest,
+          targetDigest: input.approval.binding.targetDigest,
+          previewDigest: input.approval.binding.previewDigest,
+          contentDigest: input.approval.binding.contentDigest ?? null,
+        },
+        {
+          approvalId: input.approval.id,
+          tenantId: input.workOrder.tenant.id,
+          runId: input.projection.runId,
+          stepId: input.stepId,
+          toolRegistrationDigest: input.registration.toolRegistrationDigest,
+          argumentsDigest,
+          targetDigest: input.normalizedTargetDigest,
+          previewDigest: effectPreview.previewDigest,
+          contentDigest: effectPreview.contentDigest,
+        },
+        "effect_approval_preview_changed",
+      );
+    }
     const operationKey =
       strategy.kind === "none"
         ? undefined
@@ -3424,7 +3845,13 @@ export class AgentRuntime {
         details: { reason: "effect_operation_key_empty" },
       });
     }
+    if (record !== undefined && record.operationKey !== operationKey) {
+      throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+        details: { reason: "effect_operation_key_changed" },
+      });
+    }
     let projection = input.projection;
+    let dispatchAttempt = 1;
 
     if (record?.state === "acknowledged" || record?.state === "compensated") {
       const recovered = await services.store.getAcknowledgedResult(record);
@@ -3453,6 +3880,7 @@ export class AgentRuntime {
         normalizedTargetDigest: input.normalizedTargetDigest,
         authorizationKey,
         policyRegistrationDigest: input.definition.policyRegistrationDigest,
+        ...(input.approval === undefined ? {} : { approvalId: input.approval.id }),
       };
       const authorization = validateAuthorizationReservation({
         reservation: await services.authorization.resolve(authorizationRequest),
@@ -3462,13 +3890,17 @@ export class AgentRuntime {
       if (
         (input.registration.security.riskClass === "R4" ||
           input.registration.security.riskClass === "R5") &&
-        authorization.approvalId === undefined
+        input.approval === undefined
       ) {
         throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
           details: { reason: "effect_approval_required" },
         });
       }
       const createdAt = this.#config.clock.now();
+      const consumedAuthorization = markAuthorizationReservationConsumed({
+        reservation: authorization,
+        consumedAt: createdAt,
+      });
       const identity = {
         schemaVersion: "1" as const,
         effectId,
@@ -3513,18 +3945,20 @@ export class AgentRuntime {
         undefined,
         async (transaction) => {
           await transaction.reserveCapabilityGrantUse(
+            input.workOrder.tenant.id,
             authorization.grantId,
             authorization.authorizationKey,
             createdAt,
           );
           if (authorization.approvalId !== undefined) {
             await transaction.claimApproval(
+              input.workOrder.tenant.id,
               authorization.approvalId,
               authorization.authorizationKey,
               createdAt,
             );
           }
-          await transaction.putAuthorizationReservation(authorization);
+          await transaction.putAuthorizationReservation(consumedAuthorization);
           await transaction.putEffectRecord(preparedRecord);
         },
       );
@@ -3546,24 +3980,26 @@ export class AgentRuntime {
     }
 
     if (record.state === "dispatched") {
-      if (strategy.kind === "none") {
+      if (strategy.kind === "none" || strategy.kind === "native") {
         projection = await this.#parkEffectForReconciliation(
           input.workOrder,
           projection,
           input.lease,
           record,
           input.stepId,
-          "dispatch_response_unavailable",
+          strategy.kind === "native"
+            ? "native_replay_safety_unproven"
+            : "dispatch_response_unavailable",
         );
         return { status: "parked", projection };
       }
-      if (strategy.kind === "reconcilable") {
-        if (operationKey === undefined) {
-          throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
-            details: { reason: "effect_operation_key_empty" },
-          });
-        }
-        const lookup = await this.#withActiveExecution({
+      if (operationKey === undefined) {
+        throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+          details: { reason: "effect_operation_key_empty" },
+        });
+      }
+      const lookup = validateEffectLookupResult(
+        await this.#withActiveExecution({
           workOrder: input.workOrder,
           lease: input.lease,
           stepId: input.stepId,
@@ -3572,44 +4008,63 @@ export class AgentRuntime {
           signal: input.signal,
           repeatAfterRecoveredReservation: true,
           callback: (signal) => strategy.lookup(operationKey, { ...context, signal }),
-        });
-        if (lookup.status === "unknown") {
-          projection = await this.#parkEffectForReconciliation(
-            input.workOrder,
-            projection,
-            input.lease,
-            record,
-            input.stepId,
-            "reconciliation_lookup_unknown",
-          );
-          return { status: "parked", projection };
-        }
-        if (lookup.status === "applied") {
-          const recovered = validateEffectExecution({
-            execution: lookup.execution,
-            strategy,
-            registration: input.registration,
-            effectKey,
-            operationKey,
-            normalizedTargetDigest: input.normalizedTargetDigest,
-          });
-          if (recovered.acknowledgement.proofKind !== "lookup_recovery") {
-            throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
-              details: { reason: "reconciliation_lookup_proof_required" },
-            });
-          }
-          projection = await this.#acknowledgeEffect(
-            input.workOrder,
-            projection,
-            input.lease,
-            record,
-            input.stepId,
-            recovered,
-            input.checkpoint,
-          );
-          return { status: "acknowledged", projection, result: recovered.result };
-        }
+        }),
+      );
+      if (lookup.status === "unknown") {
+        projection = await this.#parkEffectForReconciliation(
+          input.workOrder,
+          projection,
+          input.lease,
+          record,
+          input.stepId,
+          "reconciliation_lookup_unknown",
+        );
+        return { status: "parked", projection };
       }
+      if (lookup.status === "applied") {
+        const recovered = validateEffectExecution({
+          execution: lookup.execution,
+          strategy,
+          registration: input.registration,
+          effectKey,
+          operationKey,
+          normalizedTargetDigest: input.normalizedTargetDigest,
+        });
+        if (recovered.acknowledgement.proofKind !== "lookup_recovery") {
+          throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+            details: { reason: "reconciliation_lookup_proof_required" },
+          });
+        }
+        projection = await this.#acknowledgeEffect(
+          input.workOrder,
+          projection,
+          input.lease,
+          record,
+          input.stepId,
+          recovered,
+          input.checkpoint,
+        );
+        return { status: "acknowledged", projection, result: recovered.result };
+      }
+      const history = await this.#readEvents(input.workOrder.tenant.id, input.projection.runId);
+      const priorAttempt = history.reduce(
+        (maximum, event) =>
+          event.eventType === "EffectDispatched" && event.payload.effectId === effectId
+            ? Math.max(maximum, event.payload.attempt)
+            : maximum,
+        0,
+      );
+      dispatchAttempt = priorAttempt + 1;
+      projection = await this.#append(
+        input.workOrder,
+        projection,
+        input.lease,
+        "EffectDispatched",
+        { stepId: input.stepId, effectId, attempt: dispatchAttempt },
+        undefined,
+        undefined,
+        input.checkpoint,
+      );
     }
 
     if (record.state === "prepared") {
@@ -3628,6 +4083,7 @@ export class AgentRuntime {
         { stepId: input.stepId, effectId, attempt: 1 },
         undefined,
         (transaction) => transaction.putEffectRecord(dispatchedRecord),
+        input.checkpoint,
       );
     }
 
@@ -3641,7 +4097,7 @@ export class AgentRuntime {
         lease: input.lease,
         stepId: input.stepId,
         boundary: "tool",
-        boundaryKey: `${input.toolCallId}:effect-dispatch`,
+        boundaryKey: `${input.toolCallId}:effect-dispatch:${String(dispatchAttempt)}`,
         signal: input.signal,
         callback: (signal) => {
           const dispatchContext = { ...context, signal };
@@ -3892,7 +4348,7 @@ export class AgentRuntime {
       latest.payload.effectId,
     );
     if (record === undefined) return undefined;
-    if (record.strategy !== "none" && record.state === "dispatched") return undefined;
+    if (record.strategy === "reconcilable" && record.state === "dispatched") return undefined;
     return this.#parkEffectForReconciliation(
       workOrder,
       projection,
@@ -3901,7 +4357,9 @@ export class AgentRuntime {
       latest.payload.stepId,
       latest.eventType === "EffectUncertain"
         ? latest.payload.uncertaintyCode
-        : "dispatch_response_unavailable",
+        : record.strategy === "native"
+          ? "native_replay_safety_unproven"
+          : "dispatch_response_unavailable",
     );
   }
 
@@ -4052,16 +4510,20 @@ export class AgentRuntime {
       if (!this.#config.verifierRegistry.has(verifierId)) {
         return this.#fail(workOrder, projection, lease, stepId, "KAF_VERIFICATION_REQUIRED");
       }
-      const verification = await this.#withActiveExecution({
-        workOrder,
-        lease,
-        stepId,
-        boundary: "verifier",
-        boundaryKey: verifierId,
-        signal,
-        callback: (boundarySignal) =>
-          this.#config.verifierRegistry.verify(verifierId, artifact, boundarySignal),
-      });
+      const verification = this.#validateVerificationResult(
+        await this.#withActiveExecution({
+          workOrder,
+          lease,
+          stepId,
+          boundary: "verifier",
+          boundaryKey: verifierId,
+          signal,
+          callback: (boundarySignal) =>
+            this.#config.verifierRegistry.verify(verifierId, artifact, boundarySignal),
+        }),
+        verifierId,
+        artifact,
+      );
       verifications.push(verification);
       projection = await this.#append(
         workOrder,
@@ -4092,21 +4554,28 @@ export class AgentRuntime {
       }
     }
     const events = await this.#readEvents(workOrder.tenant.id, projection.runId);
-    const evidence = await this.#withActiveExecution({
+    const evidence = this.#validateEvidenceRecord(
+      await this.#withActiveExecution({
+        workOrder,
+        lease,
+        stepId,
+        boundary: "runtime_internal",
+        boundaryKey: `evidence:${contentDigest}`,
+        signal,
+        callback: () =>
+          this.#config.evidenceBuilder.build({
+            run: projection,
+            events,
+            artifacts: [artifact],
+            verifications,
+          }),
+      }),
       workOrder,
-      lease,
-      stepId,
-      boundary: "runtime_internal",
-      boundaryKey: `evidence:${contentDigest}`,
-      signal,
-      callback: () =>
-        this.#config.evidenceBuilder.build({
-          run: projection,
-          events,
-          artifacts: [artifact],
-          verifications,
-        }),
-    });
+      projection,
+      [artifact],
+      events,
+      verifications,
+    );
     projection = await this.#append(workOrder, projection, lease, "RunCompleted", {
       stepId,
       evidenceRecordId: evidence.evidenceRecordId,
@@ -4120,7 +4589,7 @@ export class AgentRuntime {
     projection: RunProjection,
     lease: LeaseSession,
     stepId: string,
-    errorCode: string,
+    errorCode: KafErrorCode,
     safeDetails?: Readonly<Record<string, JsonValue>>,
   ): Promise<RuntimeExecutionResult> {
     await this.#append(workOrder, projection, lease, "RunFailed", {
@@ -4194,6 +4663,210 @@ export class AgentRuntime {
     throw new KafError("KAF_STORAGE_CONCURRENCY_CONFLICT", { internalCause: error });
   }
 
+  async #captureBoundaryInvocation<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      throw new RuntimeBoundaryInvocationError(error);
+    }
+  }
+
+  #capturedBoundaryError(error: unknown): unknown {
+    if (error instanceof RuntimeBoundaryInvocationError) return error.boundaryError;
+    if (!(error instanceof KafError)) return undefined;
+    const classification = error.details?.["retryClassification"];
+    return classification === "aborted" ||
+      classification === "timed_out" ||
+      classification === "retryable" ||
+      classification === "non_retryable" ||
+      classification === "uncertain"
+      ? error
+      : undefined;
+  }
+
+  #parseModelEmission(input: unknown): RuntimeModelEmission {
+    const parsed = RuntimeModelEmissionSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new KafError("KAF_MODEL_ADAPTER_MISMATCH", {
+        details: { reason: "model_emission_schema_invalid" },
+        internalCause: parsed.error,
+      });
+    }
+    return parsed.data;
+  }
+
+  #validateVerificationResult(
+    input: unknown,
+    verifierId: string,
+    artifact: Artifact,
+  ): VerificationResult {
+    const parsed = VerificationResultSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new KafError("KAF_VERIFICATION_REQUIRED", {
+        details: { reason: "verifier_result_invalid" },
+        internalCause: parsed.error,
+      });
+    }
+    const result = parsed.data;
+    const { verificationDigest, ...material } = result;
+    if (
+      result.verifierId !== verifierId ||
+      result.verifierRegistrationDigest !== verifierId ||
+      result.artifactDigest !== artifact.artifactDigest ||
+      verificationDigest !== digestCanonicalJson(material)
+    ) {
+      throw new KafError("KAF_VERIFICATION_REQUIRED", {
+        details: { reason: "verifier_result_binding_mismatch" },
+      });
+    }
+    return result;
+  }
+
+  #validateEvidenceRecord(
+    input: unknown,
+    workOrder: AcceptedWorkOrder,
+    projection: RunProjection,
+    artifacts: readonly Artifact[],
+    events: readonly RunEvent[],
+    verifications: readonly VerificationResult[],
+  ): EvidenceRecord {
+    const parsed = EvidenceRecordSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new KafError("KAF_EVIDENCE_INVALID_REFERENCE", {
+        details: { reason: "evidence_record_invalid" },
+        internalCause: parsed.error,
+      });
+    }
+    const evidence = parsed.data;
+    const { evidenceDigest, ...material } = evidence;
+    const sameReferences = (actual: readonly unknown[], expected: readonly unknown[]): boolean => {
+      const canonical = (values: readonly unknown[]) =>
+        values.map((value) => canonicalJsonStringify(value)).sort();
+      return (
+        canonicalJsonStringify(canonical(actual)) === canonicalJsonStringify(canonical(expected))
+      );
+    };
+    const expectedArtifactRefs = artifacts.map(({ artifactId, artifactDigest }) => ({
+      artifactId,
+      artifactDigest,
+    }));
+    const expectedEventRefs = events.map(({ eventId, sequence }) => ({ eventId, sequence }));
+    const expectedVerificationRefs = verifications.map(
+      ({
+        verificationId,
+        verificationDigest,
+        status,
+        artifactDigest,
+        verifierId,
+        verifierVersion,
+        verifierRegistrationDigest,
+        method,
+        rubricVersion,
+        rubricDigest,
+      }) => ({
+        verificationId,
+        verificationDigest,
+        status,
+        artifactDigest,
+        verifierId,
+        verifierVersion,
+        verifierRegistrationDigest,
+        method,
+        rubricVersion,
+        rubricDigest,
+      }),
+    );
+    if (
+      evidenceDigest !== digestCanonicalJson(material) ||
+      evidence.tenantId !== workOrder.tenant.id ||
+      evidence.runId !== projection.runId ||
+      canonicalJsonStringify(evidence.executionDefinition) !==
+        canonicalJsonStringify(workOrder.executionDefinition) ||
+      evidence.executionDefinitionDigest !== workOrder.executionDefinitionDigest ||
+      evidence.workOrderBindingDigest !== workOrder.workOrderBindingDigest ||
+      !sameReferences(evidence.artifactRefs, expectedArtifactRefs) ||
+      !sameReferences(evidence.eventRefs, expectedEventRefs) ||
+      !sameReferences(evidence.verificationRefs, expectedVerificationRefs)
+    ) {
+      throw new KafError("KAF_EVIDENCE_INVALID_REFERENCE", {
+        details: { reason: "evidence_record_binding_mismatch" },
+      });
+    }
+    return evidence;
+  }
+
+  #normalizeBoundaryFailure(
+    boundary: "model" | "tool",
+    error: unknown,
+    classification: Exclude<RuntimeBoundaryErrorClassification, "aborted" | "uncertain">,
+  ): KafError {
+    if (error instanceof KafError) return error;
+    return new KafError(
+      boundary === "model" ? "KAF_MODEL_ADAPTER_MISMATCH" : "KAF_TOOL_EXECUTION_FAILED",
+      {
+        details: {
+          reason:
+            boundary === "model"
+              ? "model_call_failed_without_safe_result"
+              : "tool_call_failed_without_safe_result",
+          retryClassification: classification,
+        },
+        internalCause: error,
+      },
+    );
+  }
+
+  #terminalRunError(error: unknown): KafError | undefined {
+    if (!(error instanceof KafError)) return undefined;
+    if (TERMINAL_RUN_ERROR_CODES.has(error.code)) return error;
+    if (
+      error.code === "KAF_MODEL_ADAPTER_MISMATCH" &&
+      typeof error.details?.["reason"] === "string" &&
+      TERMINAL_MODEL_ADAPTER_REASONS.has(error.details["reason"])
+    ) {
+      return error;
+    }
+    if (
+      error.code === "KAF_AUTHORIZATION_BINDING_MISMATCH" &&
+      typeof error.details?.["reason"] === "string" &&
+      TERMINAL_EFFECT_AUTHORIZATION_REASONS.has(error.details["reason"])
+    ) {
+      return error;
+    }
+    return undefined;
+  }
+
+  async #terminalizeExecutionFailure(
+    workOrder: AcceptedWorkOrder,
+    lease: LeaseSession,
+    error: unknown,
+  ): Promise<RuntimeExecutionResult | undefined> {
+    const failure = this.#terminalRunError(error);
+    if (failure === undefined) return undefined;
+    const latest = await this.#config.eventStore.getProjection(
+      workOrder.tenant.id,
+      lease.current.runId,
+    );
+    if (latest === undefined) return undefined;
+    if (TerminalRunStatusSchema.safeParse(latest.status).success) {
+      return {
+        runId: latest.runId,
+        status:
+          latest.status === "completed"
+            ? "completed"
+            : latest.status === "cancelled"
+              ? "cancelled"
+              : "failed",
+      };
+    }
+    await this.#append(workOrder, latest, lease, "RunFailed", {
+      ...(latest.currentStepId === null ? {} : { stepId: latest.currentStepId }),
+      errorCode: failure.code,
+      safeDetails: failure.details ?? {},
+    });
+    return { runId: latest.runId, status: "failed" };
+  }
+
   #contextCheckpointEnabled(): boolean {
     return (
       this.#config.contextStore !== undefined &&
@@ -4221,14 +4894,27 @@ export class AgentRuntime {
         return value;
       }
     }
-    /* v8 ignore next -- every tool classifier call is made with its resolved registration */
-    const classified =
+    const classify =
       boundary === "model"
-        ? this.#config.modelDriver.classifyError?.(error)
-        : registration === undefined
+        ? this.#config.modelDriver.classifyError === undefined
           ? undefined
-          : this.#config.toolExecutor.classifyError?.(error, registration);
-    return classified ?? "non_retryable";
+          : (failure: unknown) => this.#config.modelDriver.classifyError?.(failure) ?? "uncertain"
+        : registration === undefined || this.#config.toolExecutor.classifyError === undefined
+          ? undefined
+          : (failure: unknown) =>
+              this.#config.toolExecutor.classifyError?.(failure, registration) ?? "uncertain";
+    if (classify !== undefined) return this.#safeBoundaryClassification(() => classify(error));
+    if (error instanceof KafError) return error.retryable ? "retryable" : "non_retryable";
+    return "uncertain";
+  }
+
+  #safeBoundaryClassification(classify: () => unknown): RuntimeBoundaryErrorClassification {
+    try {
+      const result = RuntimeBoundaryErrorClassificationSchema.safeParse(classify());
+      return result.success ? result.data : "uncertain";
+    } catch {
+      return "uncertain";
+    }
   }
 
   async #scheduleRetry(
@@ -4689,7 +5375,7 @@ export class AgentRuntime {
       schemaVersion: "1",
       eventId:
         eventId ??
-        `event-${digestCanonicalJson({ runId, sequence, eventType }).slice("sha256:".length, 39)}`,
+        `event-${digestCanonicalJson({ tenantId: workOrder.tenant.id, runId, sequence, eventType }).slice("sha256:".length, 39)}`,
       runId,
       sequence,
       occurredAt: this.#config.clock.now(),
@@ -4703,7 +5389,12 @@ export class AgentRuntime {
     });
   }
 
-  #verifyAuthority(authority: AuthorityContext) {
+  #verifyAuthority(
+    authority: AuthorityContext,
+    requirement:
+      | Readonly<{ kind: "unscoped_only"; operation: string }>
+      | Readonly<{ kind: "run"; operation: string; runId: string }>,
+  ) {
     const verification = this.#config.authorityIssuer.verify(
       authority,
       new Date(this.#config.clock.now()),
@@ -4713,7 +5404,51 @@ export class AgentRuntime {
         details: { reason: verification.reason },
       });
     }
+    const runScope = verification.claims.runScope;
+    if (runScope !== undefined) {
+      if (requirement.kind === "unscoped_only") {
+        throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+          details: { reason: "run_scope_cannot_create_run", operation: requirement.operation },
+        });
+      }
+      if (runScope.runId !== requirement.runId) {
+        throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+          details: { reason: "run_scope_mismatch", operation: requirement.operation },
+        });
+      }
+      if (
+        verification.claims.actor.type === "system_worker" &&
+        !DELEGATED_WORKER_RUN_OPERATIONS.has(requirement.operation)
+      ) {
+        throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+          details: { reason: "run_scope_operation_denied", operation: requirement.operation },
+        });
+      }
+    }
     return verification.claims;
+  }
+
+  async #assertAuthorityStoredRunScope(claims: VerifiedAuthority, runId: string): Promise<void> {
+    if (claims.runScope === undefined) return;
+    const projection = await this.#config.eventStore.getProjection(claims.tenant.id, runId);
+    if (projection === undefined) throw new KafError("KAF_STORAGE_NOT_FOUND");
+    this.#assertAuthorityWorkOrderScope(claims, runId, projection.workOrderId);
+  }
+
+  #assertAuthorityWorkOrderScope(
+    claims: VerifiedAuthority,
+    runId: string,
+    workOrderId: string,
+  ): void {
+    const runScope = claims.runScope;
+    if (
+      runScope !== undefined &&
+      (runScope.runId !== runId || runScope.workOrderId !== workOrderId)
+    ) {
+      throw new KafError("KAF_AUTHORIZATION_BINDING_MISMATCH", {
+        details: { reason: "run_scope_mismatch", operation: "run.load" },
+      });
+    }
   }
 
   #assertCommand(command: CommandContext, operation: string, payload: unknown): void {
@@ -4733,7 +5468,12 @@ export class AgentRuntime {
     decision: DecisionApprovalSubmission,
     command: CommandContext,
   ): Promise<Readonly<{ approvalId: string; runId: string; automaticResume: boolean }>> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "run",
+      operation: "run.approve",
+      runId,
+    });
+    await this.#assertAuthorityStoredRunScope(claims, runId);
     this.#assertCommand(command, "run.approve", decision);
     this.#assertCommandResourceScope(command, [runId, decision.decisionId]);
     this.#assertCommandWindow(command);
@@ -4768,7 +5508,6 @@ export class AgentRuntime {
             binding: approval.binding,
             approvedBy: approval.approvedBy,
             authenticationStrength: approval.authenticationStrength,
-            createdAt: approval.createdAt,
           },
           {
             challengeId: challenge.id,
@@ -4776,11 +5515,12 @@ export class AgentRuntime {
             binding: gate.binding,
             approvedBy: claims.actor,
             authenticationStrength: claims.authenticationStrength,
-            createdAt: now,
           },
           "approval_binding_mismatch",
         );
         if (
+          Date.parse(approval.createdAt) < Date.parse(challenge.issuedAt) ||
+          Date.parse(approval.createdAt) > Date.parse(now) ||
           Date.parse(approval.expiresAt) <= Date.parse(now) ||
           Date.parse(approval.expiresAt) > maximumExpiry
         ) {
@@ -4804,7 +5544,12 @@ export class AgentRuntime {
         const next = reduceRunEvent(projection, event);
         const automaticResume = this.#canCommitAutomaticWakeup();
         const response = { approvalId: approval.id, runId, automaticResume };
-        await transaction.consumeDecisionChallenge(challenge.id, command.commandId, now);
+        await transaction.consumeDecisionChallenge(
+          claims.tenant.id,
+          challenge.id,
+          command.commandId,
+          now,
+        );
         await transaction.putApproval(approval);
         await transaction.appendRunEvent(event);
         await transaction.putRunProjection(next);
@@ -4829,7 +5574,12 @@ export class AgentRuntime {
     decision: DecisionRejectionSubmission,
     command: CommandContext,
   ): Promise<Readonly<{ decisionId: string; runId: string; automaticResume: boolean }>> {
-    const claims = this.#verifyAuthority(authority);
+    const claims = this.#verifyAuthority(authority, {
+      kind: "run",
+      operation: "run.reject",
+      runId,
+    });
+    await this.#assertAuthorityStoredRunScope(claims, runId);
     this.#assertCommand(command, "run.reject", decision);
     this.#assertCommandResourceScope(command, [runId, decision.decisionId]);
     this.#assertCommandWindow(command);
@@ -4881,7 +5631,12 @@ export class AgentRuntime {
         const next = reduceRunEvent(projection, event);
         const automaticResume = this.#canCommitAutomaticWakeup();
         const response = { decisionId: decision.decisionId, runId, automaticResume };
-        await transaction.consumeDecisionChallenge(challenge.id, command.commandId, now);
+        await transaction.consumeDecisionChallenge(
+          claims.tenant.id,
+          challenge.id,
+          command.commandId,
+          now,
+        );
         await transaction.putDecisionRejection(rejection);
         await transaction.appendRunEvent(event);
         await transaction.putRunProjection(next);

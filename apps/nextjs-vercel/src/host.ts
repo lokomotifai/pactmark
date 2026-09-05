@@ -4,10 +4,7 @@ import {
   createRuntime,
   type CreateRuntimeInput,
 } from "@pactmark/agent";
-import {
-  createDeclaredToolExecutor,
-  createDenyAllEgressBroker,
-} from "@pactmark/executor-in-process";
+import { createDeclaredToolExecutor } from "@pactmark/executor-in-process";
 import { createVercelRouteHandler } from "@pactmark/vercel";
 
 import { nextAgent } from "./agent";
@@ -29,27 +26,27 @@ const productionTenant = { id: "nextjs-vercel-production" };
 const previewAuthority = localAuthority.issue({
   principal: previewPrincipal,
   tenant: previewTenant,
+  authenticationStrength: "phishing_resistant",
 });
 const productionAuthority = localAuthority.issue({
   principal: productionPrincipal,
   tenant: productionTenant,
+  // A static bearer secret is single-factor. Hosts that need R4/R5 approvals
+  // must replace this fixture hook with an authority backed by stronger auth.
+  authenticationStrength: "single_factor",
 });
 
 /**
- * Explicit public executor and egress composition required by a production host.
+ * Explicit public executor composition required by a production host.
  * The preview runtime below remains intentionally local/ephemeral and does not conceal these ports.
  */
 const declaredToolExecutor = createDeclaredToolExecutor([]);
-const denyAllEgressBroker = createDenyAllEgressBroker();
 
 /** @public Explicit production composition hook; callers must inject every durable host port. */
-export function createProductionHost(
-  ports: Omit<CreateRuntimeInput, "toolExecutor" | "egressBroker">,
-) {
+export function createProductionHost(ports: Omit<CreateRuntimeInput, "toolExecutor">) {
   return createRuntime({
     ...ports,
     toolExecutor: declaredToolExecutor,
-    egressBroker: denyAllEgressBroker,
   });
 }
 

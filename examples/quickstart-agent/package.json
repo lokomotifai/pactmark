@@ -6,6 +6,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "dev": "node --import tsx src/run.ts",
+    "smoke:live": "node --import tsx src/live-provider-smoke.ts",
     "lint": "eslint . --config ../eslint.config.mjs --max-warnings 0",
     "build": "tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit",
