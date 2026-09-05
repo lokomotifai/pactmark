@@ -15,7 +15,7 @@
   "dependencies": {
     "@pactmark/agent": "workspace:*",
     "@pactmark/ai-sdk": "workspace:*",
-    "ai": "7.0.48",
+    "ai": "7.0.90",
     "zod": "4.4.3"
   },
   "devDependencies": {
