@@ -30,7 +30,7 @@ jobs:
           package-manager-cache: false
       # pnpm/setup v2.0.2
       - name: Install the pinned package manager
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b
         with:
           version: 11.18.0
           install: false
