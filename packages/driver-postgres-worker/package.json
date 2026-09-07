@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@pactmark/core": "workspace:*",
-    "zod": "4.4.3"
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@types/pg": "8.20.0",

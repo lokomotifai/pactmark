@@ -34,7 +34,7 @@
     "@modelcontextprotocol/sdk": "1.30.0",
     "@pactmark/core": "workspace:*",
     "@pactmark/policy": "workspace:*",
-    "zod": "4.4.3"
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@pactmark/testing": "workspace:*",

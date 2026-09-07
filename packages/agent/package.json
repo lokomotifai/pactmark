@@ -39,7 +39,7 @@
     "@pactmark/policy": "workspace:*",
     "@pactmark/runtime": "workspace:*",
     "@pactmark/store-memory": "workspace:*",
-    "zod": "4.4.3"
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@microsoft/api-extractor": "7.58.12",
