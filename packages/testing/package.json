@@ -36,10 +36,10 @@
     "@pactmark/core": "workspace:*"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "7.58.12",
+    "@microsoft/api-extractor": "7.59.1",
     "@pactmark/store-memory": "workspace:*",
     "@types/node": "22.20.1",
-    "tsdown": "0.22.14",
+    "tsdown": "0.23.0",
     "typescript": "6.0.3",
     "vitest": "4.1.10"
   },
